@@ -1,0 +1,104 @@
+[
+    {
+        "definitions" : [
+            {
+                "column" : 6,
+                "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar.cpp",
+                "kind" : 6,
+                "line" : 19,
+                "name" : "showMatrix(mat)",
+                "parent_name" : "",
+                "usr" : "c:@F@showMatrix#$@N@arma@C@Mat>#d#"
+            },
+            {
+                "column" : 5,
+                "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar.cpp",
+                "kind" : 6,
+                "line" : 23,
+                "name" : "mvrnormArma(int, vec, mat)",
+                "parent_name" : "",
+                "usr" : "c:@F@mvrnormArma#I#$@N@arma@C@Col>#d#$@N@arma@C@Mat>#d#"
+            },
+            {
+                "column" : 5,
+                "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar.cpp",
+                "kind" : 6,
+                "line" : 29,
+                "name" : "shrinkage2(mat, double, Rcpp::Nullable<Rcpp::NumericVector>)",
+                "parent_name" : "",
+                "usr" : "c:@F@shrinkage2#$@N@arma@C@Mat>#d#d#$@N@Rcpp@C@Nullable>#$@N@Rcpp@C@Vector>#VI14#@N@Rcpp@CT>1#T@PreserveStorage#"
+            },
+            {
+                "column" : 8,
+                "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar.cpp",
+                "kind" : 6,
+                "line" : 45,
+                "name" : "function_f2(mat, mat, mat)",
+                "parent_name" : "",
+                "usr" : "c:@F@function_f2#$@N@arma@C@Mat>#d#S0_#S0_#"
+            },
+            {
+                "column" : 5,
+                "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar.cpp",
+                "kind" : 6,
+                "line" : 51,
+                "name" : "gradient_f2(mat, mat, mat)",
+                "parent_name" : "",
+                "usr" : "c:@F@gradient_f2#$@N@arma@C@Mat>#d#S0_#S0_#"
+            },
+            {
+                "column" : 8,
+                "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar.cpp",
+                "kind" : 6,
+                "line" : 57,
+                "name" : "function_g2(mat, double, Rcpp::Nullable<Rcpp::NumericVector>)",
+                "parent_name" : "",
+                "usr" : "c:@F@function_g2#$@N@arma@C@Mat>#d#d#$@N@Rcpp@C@Nullable>#$@N@Rcpp@C@Vector>#VI14#@N@Rcpp@CT>1#T@PreserveStorage#"
+            },
+            {
+                "column" : 8,
+                "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar.cpp",
+                "kind" : 6,
+                "line" : 71,
+                "name" : "function_Q2(mat, mat, mat, mat, double, mat, mat)",
+                "parent_name" : "",
+                "usr" : "c:@F@function_Q2#$@N@arma@C@Mat>#d#S0_#S0_#S0_#d#S0_#S0_#"
+            },
+            {
+                "column" : 5,
+                "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar.cpp",
+                "kind" : 6,
+                "line" : 76,
+                "name" : "function_proximal2(mat, mat, mat, double, double, mat, mat, Rcpp::Nullable<Rcpp::NumericVector>)",
+                "parent_name" : "",
+                "usr" : "c:@F@function_proximal2#$@N@arma@C@Mat>#d#S0_#S0_#d#d#S0_#S0_#$@N@Rcpp@C@Nullable>#$@N@Rcpp@C@Vector>#VI14#@N@Rcpp@CT>1#T@PreserveStorage#"
+            },
+            {
+                "column" : 5,
+                "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar.cpp",
+                "kind" : 6,
+                "line" : 81,
+                "name" : "var_sim(int, mat, mat)",
+                "parent_name" : "",
+                "usr" : "c:@F@var_sim#I#$@N@arma@C@Mat>#d#S0_#"
+            },
+            {
+                "column" : 6,
+                "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar.cpp",
+                "kind" : 6,
+                "line" : 137,
+                "name" : "fista_sparse(const mat &, const mat &, double, const mat &, int, bool, Rcpp::Nullable<Rcpp::NumericVector>, double)",
+                "parent_name" : "",
+                "usr" : "c:@F@fista_sparse#&1$@N@arma@C@Mat>#d#S0_#d#S0_#I#b#$@N@Rcpp@C@Nullable>#$@N@Rcpp@C@Vector>#VI14#@N@Rcpp@CT>1#T@PreserveStorage#d#"
+            }
+        ],
+        "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar.cpp",
+        "file_last_write" : 1594580869
+    },
+    {
+        "definitions" : [
+        ],
+        "file" : "/Users/lola/Dropbox/Docs/pkgs/multivar/src/multivar_types.h",
+        "file_last_write" : 1594581296
+    }
+]
