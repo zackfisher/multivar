@@ -19,7 +19,7 @@ Estimate h-step ahead forecasts based on the recovered transition matrix.
 \examples{
 
 theta    <- diag(c(.7,.8,.9,.6,.7,.9))
-data     <- t(var_sim(100, theta, diag(.1,6)))
+data     <- var_sim(100, theta, diag(.1,6))
 datalag  <- embed(data, 2)
 b        <- datalag[,1:6]
 A        <- datalag[,7:12]

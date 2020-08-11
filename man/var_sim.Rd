@@ -4,14 +4,16 @@
 \alias{var_sim}
 \title{Simulate a stationary Vector Autoregressive (VAR) time series.}
 \usage{
-var_sim(T, A, Sigma)
+var_sim(n, phi, sigma, burn = 500)
 }
 \arguments{
-\item{T}{An integer giving the number of timepoints.}
+\item{n}{An integer giving the number of timepoints.}
 
-\item{A}{A d x d transition matrix.}
+\item{phi}{A d x d transition matrix.}
 
-\item{Sigma}{A d x d innovation covariance matrix.}
+\item{sigma}{A d x d innovation covariance matrix.}
+
+\item{bubrn}{Burn-in period to be discarded. Default is 500.}
 }
 \description{
 Simulate a stationary Vector Autoregressive (VAR) time series.
@@ -19,7 +21,7 @@ Simulate a stationary Vector Autoregressive (VAR) time series.
 \examples{
 
 theta    <- diag(c(.7,.8,.9,.6,.7,.9))
-data     <- t(var_sim(100, theta, diag(.1,6)))
+data     <- var_sim(100, theta, diag(.1,6))
 datalag  <- embed(data, 2)
 b        <- datalag[,1:6]
 A        <- datalag[,7:12]
