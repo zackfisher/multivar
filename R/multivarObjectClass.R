@@ -28,6 +28,9 @@ check.multivar <- function(object){
 #' @slot horizon Numeric. Forecast horizon.
 #' @slot t1 Numeric vector. Index of time series in which to start cross validation for individual k. 
 #' @slot t2 Numeric vector. Index of time series in which to end cross validation for individual k.
+#' @slot lambda1 Numeric vector. Regularization parameters for Sparse model structure.
+#' @slot lambda2 Numeric vector. Regularization parameters for Low-Rank model structure.
+#' @slot gamma Numeric vector. Regularization parameters for adaptive model structures.
 #' @slot tol Numeric. Convergence tolerance.
 #' @slot window Numeric. Size of rolling window.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
@@ -46,16 +49,15 @@ setClass(
         H  = "matrix",
         lag="numeric",
         horizon="numeric",
-        t1k = "numeric",
-        t2k = "numeric",
-        lambdas="numeric",
+        t1 = "numeric",
+        t2 = "numeric",
+        lambda1="numeric",
+        lambda2="numeric",
+        gamma = "numeric",
         tol="numeric",
         window="numeric"
         ),validity=check.multivar
     )
-
-
-
 
 
 #' Construct an object of class multivar
@@ -144,13 +146,15 @@ constructModel <- function( data = NULL,
   t1k <- unlist(lapply(dat, function(x){floor(nrow(x$b)/3)}))
   t2k <- unlist(lapply(dat, function(x){floor(2*nrow(x$b)/3)}))
   ntk <- unlist(lapply(dat, function(x){nrow(x$b)})) # number cols 
-  nvk <- unlist(lapply(dat, function(x){ncol(x$b)})) # number tpts
+  ndk <- unlist(lapply(dat, function(x){ncol(x$b)})) # number tpts
   # tks <- c(1, cumsum(ntk[-length(ntk)])+1)
   # tke <- cumsum(ntk)
   # t1s <- c(1, cumsum(t1k[-length(t1k)])+1)
   # t1e <- cumsum(t1k)
   # t2s <- t1e+1
   # t1e <- cumsum(t1k)
+  
+  # construct lambda grid
   
   obj <- new("multivar",
     n  = ntk,
@@ -172,8 +176,6 @@ constructModel <- function( data = NULL,
   return(obj)
 
 }
-
-
 
 
 # show-default method to show an object when its name is printed in the console.
