@@ -4,10 +4,22 @@
 \alias{multivar_sim}
 \title{Simulate multivar data.}
 \usage{
-multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub, sigma)
+multivar_sim(
+  k,
+  d,
+  n,
+  prop_fill_com,
+  prop_fill_ind,
+  lb,
+  ub,
+  sigma,
+  mat_common = NULL,
+  mat_unique = NULL,
+  mat_total = NULL
+)
 }
 \arguments{
-\item{k}{Integer. The number of individuals (or datsets) to be generated.}
+\item{k}{Integer. The number of individuals (or datasets) to be generated.}
 
 \item{d}{Integer. The number of variables per dataset. For now this will be constant across individuals.}
 
@@ -22,6 +34,12 @@ multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub, sigma)
 \item{ub}{Numeric. The lower bound for individual elements of the transition matrices.}
 
 \item{sigma}{Matrix. The (population) innovation covariance matrix.}
+
+\item{mat_common}{Matrix. A common effects transition matrix (if known).}
+
+\item{mat_unique}{List. A list of unique effects transition matrix (if known).}
+
+\item{mat_total}{List. A list of total effects transition matrix (if known).}
 }
 \description{
 Simulate multivar data.
@@ -30,7 +48,7 @@ Simulate multivar data.
 
 k <- 3
 d <- 5
-n <- 100
+n <- 50
 prop_fill_com <- .2
 prop_fill_ind <- .2
 lb <- 0.1

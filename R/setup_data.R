@@ -1,5 +1,4 @@
-#' @keywords internal
-setup_data <- function (data, sep, header, standardize, lag, horizon) {
+setup_data <- function (data, standardize, lag, horizon) {
   
    if (is.null(data)){
     stop(paste0(
@@ -12,62 +11,77 @@ setup_data <- function (data, sep, header, standardize, lag, horizon) {
   #-------------------------------------------------------------#
   # If the data is already in list form.
   #-------------------------------------------------------------#
-  
-  if (is.list(data)){
-  
-    ts_list  <- list()
-  
-    # if the user-supplied list does not have names, add names 
-    if(is.null(names(data))){ 
-      
-      names(data) <- paste0("subj", 1:length(data)) 
-      
-    }
-  
-    ts_list  <- data
-
-  #-------------------------------------------------------------#
-  # If the data is not a list (we assume it is a directory).
-  #-------------------------------------------------------------#  
-  } else if (!is.list(data)){
-  
-    files <- list.files(data, full.names = TRUE) 
-    
-    #-------------------------------------------------------------#
-    # Throw errors specific to data specified as a directory.
-    #-------------------------------------------------------------# 
-    if (is.null(sep)){
+  if (!is.list(data)){
       stop(paste0(
-        "multivar ERROR: a data directory is specified but the sep argument is not. ",
-        "Please specify a sep argument before continuing."
+        "multivar ERROR: data must be supplied as a list of matrices."
       ))
-    }
-    
-    if (is.null(header)){
-      stop(paste0(
-        "multivar ERROR: a data directory is specified but a header argument is not. ",
-        "Please specify a logical value for header before continuing."
-      ))
-    }
-  
-    #-------------------------------------------------------------#
-    # Create a list of dataframes.
-    #-------------------------------------------------------------# 
-    
-    ts_list <- list()
-    for (i in 1:length(files)){
-      ts_list[[i]] <- read.table(files[i], sep = ctrlOpts$sep, header = ctrlOpts$header)
-    }
-    
-    names(ts_list) <- tools::file_path_sans_ext(basename(files))
-  
   } else {
+      ts_list  <- list()
   
-    stop(paste0(
-      "multivar ERROR: Format of data argument not recognized. "
-    ))
-
+      # if the user-supplied list does not have names, add names
+      if(is.null(names(data))){
+  
+        names(data) <- paste0("dataset", 1:length(data))
+  
+      }
+  
+      ts_list  <- data
   }
+  # if (is.list(data)){
+  # 
+  #   ts_list  <- list()
+  # 
+  #   # if the user-supplied list does not have names, add names 
+  #   if(is.null(names(data))){ 
+  #     
+  #     names(data) <- paste0("dataset", 1:length(data)) 
+  #     
+  #   }
+  # 
+  #   ts_list  <- data
+  # 
+  # #-------------------------------------------------------------#
+  # # If the data is not a list (we assume it is a directory).
+  # #-------------------------------------------------------------#  
+  # } else if (!is.list(data)){
+  # 
+  #   files <- list.files(data, full.names = TRUE) 
+  #   
+  #   #-------------------------------------------------------------#
+  #   # Throw errors specific to data specified as a directory.
+  #   #-------------------------------------------------------------# 
+  #   if (is.null(sep)){
+  #     stop(paste0(
+  #       "multivar ERROR: a data directory is specified but the sep argument is not. ",
+  #       "Please specify a sep argument before continuing."
+  #     ))
+  #   }
+  #   
+  #   if (is.null(header)){
+  #     stop(paste0(
+  #       "multivar ERROR: a data directory is specified but a header argument is not. ",
+  #       "Please specify a logical value for header before continuing."
+  #     ))
+  #   }
+  # 
+  #   #-------------------------------------------------------------#
+  #   # Create a list of dataframes.
+  #   #-------------------------------------------------------------# 
+  #   
+  #   ts_list <- list()
+  #   for (i in 1:length(files)){
+  #     ts_list[[i]] <- read.table(files[i], sep = ctrlOpts$sep, header = ctrlOpts$header)
+  #   }
+  #   
+  #   names(ts_list) <- tools::file_path_sans_ext(basename(files))
+  # 
+  # } else {
+  # 
+  #   stop(paste0(
+  #     "multivar ERROR: Format of data argument not recognized. "
+  #   ))
+  # 
+  # }
   
   #-------------------------------------------------------------#
   # Ensure all datafiles share the same column order.
@@ -79,7 +93,7 @@ setup_data <- function (data, sep, header, standardize, lag, horizon) {
   
   if(is.null(varnames)){
     varnames <- c(paste0("V", seq(1,n_orig_vars)))
-    ts_list <- lapply(ts_list, function(x) { colnames(x)<-varnames;  x })
+    ts_list <- lapply(ts_list, function(x) { colnames(x) <- varnames;  x })
   } 
   
   
@@ -144,12 +158,15 @@ setup_data <- function (data, sep, header, standardize, lag, horizon) {
   
   # will need to be updated for lags > 1
   ts_list <- lapply(ts_list, function(df){
-    H  <- df[((ncol(df)-horizon):ncol(df)),, drop = FALSE]
-    df <- df[-((ncol(df)-horizon):ncol(df)),, drop = FALSE]
+    if(horizon > 0){
+      H  <- df[((nrow(df)-horizon+1):nrow(df)),, drop = FALSE]
+      df <- df[-((nrow(df)-horizon+1):nrow(df)),, drop = FALSE]
+    } else {
+      H  <- NA
+    }
     A  <- Matrix(df[1:(nrow(df)-1), ], sparse = TRUE)
     b  <- Matrix(df[2:(nrow(df)  ), ], sparse = TRUE)
-    #colnames(A) <- paste0(colnames(df), ".l1")
-    #colnames(b) <- colnames(df)
+    colnames(A) <- colnames(b) <- colnames(df)
     list(b = b, A = A, H = H)
   })
   

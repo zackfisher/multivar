@@ -93,46 +93,6 @@ mat var_sim(int n, mat coef, mat sigma) {
    return simdata;
 }
 
-//' Estimate a Sparse Multiple-Subject Vector Autoregression (VAR) Model
-//'
-//' Function for estimating multiple-subjbect Vector Autoregression models
-//' using Fast Iterative Shrinkage-Thresholding Algorithm (FISTA; Beck and Teboulle, 2009)
-//'
-//' @param A An N x P design matrix.
-//' @param b An N x P outcome matrix.
-//' @param lambda Regularization parameter.
-//' @param x_true Numeric matrix containing the true transition matrix (if available).
-//' @param niter Integer giving the maximum number of iterations.
-//' @param backtrack Logical. If backtracking should be used in the FISTA algorithm.
-//' @param w Numeric matrix containing the weights (if available).
-//' @param conv Convergance criterion.
-//' @details
-//'
-//' \strong{Function Under Development}
-//'
-//' This is a prototype function and is currently under development.
-//'
-//' @references
-//'
-//' Fisher, Z.F., Kim, Y., and Pipiras, V. (Under Review) Penalized
-//' Estimation and Forecasting of Multiple Subject Intensive Longitudinal Data.
-//'
-//' Beck A. and Teboulle, M. (2009). A Fast Iterative Shrinkage-Thresholding
-//' Algorithm for Linear Inverse Problems. SIAM J. Img. Sci. 2, 1, 183–202.
-//'
-//' @keywords var lasso
-//'
-//' @examples
-//'
-//' theta    <- matrix(rnorm(9),3,3)
-//' data     <- var_sim(20, theta, diag(.1,3))
-//' datalag  <- embed(data, 2)
-//' b        <- datalag[,1:3]
-//' A        <- datalag[,4:6]
-//' fista_sparse(A, b, 1, theta, niter = 1, backtrack = TRUE)
-//'
-//'
-//' @export
 //[[Rcpp::export]]
 List fista_sparse(const mat& A, const mat& b, double lambda, const mat& x_true, int niter, bool backtrack, Rcpp::Nullable<Rcpp::NumericVector> w = R_NilValue, double conv=1e-10){
 
@@ -204,73 +164,5 @@ List fista_sparse(const mat& A, const mat& b, double lambda, const mat& x_true, 
 }
 
 
-// mat cv(const mat A, const mat b, const vec lambdas, const int T1,const int T2, int niter, bool backtrack, double conv, Rcpp::Nullable<Rcpp::NumericVector> w = R_NilValue){
-//   //Rprintf("L bar predate : %f \n", L_bar);
-//   mat x_true; x_true.zeros(size(A.n_cols, b.n_cols));
-//   double lambda = 0;
-//   int T10 = T1-1;
-//   int cnt = 0;
-//   
-//   mat err; err.zeros(T2-T1, lambdas.size()); 
-//   
-//   for (int j = 0; j < lambdas.size(); j++) {
-//     
-//     lambda = lambdas(j);
-//     
-//     for (int i = 0; i < (T2-T1); i++) {
-//       mat A_train = A.head_rows(T10+i);
-//       mat b_train = b.head_rows(T10+i);
-//       List fit    = fista_sparse(A_train, b_train, lambda, x_true, niter, backtrack, conv,w);
-//       mat B_train = fit["out.x"]; B_train = B_train.t();
-//       mat A_test  = A.rows(T10+1+i, T10+1+i); 
-//       mat b_test  = b.rows(T10+1+i, T10+1+i);
-//       err(i,j)    = norm(arma::vectorise(b_test - A_test*B_train), "fro");
-//       cnt++;
-//     }
-//     
-//   }
-//   
-//   return(err);
-// }
-// 
-// 
-// template <const int RTYPE>
-// Vector<RTYPE> do_conc_(Vector<RTYPE> x, Vector<RTYPE> y){
-//  int nx=x.size(), n=x.size()+y.size(),i,j;
-//  Vector<RTYPE> out=no_init(n);
-//  for (i=0; i<nx; ++i){ out[ i ] = x[ i ];}
-//  for (j=i, i=0; j<n; ++j, ++i){ out[ j ] = y[i] ;}
-//  return out;
-// }
-// 
-// 
-// SEXP conc( SEXP& XX_, SEXP& YY_){
-//  int type = TYPEOF(XX_) ;
-//  switch( type ){
-//  case INTSXP  : return do_conc_<INTSXP> ( XX_, YY_ ) ;
-//  case REALSXP : return do_conc_<REALSXP>( XX_, YY_ ) ;
-//  case STRSXP  : return do_conc_<STRSXP> ( XX_, YY_ ) ;
-//  case VECSXP  : return do_conc_<VECSXP> ( XX_, YY_ ) ;
-//  }
-//  return R_NilValue ;
-// }
-// 
-// 
-// mat cv_err(const mat A, const mat b, const vec lambdas, const mat x_true, int niter, bool backtrack, double conv, Rcpp::Nullable<Rcpp::NumericVector> w = R_NilValue){
-// 
-//   double lambda = 0;
-// 
-//   vec err; err.zeros(lambdas.size()); 
-//   
-//   for (int j = 0; j < lambdas.size(); j++) {
-//     lambda = lambdas(j);
-//     List fit = fista_sparse(A, b, lambda, x_true, niter, backtrack, conv,w);
-//     vec erri = fit["out.relerr"];
-//     int index = fit["index"];
-//     err(j)   = erri(index);
-//   }
-//   
-//   return(err);
-// }
 
 

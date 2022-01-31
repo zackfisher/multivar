@@ -3,7 +3,7 @@
 \docType{class}
 \name{multivar-class}
 \alias{multivar-class}
-\title{multivar Object Class}
+\title{multivar object class}
 \description{
 An object class to be used with cv.multivar
 }
@@ -13,15 +13,17 @@ To construct an object of class multivar, use the function \code{\link{construct
 \section{Slots}{
 
 \describe{
-\item{\code{n}}{Numeric Vector. Vector containing the number of variables for each dataset.}
+\item{\code{k}}{Numeric. The number of subjects (or groupings) in the dataset.}
 
-\item{\code{d}}{Numeric Vector. Vector containing the number of timepoints for each dataset.}
+\item{\code{n}}{Numeric Vector. Vector containing the number of timepoints for each dataset.}
+
+\item{\code{d}}{Numeric Vector. Vector containing the number of variables for each dataset.}
 
 \item{\code{Ak}}{List. A list (length = k) of lagged (T-lag-horizon) by d multivariate time series.}
 
 \item{\code{bk}}{List. A list (length = k) of (T-lag-horizon) by d multivariate time series.}
 
-\item{\code{bk}}{List. A list (length = k) of (horizon) by d multivariate time series.}
+\item{\code{Hk}}{List. A list (length = k) of (horizon) by d multivariate time series.}
 
 \item{\code{A}}{Matrix. A matrix containing the lagged ((T-lag-horizon)k) by (d+dk) multivariate time series.}
 
@@ -37,9 +39,39 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{t2}}{Numeric vector. Index of time series in which to end cross validation for individual k.}
 
+\item{\code{lambda1}}{Numeric vector. Regularization parameter 1.}
+
+\item{\code{lambda2}}{Numeric vector. Regularization parameter 2.}
+
+\item{\code{nlambda1}}{Numeric. Number of lambda1 values to search over. Default is 30.}
+
+\item{\code{nlambda2}}{Numeric. Number of lambda2 values to search over. Default is 30.}
+
 \item{\code{tol}}{Numeric. Convergence tolerance.}
 
+\item{\code{depth}}{Numeric. Depth of grid construction. Default is 1000.}
+
 \item{\code{window}}{Numeric. Size of rolling window.}
+
+\item{\code{standardize}}{Logical. Default is true. Whether to standardize the individual data.}
+
+\item{\code{weightest}}{Character. Default is "mlr" for multiple linear regression. "sls" for simple linear regression also available. How to estimate the first-stage weights.}
+
+\item{\code{canonical}}{Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.}
+
+\item{\code{threshold}}{Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.}
+
+\item{\code{lassotype}}{Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.}
+
+\item{\code{intercept}}{Logical. Default is FALSE.}
+
+\item{\code{W}}{Matrix. Default is NULL.}
+
+\item{\code{ratios}}{Numeric vector. Default is NULL.}
+
+\item{\code{cv}}{Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.}
+
+\item{\code{nfolds}}{Numeric. The number of folds for use with "blocked" cross-validation.}
 }}
 
 \seealso{

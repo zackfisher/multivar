@@ -1,9 +1,9 @@
 {
-    "path" : "~/Dropbox/Docs/pkgs/multivar/multivar/R",
-    "sortOrder" : [
+    "path": "~/Dropbox/Docs/pkgs/multivar/multivar/R",
+    "sortOrder": [
         {
-            "ascending" : true,
-            "columnIndex" : 2
+            "columnIndex": 2,
+            "ascending": false
         }
     ]
 }

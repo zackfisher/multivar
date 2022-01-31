@@ -1,24 +1,23 @@
 Encoding: UTF-8
 Package: multivar
 Title: Penalized Estimation and Forecasting of Multiple Subject Vector Autoregressive (multi-VAR) Models
-Version: 0.0.2
+Version: 1.0.0
 Authors@R: c(
  person("Zachary","Fisher", email = "fish.zachary@gmail.com", role = c("aut", "cre")),
- person("Younghoon", "Kim", role = "aut"),
- person("Vladas", "Pipiras", role = "aut")
+ person("Younghoon", "Kim", role = "ctb"),
+ person("Vladas", "Pipiras", role = "ctb")
  )
 Description: Functions for simulating, estimating and forecasting stationary Vector Autoregressive (VAR) models for multiple subject data using the penalized multi-VAR framework in Fisher, Kim and Pipiras (2020) <arXiv:2007.05052>. 
 Depends: R (>= 2.10)
-Imports: stats, utils, MASS, Rcpp (>= 1.0.3), Matrix
+Imports: methods, stats, utils, MASS, Rcpp (>= 1.0.3), Matrix, ggplot2, vars, reshape2
 License: GPL (>= 2)
 LazyData: true
 ByteCompile: true
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1
 NeedsCompilation: no
 Packaged: 2017-05-19 21:30:05 UTC; 
-Author: Zachary Fisher [aut, cre],
-  Younghoon Kim [aut],
-  Vladas Pipiras [aut]
 Maintainer: Zachary Fisher <fish.zachary@gmail.com>
 Repository: CRAN
 LinkingTo: Rcpp,RcppArmadillo
+VignetteBuilder: knitr, rmarkdown
+Suggests: knitr, rmarkdown

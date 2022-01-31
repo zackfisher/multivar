@@ -4,19 +4,8 @@
 #' @param phi A d x d transition matrix.
 #' @param sigma A d x d innovation covariance matrix.
 #' @param bubrn Burn-in period to be discarded. Default is 500.
-#' @keywords var simulate
-#'
-#' @examples
-#'
-#' theta    <- diag(c(.7,.8,.9,.6,.7,.9))
-#' data     <- var_sim(100, theta, diag(.1,6))
-#' datalag  <- embed(data, 2)
-#' b        <- datalag[,1:6]
-#' A        <- datalag[,7:12]
-#' A_est    <- fista_sparse(A, b, 1, theta, niter = 10, backtrack = TRUE)$out.x
-#' var_forecast(t(b), 2, A_est)
-#'
-#' @export
+#' @keywords var simulate internal
+#' @noRd
 var_sim = function(n, phi, sigma, burn = 500){
   k    <- dim(phi)[1]
   p    <- dim(phi)[2]/k

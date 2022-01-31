@@ -4,42 +4,94 @@
 \alias{constructModel}
 \title{Construct an object of class multivar}
 \usage{
-constructModel(data = NULL, lag = 1, struct = "Sparse",
-  horizon = 1, t1 = NULL, t2 = NULL, lambdas = NULL, tol = 1e-04,
-  window = 1, standardize = T, sep = NULL, header = NULL)
+constructModel(
+  data = NULL,
+  lag = 1,
+  horizon = 0,
+  t1 = NULL,
+  t2 = NULL,
+  lambda1 = NULL,
+  lambda2 = NULL,
+  nlambda1 = 30,
+  nlambda2 = 30,
+  depth = 1000,
+  tol = 1e-04,
+  window = 1,
+  standardize = T,
+  weightest = "ols",
+  canonical = FALSE,
+  threshold = FALSE,
+  lassotype = "adaptive",
+  intercept = FALSE,
+  W = NULL,
+  ratios = NULL,
+  cv = "rolling",
+  nfolds = 10
+)
 }
 \arguments{
 \item{data}{List. A list (length = k) of T by d multivariate time series}
 
 \item{lag}{Numeric. The VAR order. Default is 1.}
 
-\item{struct}{Character. The choice of penalty structure can be "Sparse","Lowrank",or "SparseLowrank".}
-
-\item{horizon}{Numeric. Desired forecast horizon. Default is 1.}
+\item{horizon}{Numeric. Desired forecast horizon. Default is 1. ZF Note: Should probably be zero.}
 
 \item{t1}{Numeric. Index of time series in which to start cross validation. If NULL, default is floor(nrow(n)/3) where nk is the time series length for individual k.}
 
 \item{t2}{Numeric. Index of times series in which to end cross validation. If NULL, default is floor(2*nrow(n)/3) where nk is the time series length for individual k.}
 
-\item{lambdas}{List. User-supplied penalty parameters.}
+\item{lambda1}{Matrix. Regularization parameter 1. Default is NULL.}
 
-\item{tol}{Numeric. Optimization tolerance (default 1e-4)}
+\item{lambda2}{Matrix. Regularization parameter 2. Default is NULL.}
 
-\item{window}{Numeric. Size of rolling window.  If set to 0 an expanding window will be used.}
+\item{nlambda1}{Numeric. Number of lambda1 values to search over. Default is 30.}
+
+\item{nlambda2}{Numeric. Number of lambda2 values to search over. Default is 30.}
+
+\item{depth}{Numeric. Depth of grid construction. Default is 1000.}
+
+\item{tol}{Numeric. Optimization tolerance (default 1e-4).}
+
+\item{window}{Numeric. Size of rolling window.}
 
 \item{standardize}{Logical. Default is true. Whether to standardize the individual data.}
+
+\item{weightest}{Character. Default is "mlr" for multiple linear regression. "sls" for simple linear regression also available. How to estimate the first-stage weights.}
+
+\item{canonical}{Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.}
+
+\item{threshold}{Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.}
+
+\item{lassotype}{Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.}
+
+\item{intercept}{Logical. Default is FALSE.}
+
+\item{W}{Matrix. Default is NULL.}
+
+\item{ratios}{Numeric vector. Default is NULL.}
+
+\item{cv}{Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.}
+
+\item{nfolds}{Numeric. The number of folds for use with "blocked" cross-validation.}
 }
 \description{
 Construct an object of class multivar
 }
-\details{
-The choices for "struct" are as follows
-\itemize{
-\item{  "Sparse" (Sparse)}
-\item{  "Lowrank" (Low-Rank)} 
-\item{  "SparseLowrank" (Sparse and Low-Rank)} 
-}
-}
 \examples{
-# multivar Example
+
+sim  <- multivar_sim(
+  k = 2,  # individuals
+  d = 3,  # number of variables
+  n = 20, # number of timepoints
+  prop_fill_com = 0.1, # proportion of paths common
+  prop_fill_ind = 0.1, # proportion of paths unique
+  lb = 0.1,  # lower bound on coefficient magnitude
+  ub = 0.9,  # upper bound on coefficient magnitude
+  sigma = diag(1,3) # noise
+)
+
+plot_sim(sim, plot_type = "common")
+
+model <- constructModel(data = sim$data, weightest = "ols")
+
 }

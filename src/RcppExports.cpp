@@ -7,6 +7,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // fista_sparse
 List fista_sparse(const mat& A, const mat& b, double lambda, const mat& x_true, int niter, bool backtrack, Rcpp::Nullable<Rcpp::NumericVector> w, double conv);
 RcppExport SEXP _multivar_fista_sparse(SEXP ASEXP, SEXP bSEXP, SEXP lambdaSEXP, SEXP x_trueSEXP, SEXP niterSEXP, SEXP backtrackSEXP, SEXP wSEXP, SEXP convSEXP) {
@@ -25,9 +30,42 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// norm2
+double norm2(NumericVector x);
+RcppExport SEXP _multivar_norm2(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(norm2(x));
+    return rcpp_result_gen;
+END_RCPP
+}
+// lamloopFISTA
+cube lamloopFISTA(NumericVector beta_, const mat& Y, const mat& Z, NumericVector W_, const mat& lambda1, const double eps, const colvec& YMean2, const colvec& ZMean2, mat& B1, double step);
+RcppExport SEXP _multivar_lamloopFISTA(SEXP beta_SEXP, SEXP YSEXP, SEXP ZSEXP, SEXP W_SEXP, SEXP lambda1SEXP, SEXP epsSEXP, SEXP YMean2SEXP, SEXP ZMean2SEXP, SEXP B1SEXP, SEXP stepSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type beta_(beta_SEXP);
+    Rcpp::traits::input_parameter< const mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const mat& >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type W_(W_SEXP);
+    Rcpp::traits::input_parameter< const mat& >::type lambda1(lambda1SEXP);
+    Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
+    Rcpp::traits::input_parameter< const colvec& >::type YMean2(YMean2SEXP);
+    Rcpp::traits::input_parameter< const colvec& >::type ZMean2(ZMean2SEXP);
+    Rcpp::traits::input_parameter< mat& >::type B1(B1SEXP);
+    Rcpp::traits::input_parameter< double >::type step(stepSEXP);
+    rcpp_result_gen = Rcpp::wrap(lamloopFISTA(beta_, Y, Z, W_, lambda1, eps, YMean2, ZMean2, B1, step));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_multivar_fista_sparse", (DL_FUNC) &_multivar_fista_sparse, 8},
+    {"_multivar_norm2", (DL_FUNC) &_multivar_norm2, 1},
+    {"_multivar_lamloopFISTA", (DL_FUNC) &_multivar_lamloopFISTA, 10},
     {NULL, NULL, 0}
 };
 

@@ -3,19 +3,8 @@
 #' @param yf A d x T data matrix where d is the number of observed variables and T is the number of timepoints.
 #' @param h An integer indicating the forecast horizon.
 #' @param A A d x d transition matrix.
-#' @keywords var forecast
-#'
-#' @examples
-#'
-#' theta    <- diag(c(.7,.8,.9,.6,.7,.9))
-#' data     <- var_sim(100, theta, diag(.1,6))
-#' datalag  <- embed(data, 2)
-#' b        <- datalag[,1:6]
-#' A        <- datalag[,7:12]
-#' A_est    <- fista_sparse(A, b, 1, theta, niter = 10, backtrack = TRUE)$out.x
-#' var_forecast(t(b), 2, A_est)
-#'
-#' @export
+#' @keywords var forecast internal
+#' @noRd
 var_forecast = function(yf, h, A){
 
   T1 = dim(yf)[2];
