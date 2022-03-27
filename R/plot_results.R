@@ -4,6 +4,8 @@
 #' @param plot_type Character. User can specify "common" to plot the common effects matrix, "unique" to plot the unique effects matrix, or "total" to plot the total effects matrix.
 #' @param facet_ncol Numeric. Number of columns to use in the "unique" or "total" effects plot.
 #' @param datasets Numeric. A vector containing the index of datasets to plot. Default is "all".
+#' @param ub Numeric. Upper bound on coefficient values for heatmap index. Default is 1.
+#' @param lb Numeric. Lower bound on coefficient values for heatmap index. Default is -1.
 #' @keywords var multivar simulate plot
 #'
 #' @examples
@@ -24,7 +26,7 @@
 #' plot_results(fit1, plot_type = "common")
 #'
 #' @export
-plot_results <- function(x, plot_type = "common", facet_ncol=3, datasets = "all"){
+plot_results <- function(x, plot_type = "common", facet_ncol=3, datasets = "all",ub = 1, lb = -1){
   
   rows <- values <- NULL
   MSFE_mean    <- colMeans(x$MSFE)
@@ -75,6 +77,10 @@ plot_results <- function(x, plot_type = "common", facet_ncol=3, datasets = "all"
   }
 
   df$values[df$values == 0] <- NA
+  
+  max_val <- max(df$values)
+  min_val <- min(df$values)
+
 
   zf_red <- rgb(255,0,90, maxColorValue=255)
   zf_green <- rgb(90, 168, 0, maxColorValue=255)
@@ -82,6 +88,7 @@ plot_results <- function(x, plot_type = "common", facet_ncol=3, datasets = "all"
   zf_yellow <- rgb(242, 147, 24, maxColorValue=255)
   zf_back <- rgb(51,51,51, maxColorValue=255)
   zf_fore <- rgb(249,242,215, maxColorValue=255)
+  zf_fore <- "white"
   
   text_color <- zf_back
   grid_color <- zf_back
@@ -92,10 +99,14 @@ plot_results <- function(x, plot_type = "common", facet_ncol=3, datasets = "all"
   colors_to_use <- c(colfunc_low(6)[1:3],zf_fore,colfunc_high(6)[4:6])
   
   df$rows <- factor(df$rows,levels = rev(colnames(mats$common)))
+  
+  limit <- max(abs(c(lb,ub))) * c(-1, 1)
  
   gg <- ggplot(df, aes(y=rows, x=vars, fill = values)) # original
-  gg <- gg + geom_tile(color=grid_color, size=.5) 
-  gg <- gg + scale_fill_gradientn(colors=colors_to_use,limits=c(-1,1),na.value = zf_fore,guide = guide_colorbar(frame.colour = "black", ticks.colour = "black",ticks.linewidth = 1,frame.linewidth = 1))
+  #gg <- gg + geom_tile(color=grid_color, size=.5) 
+  gg <- gg + geom_tile() 
+  #gg <- gg + scale_fill_gradientn(colors=colors_to_use,limits=c(-1,1),na.value = zf_fore)
+  gg <- gg + scale_fill_gradientn(colors=colors_to_use,limits=limit,na.value = zf_fore,guide = guide_colorbar(frame.colour = "black", ticks.colour = "black",ticks.linewidth = 1,frame.linewidth = 1))
   gg <- gg + coord_equal()
   gg <- gg + theme(panel.grid.minor=element_blank())
   gg <- gg + theme(panel.grid.major=element_blank())
@@ -114,7 +125,7 @@ plot_results <- function(x, plot_type = "common", facet_ncol=3, datasets = "all"
   gg <- gg + theme(legend.title.align=1)
   gg <- gg + theme(legend.text=element_text(size=10, color=text_color))
   gg <- gg + theme(plot.background=element_rect(fill=plot_background,color=plot_background)) 
-  gg <- gg + theme(panel.border=element_blank())
+  gg <- gg + theme(panel.border=element_rect(fill = NA, colour='black',size=1))
   gg <- gg + theme(legend.text.align=1)
   
   gg <- gg + labs(fill='') 
@@ -134,6 +145,6 @@ plot_results <- function(x, plot_type = "common", facet_ncol=3, datasets = "all"
   }
   
   gg
-  
+
   
 }

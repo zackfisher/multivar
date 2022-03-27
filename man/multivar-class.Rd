@@ -72,6 +72,8 @@ To construct an object of class multivar, use the function \code{\link{construct
 \item{\code{cv}}{Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.}
 
 \item{\code{nfolds}}{Numeric. The number of folds for use with "blocked" cross-validation.}
+
+\item{\code{thresh}}{Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if they are smaller than given value. Default is zero.}
 }}
 
 \seealso{

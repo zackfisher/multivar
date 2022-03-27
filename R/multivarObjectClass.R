@@ -46,6 +46,7 @@ check.multivar <- function(object){
 #' @slot ratios Numeric vector. Default is NULL. 
 #' @slot cv Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.
 #' @slot nfolds Numeric. The number of folds for use with "blocked" cross-validation.
+#' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if they are smaller than given value. Default is zero.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -86,7 +87,8 @@ setClass(
         W = "array",
         ratios = "numeric",
         cv = "character",
-        nfolds = "numeric"
+        nfolds = "numeric",
+        thresh = "numeric"
         ),validity=check.multivar
     )
 
@@ -115,6 +117,7 @@ setClass(
 #' @param ratios Numeric vector. Default is NULL. 
 #' @param cv Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.
 #' @param nfolds Numeric. The number of folds for use with "blocked" cross-validation.
+#' @param thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if they are smaller than given value. Default is zero.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -154,7 +157,8 @@ constructModel <- function( data = NULL,
                             W = NULL,
                             ratios = NULL,
                             cv = "rolling",
-                            nfolds = 10){
+                            nfolds = 10,
+                            thresh = 0){
   
   if( lag != 1 ){
     stop("multivar ERROR: Currently only lag of order 1 is supported.")
@@ -191,11 +195,22 @@ constructModel <- function( data = NULL,
   Ak <- lapply(dat, "[[", "A")
   bk <- lapply(dat, "[[", "b")
   Hk <- lapply(dat, "[[", "H")
+  
   if(k == 1) {
      A  <- Matrix(Ak[[1]], sparse = TRUE)
   } else {
      A  <- sparseMatrix(i = is, j = js, x = xs, index1=FALSE, dims = c(nz,p*(k+1)))
   }
+  
+  #--------------------------------------#
+  #--------------------------------------#
+  if(pendiff){
+    Aplus  <- as.matrix(do.call("cbind",replicate(k,as.matrix(do.call(rbind, Ak)),simplify = FALSE)))
+    Aplus  <- Aplus - A[,c((p+1):ncol(A))]
+    A      <- cbind(A, Aplus)
+  }
+  #--------------------------------------#
+  #--------------------------------------#
  
   b  <- as.matrix(do.call(rbind, bk))
   H  <- as.matrix(do.call(rbind, Hk))
@@ -268,7 +283,8 @@ constructModel <- function( data = NULL,
     W = W,
     ratios = ratios,
     cv = cv,
-    nfolds = nfolds
+    nfolds = nfolds,
+    thresh = thresh
   )
 
   return(obj)
@@ -364,7 +380,9 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     B <- array(0,dim = c((object@d[1]),(object@d[1]*(object@k + 1) + 1), object@nlambda1*length(object@ratios)))
   }
   
-  
+  # if(object@pendiff){
+  #    B <- array(0,dim = c((object@d[1]),(object@d[1]*(2*object@k + 1) + 1), object@nlambda1*length(object@ratios)))
+  # }
   
   object@W <- est_base_weight_mat(
     object@W,
@@ -412,7 +430,8 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     fit[[1]][,,which.min(colMeans(fit[[2]]))], 
     object@Ak, 
     object@ndk, 
-    object@intercept
+    object@intercept,
+    object@thresh
   )
   
   results <- list(

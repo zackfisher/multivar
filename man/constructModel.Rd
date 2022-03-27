@@ -26,7 +26,8 @@ constructModel(
   W = NULL,
   ratios = NULL,
   cv = "rolling",
-  nfolds = 10
+  nfolds = 10,
+  thresh = 0
 )
 }
 \arguments{
@@ -73,6 +74,8 @@ constructModel(
 \item{cv}{Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.}
 
 \item{nfolds}{Numeric. The number of folds for use with "blocked" cross-validation.}
+
+\item{thresh}{Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if they are smaller than given value. Default is zero.}
 }
 \description{
 Construct an object of class multivar

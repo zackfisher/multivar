@@ -8,16 +8,18 @@
 #' @param ub Numeric. The lower bound for individual elements of the transition matrices.
 #' @param lb Numeric. The upper bound for individual elements of the transition matrices.
 #' @param sigma Matrix. The (population) innovation covariance matrix.
+#' @param unique_overlap Logical. Default is FALSE. Whether the unique portion should be completely unique (no overlap) or randomly chosen.
 #' @param mat_common Matrix. A common effects transition matrix (if known).
 #' @param mat_unique List. A list of unique effects transition matrix (if known).
 #' @param mat_total List. A list of total effects transition matrix (if known).
+#' @param diag Logical. Default is FALSE. Should diagonal elements be filled first for common elements.
 #'
 #' @keywords var multivar simulate
 #'
 #' @examples
 #'
 #' k <- 3
-#' d <- 5
+#' d <- 10
 #' n <- 50
 #' prop_fill_com <- .2
 #' prop_fill_ind <- .2
@@ -27,8 +29,34 @@
 #' data <- multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub,sigma)$data
 #'
 #' @export
-multivar_sim <- function(k, d, n, prop_fill_com, prop_fill_ind, lb, ub, sigma, mat_common = NULL, mat_unique = NULL, mat_total = NULL){
+multivar_sim <- function(
+  k, 
+  d, 
+  n, 
+  prop_fill_com, 
+  prop_fill_ind, 
+  lb, 
+  ub,
+  sigma, 
+  distgen = "uniform",
+  unique_overlap = FALSE, 
+  mat_common = NULL, 
+  mat_unique = NULL, 
+  mat_total = NULL, 
+  diag = FALSE
+  # lb.auto = NULL,
+  # ub.auto = NULL,
+  # lb.cross = NULL,
+  # ub.cross = NULL,
+  # mean.all = NULL,
+  # sd.all = NULL,
+  # mean.auto = NULL,
+  # sd.auto = NULL,
+  # mean.cross = NULL,
+  # sd.cross = NULL
+  ){
   
+
   if (is.null(mat_common) & is.null(mat_total)){
   
     d.fun                 <- function(n) runif(n,lb,ub)
@@ -38,18 +66,33 @@ multivar_sim <- function(k, d, n, prop_fill_com, prop_fill_ind, lb, ub, sigma, m
     n_elem_total_all_subj <- n_elem_prop_fill_ind*k
     n_elem_total_all      <- n_elem_total_all_subj + n_elem_prop_fill_com
     
-    if(n_elem_total_all_subj > (d^2 - n_elem_prop_fill_com)){
+    if(!unique_overlap & n_elem_total_all_subj > (d^2 - n_elem_prop_fill_com)){
       stop(paste0("multivar ERROR: The arguments prop_fill_com and prop_fill_ind are not well specified."))
     }
     
-    max_eigs          <- TRUE
+    max_eigs <- TRUE
     
     while(max_eigs){
-      permuted_elements <- sample(c(1:d^2))
-      idx_grp           <- permuted_elements[1:n_elem_prop_fill_com]
-      sub_elements      <- permuted_elements[(n_elem_prop_fill_com+1):(n_elem_prop_fill_com+n_elem_total_all_subj)]
-      idx_sub           <- split(sub_elements, ceiling(seq_along(sub_elements)/n_elem_prop_fill_ind))
-      idx_all           <- append(list(idx_grp),unname(idx_sub))
+      if(diag){
+        vec_A             <- c(matrix(c(1:d^2),d,d))    # indices for elements of A
+        vec_A_diag        <- diag(matrix(c(1:d^2),d,d)) # indices for diagonal elements of A
+        vec_A_nondiag     <- setdiff(vec_A,vec_A_diag)  # indices for non-diagonal elements of A
+        permuted_elements <- c(vec_A_diag,sample(vec_A_nondiag))
+      } else {
+        permuted_elements <- sample(c(1:d^2))
+      }
+      
+      idx_grp <- permuted_elements[1:n_elem_prop_fill_com]
+
+      if(!unique_overlap){
+        sub_elements <- permuted_elements[(n_elem_prop_fill_com+1):(n_elem_prop_fill_com+n_elem_total_all_subj)]
+        idx_sub <- split(sub_elements, ceiling(seq_along(sub_elements)/n_elem_prop_fill_ind))
+      } else {
+        sub_elements <- permuted_elements[(n_elem_prop_fill_com+1):length(permuted_elements)]
+        idx_sub <- lapply(1:k, function(v){sample(sub_elements,size = n_elem_prop_fill_ind)})
+      }
+      
+      idx_all <- append(list(idx_grp),unname(idx_sub))
       mats <- replicate(k+1, matrix(0,d,d), simplify = FALSE)
       mats[[1]][idx_all[[1]]]<- d.fun(length(idx_all[[1]]))
         
@@ -66,7 +109,6 @@ multivar_sim <- function(k, d, n, prop_fill_com, prop_fill_ind, lb, ub, sigma, m
       
       
       max_eigs <- any(unlist(lapply(mats[-1], function(x){max(abs(eigen(x)$values))})) > .95)
-      
     }
     
     data <- lapply(mats[-1], function(x) {var_sim(n, x, sigma)})

@@ -1,4 +1,6 @@
-breakup_transition <- function(B, Ak, ndk, intercept){
+breakup_transition <- function(B, Ak, ndk, intercept, thresh){
+  
+  #pendiff <- FALSE # remove references to pendiff
   
   if(!intercept){ B <- B[,-1] } 
   
@@ -7,6 +9,7 @@ breakup_transition <- function(B, Ak, ndk, intercept){
     common_mat  <- B
     unique_mats <- list(B)
     total_mats  <- list(B)
+    diff_mats   <- NULL
     
   } else {
     
@@ -15,6 +18,11 @@ breakup_transition <- function(B, Ak, ndk, intercept){
     final_com_col_index   <- ndk[1] 
     first_ind_col_indices <- cumsum(ndk) + 1
     final_ind_col_indices <- first_ind_col_indices + ndk - 1
+    
+    # if(pendiff){
+    #   first_ind_col_indices_pd <- first_ind_col_indices + sum(ndk)
+    #   final_ind_col_indices_pd <- final_ind_col_indices + sum(ndk)
+    # }
     
     # common mat
     common_mat <- B[,first_com_col_index:final_com_col_index]
@@ -27,9 +35,21 @@ breakup_transition <- function(B, Ak, ndk, intercept){
       mat
     })
     
+    # if(pendiff){
+    #   # unique mats
+    #   diff_mats <- lapply(seq_along(ndk), function(i){
+    #     mat <- B[,first_ind_col_indices_pd[i]:final_ind_col_indices_pd[i]]
+    #     rownames(mat) <- colnames(mat) <- colnames(Ak[[i]])
+    #     mat
+    #   })
+    # } else {
+    #   diff_mats <- NULL
+    # }
+    
     # total mats
     total_mats <- lapply(unique_mats, function(mat){
-      mat + common_mat
+      g <- mat + common_mat;
+      g[g < thresh] <- 0
     })
     
   }
@@ -40,7 +60,6 @@ breakup_transition <- function(B, Ak, ndk, intercept){
     unique = unique_mats,
     total  = total_mats
   )
-  
   return(res)
 }
   

@@ -13,9 +13,12 @@ multivar_sim(
   lb,
   ub,
   sigma,
+  distgen = "uniform",
+  unique_overlap = FALSE,
   mat_common = NULL,
   mat_unique = NULL,
-  mat_total = NULL
+  mat_total = NULL,
+  diag = FALSE
 )
 }
 \arguments{
@@ -35,11 +38,15 @@ multivar_sim(
 
 \item{sigma}{Matrix. The (population) innovation covariance matrix.}
 
+\item{unique_overlap}{Logical. Default is FALSE. Whether the unique portion should be completely unique (no overlap) or randomly chosen.}
+
 \item{mat_common}{Matrix. A common effects transition matrix (if known).}
 
 \item{mat_unique}{List. A list of unique effects transition matrix (if known).}
 
 \item{mat_total}{List. A list of total effects transition matrix (if known).}
+
+\item{diag}{Logical. Default is FALSE. Should diagonal elements be filled first for common elements.}
 }
 \description{
 Simulate multivar data.
@@ -47,7 +54,7 @@ Simulate multivar data.
 \examples{
 
 k <- 3
-d <- 5
+d <- 10
 n <- 50
 prop_fill_com <- .2
 prop_fill_ind <- .2

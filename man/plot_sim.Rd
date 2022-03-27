@@ -4,7 +4,14 @@
 \alias{plot_sim}
 \title{Plot data arising from multivar_sim.}
 \usage{
-plot_sim(x, plot_type = "common", facet_ncol = 3, datasets = "all")
+plot_sim(
+  x,
+  plot_type = "common",
+  facet_ncol = 3,
+  datasets = "all",
+  ub = 1,
+  lb = -1
+)
 }
 \arguments{
 \item{x}{Object. An object returned by multivar_sim.}
@@ -14,6 +21,10 @@ plot_sim(x, plot_type = "common", facet_ncol = 3, datasets = "all")
 \item{facet_ncol}{Numeric. Number of columns to use in the "unique" or "total" effects plot.}
 
 \item{datasets}{Numeric. A vector containing the index of datasets to plot. Default is "all".}
+
+\item{ub}{Numeric. Upper bound on coefficient values for heatmap index. Default is 1.}
+
+\item{lb}{Numeric. Lower bound on coefficient values for heatmap index. Default is -1.}
 }
 \description{
 Plot data arising from multivar_sim.

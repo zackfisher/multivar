@@ -9,6 +9,15 @@ est_base_weight_mat <- function(
   lassotype, 
   weightest){
   
+  # W <- object@W
+  # Ak <- object@Ak
+  # bk <-   object@bk
+  # ratios <-  object@ratios 
+  # d <-   object@d
+  # k <-  object@k
+  # lassotype <-  object@lassotype 
+  # weightest <-  object@weightest
+  
  if (lassotype == "standard"){
    
    # w_mat <- matrix(1, nrow = ncol(dat@bk[[1]]), ncol = ncol(dat@A))
@@ -106,6 +115,17 @@ est_base_weight_mat <- function(
       b_med[is.infinite(b_med)] <- 1e10
         
       w_mat <- cbind(b_med, do.call("cbind", v_list))
+      
+      if(pendiff){
+        
+        d_list <- lapply(seq_along(Ak), function(i){
+          d <- 1/abs(b_w[[i]])^1
+          d[is.infinite(d)] <- 1e10
+          d
+        })
+        w_mat <- cbind(w_mat, do.call("cbind", d_list))
+        
+      }
       
     }
 
