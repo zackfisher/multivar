@@ -204,11 +204,11 @@ constructModel <- function( data = NULL,
   
   #--------------------------------------#
   #--------------------------------------#
-  if(pendiff){
-    Aplus  <- as.matrix(do.call("cbind",replicate(k,as.matrix(do.call(rbind, Ak)),simplify = FALSE)))
-    Aplus  <- Aplus - A[,c((p+1):ncol(A))]
-    A      <- cbind(A, Aplus)
-  }
+  # if(pendiff){
+  #   Aplus  <- as.matrix(do.call("cbind",replicate(k,as.matrix(do.call(rbind, Ak)),simplify = FALSE)))
+  #   Aplus  <- Aplus - A[,c((p+1):ncol(A))]
+  #   A      <- cbind(A, Aplus)
+  # }
   #--------------------------------------#
   #--------------------------------------#
  
