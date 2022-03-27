@@ -49,7 +49,8 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh){
     # total mats
     total_mats <- lapply(unique_mats, function(mat){
       g <- mat + common_mat;
-      g[g < abs(thresh)] <- 0
+      g[abs(g) < thresh] <- 0
+      g
     })
     
   }
