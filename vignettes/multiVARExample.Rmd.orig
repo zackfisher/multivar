@@ -59,7 +59,7 @@ model <- multivar::constructModel(data = dat_multivar_sim$data)
 
 # Cross-Validate
 
-As of Version 1.0.0 the only cross-validation procedure available in $\texttt{multivar}$ is rolling window cross-validation (RWCV). Additional cross-validation methods for mult-VAR are currently under development and should be available soon. 
+As of Version 1.0.0 the only cross-validation procedure available in $\texttt{multivar}$ are rolling window cross-validation (RWCV) or blocked k-folds CV (blocked). Additional cross-validation methods for mult-VAR are currently under development and should be available soon. 
 
 ```{r, echo=TRUE, results ='hide'}
 fit <- multivar::cv.multivar(model)

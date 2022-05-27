@@ -25,11 +25,10 @@ constructModel(
   intercept = FALSE,
   W = NULL,
   ratios = NULL,
-  cv = "rolling",
+  cv = "blocked",
   nfolds = 10,
   thresh = 0,
-  lamadapt = FALSE,
-  adapower = 1
+  lamadapt = FALSE
 )
 }
 \arguments{
@@ -80,8 +79,6 @@ constructModel(
 \item{thresh}{Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.}
 
 \item{lamadapt}{Logical. Should the lambdas be calculated adaptively. Default is FALSE.}
-
-\item{adpower}{Numeric. The exponent used in the construction of adaptive weights. Default is 1.}
 }
 \description{
 Construct an object of class multivar
@@ -96,7 +93,7 @@ sim  <- multivar_sim(
   prop_fill_ind = 0.1, # proportion of paths unique
   lb = 0.1,  # lower bound on coefficient magnitude
   ub = 0.9,  # upper bound on coefficient magnitude
-  sigma = diag(1,3) # noise
+  sigma = diag(3) # noise
 )
 
 plot_sim(sim, plot_type = "common")

@@ -44,11 +44,10 @@ check.multivar <- function(object){
 #' @slot intercept Logical. Default is FALSE. 
 #' @slot W Matrix. Default is NULL. 
 #' @slot ratios Numeric vector. Default is NULL. 
-#' @slot cv Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.
+#' @slot cv Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.
 #' @slot nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @slot lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
-#' @slot adpower Numeric. The exponent used in the construction of adaptive weights. Default is 1.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -91,8 +90,7 @@ setClass(
         cv = "character",
         nfolds = "numeric",
         thresh = "numeric",
-        lamadapt = "logical",
-        adapower = "numeric"
+        lamadapt = "logical"
         ),validity=check.multivar
     )
 
@@ -123,7 +121,6 @@ setClass(
 #' @param nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @param thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @param lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
-#' @param adpower Numeric. The exponent used in the construction of adaptive weights. Default is 1.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -134,7 +131,7 @@ setClass(
 #'   prop_fill_ind = 0.1, # proportion of paths unique
 #'   lb = 0.1,  # lower bound on coefficient magnitude
 #'   ub = 0.9,  # upper bound on coefficient magnitude
-#'   sigma = diag(1,3) # noise
+#'   sigma = diag(3) # noise
 #' )
 #' 
 #' plot_sim(sim, plot_type = "common")
@@ -162,11 +159,10 @@ constructModel <- function( data = NULL,
                             intercept = FALSE,
                             W = NULL,
                             ratios = NULL,
-                            cv = "rolling",
+                            cv = "blocked",
                             nfolds = 10,
                             thresh = 0,
-                            lamadapt = FALSE,
-                            adapower = 1){
+                            lamadapt = FALSE){
   
   if( lag != 1 ){
     stop("multivar ERROR: Currently only lag of order 1 is supported.")
@@ -294,8 +290,7 @@ constructModel <- function( data = NULL,
     cv = cv,
     nfolds = nfolds,
     thresh = thresh,
-    lamadapt = lamadapt,
-    adapower = adapower
+    lamadapt = lamadapt
   )
 
   return(obj)
@@ -343,36 +338,18 @@ setMethod("show","multivar",function(object){
 #' # example 1 (run)
 #' sim1  <- multivar_sim(
 #'   k = 2,  # individuals
-#'   d = 3,  # number of variables
+#'   d = 5,  # number of variables
 #'   n = 20, # number of timepoints
 #'   prop_fill_com = 0.1, # proportion of paths common
-#'   prop_fill_ind = 0.1, # proportion of paths unique
+#'   prop_fill_ind = 0.05, # proportion of paths unique
 #'   lb = 0.1,  # lower bound on coefficient magnitude
-#'   ub = 0.9,  # upper bound on coefficient magnitude
-#'   sigma = diag(1,3) # noise
+#'   ub = 0.5,  # upper bound on coefficient magnitude
+#'   sigma = diag(5) # noise
 #' )
 #' 
-#' model1 <- constructModel(data = sim1$data, weightest = "ols")
+#' model1 <- constructModel(data = sim1$data)
 #' fit1 <- multivar::cv.multivar(model1)
 #'
-#' \dontrun{
-#' 
-#' # example 2 (don't run)
-#' sim2  <- multivar_sim(
-#'   k = 10,  # individuals
-#'   d = 10,  # number of variables
-#'   n = 100, # number of timepoints
-#'   prop_fill_com = 0.1, # proportion of paths common
-#'   prop_fill_ind = 0.1, # proportion of paths unique
-#'   lb = 0.1,  # lower bound on coefficient magnitude
-#'   ub = 0.9,  # upper bound on coefficient magnitude
-#'   sigma = diag(1,10) # noise
-#' )
-#' 
-#' model2 <- constructModel(data = sim2$data, weightest = "ols")
-#' fit2 <- cv.multivar(model2)
-#'
-#' }
 #'
 #' @export
 setGeneric(name = "cv.multivar",def=function(object){standardGeneric("cv.multivar")})
@@ -400,28 +377,24 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@d, 
     object@k, 
     object@lassotype, 
-    object@weightest,
-    object@adapower
+    object@weightest
   )
   
-  if (object@estimator != "admm"){
-    object@lambda1 <- lambda_grid(
-      B,
-      object@depth, 
-      object@nlambda1, 
-      t(as.matrix(object@b)), 
-      t(as.matrix(object@A)), 
-      object@W, 
-      object@k,
-      object@tol,
-      object@intercept,
-      object@lamadapt
-    ) 
-  }
+ 
+  object@lambda1 <- lambda_grid(
+    B,
+    object@depth, 
+    object@nlambda1, 
+    t(as.matrix(object@b)), 
+    t(as.matrix(object@A)), 
+    object@W, 
+    object@k,
+    object@tol,
+    object@intercept,
+    object@lamadapt
+  ) 
   
-  # if (object@estimator == "admm"){
-  #   object@lambda2 <- object@lambda1
-  # }
+
   
   fit <- cv_multivar(
     B, 
@@ -479,13 +452,13 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
 #' # example 1 (run)
 #' sim1  <- multivar_sim(
 #'   k = 2,  # individuals
-#'   d = 3,  # number of variables
+#'   d = 5,  # number of variables
 #'   n = 20, # number of timepoints
 #'   prop_fill_com = 0.1, # proportion of paths common
-#'   prop_fill_ind = 0.1, # proportion of paths unique
+#'   prop_fill_ind = 0.05, # proportion of paths unique
 #'   lb = 0.1,  # lower bound on coefficient magnitude
-#'   ub = 0.9,  # upper bound on coefficient magnitude
-#'   sigma = diag(1,3) # noise
+#'   ub = 0.5,  # upper bound on coefficient magnitude
+#'   sigma = diag(5) # noise
 #' )
 #' 
 #' model1 <- constructModel(data = sim1$data, weightest = "ols")

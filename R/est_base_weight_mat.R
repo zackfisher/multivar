@@ -7,17 +7,9 @@ est_base_weight_mat <- function(
   d, 
   k, 
   lassotype, 
-  weightest,
-  adpower){
+  weightest){
   
-  # W <- object@W
-  # Ak <- object@Ak
-  # bk <-   object@bk
-  # ratios <-  object@ratios
-  # d <-   object@d
-  # k <-  object@k
-  # lassotype <-  object@lassotype
-  # weightest <-  object@weightest
+  adapower <- 1
   
  if (lassotype == "standard"){
    
@@ -132,7 +124,7 @@ est_base_weight_mat <- function(
     if(length(Ak) == 1){
       
       v_list <- lapply(seq_along(Ak), function(i){
-        v <- 1/abs(b_w[[i]])^adpower
+        v <- 1/abs(b_w[[i]])^adapower
         v[is.infinite(v)] <- 1e10
         v
       })
@@ -145,7 +137,7 @@ est_base_weight_mat <- function(
       b_med <- apply(a, 1:2, median)
       
       v_list <- lapply(seq_along(Ak), function(i){
-        v <- 1/abs(b_w[[i]] - b_med)^adpower
+        v <- 1/abs(b_w[[i]] - b_med)^adapower
         v[is.infinite(v)] <- 1e10
         v
       })

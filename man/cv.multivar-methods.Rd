@@ -25,35 +25,17 @@ The main function of the multivar package. Performs cross validation to select p
 # example 1 (run)
 sim1  <- multivar_sim(
   k = 2,  # individuals
-  d = 3,  # number of variables
+  d = 5,  # number of variables
   n = 20, # number of timepoints
   prop_fill_com = 0.1, # proportion of paths common
-  prop_fill_ind = 0.1, # proportion of paths unique
+  prop_fill_ind = 0.05, # proportion of paths unique
   lb = 0.1,  # lower bound on coefficient magnitude
-  ub = 0.9,  # upper bound on coefficient magnitude
-  sigma = diag(1,3) # noise
+  ub = 0.5,  # upper bound on coefficient magnitude
+  sigma = diag(5) # noise
 )
 
-model1 <- constructModel(data = sim1$data, weightest = "ols")
+model1 <- constructModel(data = sim1$data)
 fit1 <- multivar::cv.multivar(model1)
 
-\dontrun{
-
-# example 2 (don't run)
-sim2  <- multivar_sim(
-  k = 10,  # individuals
-  d = 10,  # number of variables
-  n = 100, # number of timepoints
-  prop_fill_com = 0.1, # proportion of paths common
-  prop_fill_ind = 0.1, # proportion of paths unique
-  lb = 0.1,  # lower bound on coefficient magnitude
-  ub = 0.9,  # upper bound on coefficient magnitude
-  sigma = diag(1,10) # noise
-)
-
-model2 <- constructModel(data = sim2$data, weightest = "ols")
-fit2 <- cv.multivar(model2)
-
-}
 
 }

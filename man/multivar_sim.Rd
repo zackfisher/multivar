@@ -13,7 +13,6 @@ multivar_sim(
   lb,
   ub,
   sigma,
-  distgen = "uniform",
   unique_overlap = FALSE,
   mat_common = NULL,
   mat_unique = NULL,
@@ -53,15 +52,6 @@ Simulate multivar data.
 }
 \examples{
 
-k <- 3
-d <- 10
-n <- 50
-prop_fill_com <- .2
-prop_fill_ind <- .2
-lb <- 0.1
-ub <- 0.7
-sigma <- diag(0.1,d)
-data <- multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub,sigma)$data
 
 }
 \keyword{multivar}

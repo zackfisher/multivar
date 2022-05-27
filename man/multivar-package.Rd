@@ -4,7 +4,7 @@
 \name{multivar-package}
 \alias{multivar}
 \alias{multivar-package}
-\title{Penalized Estimation and Forecasting of Multiple Subject Vector Autoregressive (multi-VAR) Models}
+\title{Penalized Estimation of Multiple Subject Vector Autoregressive (multi-VAR) Models}
 \description{
 \pkg{multivar} is an R package for simulating, estimating and forecasting stationary Vector Autoregressive (VAR) models for multiple subject data using the penalized multi-VAR framework.
 }

@@ -18,15 +18,15 @@
 #'
 #' @examples
 #'
-#' k <- 3
-#' d <- 10
-#' n <- 50
-#' prop_fill_com <- .2
-#' prop_fill_ind <- .2
-#' lb <- 0.1
-#' ub <- 0.7
-#' sigma <- diag(0.1,d)
-#' data <- multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub,sigma)$data
+# k <- 3
+# d <- 10
+# n <- 20
+# prop_fill_com <- .1
+# prop_fill_ind <- .05
+# lb <- 0.1
+# ub <- 0.5
+# sigma <- diag(d)
+# data <- multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub,sigma)$data
 #'
 #' @export
 multivar_sim <- function(
@@ -38,23 +38,11 @@ multivar_sim <- function(
   lb, 
   ub,
   sigma, 
-  distgen = "uniform",
   unique_overlap = FALSE, 
   mat_common = NULL, 
   mat_unique = NULL, 
   mat_total = NULL, 
-  diag = FALSE
-  # lb.auto = NULL,
-  # ub.auto = NULL,
-  # lb.cross = NULL,
-  # ub.cross = NULL,
-  # mean.all = NULL,
-  # sd.all = NULL,
-  # mean.auto = NULL,
-  # sd.auto = NULL,
-  # mean.cross = NULL,
-  # sd.cross = NULL
-  ){
+  diag = FALSE){
   
 
   if (is.null(mat_common) & is.null(mat_total)){

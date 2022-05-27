@@ -69,15 +69,13 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{ratios}}{Numeric vector. Default is NULL.}
 
-\item{\code{cv}}{Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.}
+\item{\code{cv}}{Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.}
 
 \item{\code{nfolds}}{Numeric. The number of folds for use with "blocked" cross-validation.}
 
 \item{\code{thresh}}{Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.}
 
 \item{\code{lamadapt}}{Logical. Should the lambdas be calculated adaptively. Default is FALSE.}
-
-\item{\code{adpower}}{Numeric. The exponent used in the construction of adaptive weights. Default is 1.}
 }}
 
 \seealso{
