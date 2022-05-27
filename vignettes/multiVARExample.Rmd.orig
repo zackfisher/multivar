@@ -50,7 +50,7 @@ plot_sim(dat_multivar_sim, plot_type = "total")
 
 # Construct a multi-VAR Model
 
-With data in hand we can construct a multi-VAR model. The $\texttt{data}$ argument should be a list containing the $k$ multivariate time series data from each individual. Each data matrix should be organized with variables as columns and time points as rows (e.g. $T \times d$). By default $\texttt{multivar}$ employs the adaptive LASSO penalty, which requires an initial estimate of the individual transition matrices. The default option for an initial weight matrix is ordinary least squares (OLS). Additional details on these initial weights and the adaptive lasso can be found in Fisher, Kim, Fredrickson and Pipiras (2022).
+With data in hand we can construct a multi-VAR model. The $\texttt{data}$ argument should be a list containing the $k$ multivariate time series data from each individual. Each data matrix should be organized with variables as columns and time points as rows (e.g. $T \times d$). By default $\texttt{multivar}$ employs the adaptive LASSO penalty, which requires an initial estimate of the individual transition matrices. The default option for an initial weight matrix based on estimates from the individual-level LASSO. Additional details on these initial weights and the adaptive lasso can be found in Fisher, Kim, Fredrickson and Pipiras (2022).
 
 
 ```{r, echo=TRUE}
@@ -59,7 +59,7 @@ model <- multivar::constructModel(data = dat_multivar_sim$data)
 
 # Cross-Validate
 
-As of Version 1.0.0 the only cross-validation procedure available in $\texttt{multivar}$ are rolling window cross-validation (RWCV) or blocked k-folds CV (blocked). Additional cross-validation methods for mult-VAR are currently under development and should be available soon. 
+As of Version 1.0.0 the only cross-validation procedure available in $\texttt{multivar}$ are rolling window cross-validation (RWCV) or blocked k-folds CV (blocked). The default is blocked with 5 folds. Additional cross-validation methods for mult-VAR are currently under development and should be available soon. 
 
 ```{r, echo=TRUE, results ='hide'}
 fit <- multivar::cv.multivar(model)

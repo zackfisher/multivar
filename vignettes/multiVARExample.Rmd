@@ -12,7 +12,7 @@ vignette: >
 
 # The multi-VAR Framework
 
-The $\texttt{multivar}$ package is intended to provide an entry point to the multi-VAR algorithm (Fisher, Kim, Fredrickson and Pipiras, 2022). In short, multi-VAR is designed to model multivariate time series obtained from multiple individuals. This method is especially well-suited to time-series paradigms, such as intensive longitudinal data (ILD), where it is often unclear the degree to which individuals differ in terms of their dynamic processes. If individuals share little in common results from multi-VAR resemble what would be obtained from fitting separate models to each individual. If individuals are homogenous, results resemble what would be obtained from pooling the data and fitting a single model to the sample. Most importantly, if the truth lies somewhere in between - certain dynamics are shared while others are idiosyncratic - results will reflect this and provide researchers with new tools for isolating generalizable dynamics. Although this vignette is not intended to provide a thorough introduction to multi-VAR it introduces the $\texttt{multivar}$ package functionality.
+The $\texttt{multivar}$ package (Fisher, 2021) is intended to provide an entry point to the multi-VAR algorithm (Fisher, Kim, Fredrickson and Pipiras, 2022). In short, multi-VAR is designed to model multivariate time series obtained from multiple individuals. This method is especially well-suited to time-series paradigms, such as intensive longitudinal data (ILD), where it is often unclear the degree to which individuals differ in terms of their dynamic processes. If individuals share little in common results from multi-VAR resemble what would be obtained from fitting separate models to each individual. If individuals are homogenous, results resemble what would be obtained from pooling the data and fitting a single model to the sample. Most importantly, if the truth lies somewhere in between - certain dynamics are shared while others are idiosyncratic - results will reflect this and provide researchers with new tools for isolating generalizable dynamics. Although this vignette is not intended to provide a thorough introduction to multi-VAR it introduces the $\texttt{multivar}$ package functionality.
 
 ## Load the $\texttt{multivar}$ Package
 
@@ -55,7 +55,7 @@ plot_sim(dat_multivar_sim, plot_type = "total")
 
 # Construct a multi-VAR Model
 
-With data in hand we can construct a multi-VAR model. The $\texttt{data}$ argument should be a list containing the $k$ multivariate time series data from each individual. Each data matrix should be organized with variables as columns and time points as rows (e.g. $T \times d$). By default $\texttt{multivar}$ employs the adaptive LASSO penalty, which requires an initial estimate of the individual transition matrices. The default option for an initial weight matrix is ordinary least squares (OLS). Additional details on these initial weights and the adaptive lasso can be found in Fisher, Kim, Fredrickson and Pipiras (2022).
+With data in hand we can construct a multi-VAR model. The $\texttt{data}$ argument should be a list containing the $k$ multivariate time series data from each individual. Each data matrix should be organized with variables as columns and time points as rows (e.g. $T \times d$). By default $\texttt{multivar}$ employs the adaptive LASSO penalty, which requires an initial estimate of the individual transition matrices. The default option for an initial weight matrix based on estimates from the individual-level LASSO. Additional details on these initial weights and the adaptive lasso can be found in Fisher, Kim, Fredrickson and Pipiras (2022).
 
 
 
@@ -65,7 +65,7 @@ model <- multivar::constructModel(data = dat_multivar_sim$data)
 
 # Cross-Validate
 
-As of Version 1.0.0 the only cross-validation procedure available in $\texttt{multivar}$ is rolling window cross-validation (RWCV). Additional cross-validation methods for mult-VAR are currently under development and should be available soon. 
+As of Version 1.0.0 the only cross-validation procedure available in $\texttt{multivar}$ are rolling window cross-validation (RWCV) or blocked k-folds CV (blocked). The default is blocked with 5 folds. Additional cross-validation methods for mult-VAR are currently under development and should be available soon. 
 
 
 ```r
@@ -127,6 +127,8 @@ gridExtra::grid.arrange(
 
 
 # References
+
+Fisher, Z. F. (2021). multivar: Penalized estimation and forecasting of multiple subject vector autoregressive (multi-VAR) models. R package version 1.0.0, https://CRAN.R-project.org/package=multivar.
 
 Fisher, Z. F., Kim, Y., Fredrickson, B., and Pipiras, V. (2022). Penalized Estimation and Forecasting of Multiple Subject Intensive Longitudinal Data. Psychometrika. 
 
