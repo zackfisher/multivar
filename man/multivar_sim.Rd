@@ -51,8 +51,15 @@ multivar_sim(
 Simulate multivar data.
 }
 \examples{
-
-
+k <- 3
+d <- 10
+n <- 20
+prop_fill_com <- .1
+prop_fill_ind <- .05
+lb <- 0.1
+ub <- 0.5
+sigma <- diag(d)
+data <- multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub,sigma)$data
 }
 \keyword{multivar}
 \keyword{simulate}

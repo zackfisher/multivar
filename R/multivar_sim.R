@@ -13,21 +13,17 @@
 #' @param mat_unique List. A list of unique effects transition matrix (if known).
 #' @param mat_total List. A list of total effects transition matrix (if known).
 #' @param diag Logical. Default is FALSE. Should diagonal elements be filled first for common elements.
-#'
 #' @keywords var multivar simulate
-#'
 #' @examples
-#'
-# k <- 3
-# d <- 10
-# n <- 20
-# prop_fill_com <- .1
-# prop_fill_ind <- .05
-# lb <- 0.1
-# ub <- 0.5
-# sigma <- diag(d)
-# data <- multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub,sigma)$data
-#'
+#' k <- 3
+#' d <- 10
+#' n <- 20
+#' prop_fill_com <- .1
+#' prop_fill_ind <- .05
+#' lb <- 0.1
+#' ub <- 0.5
+#' sigma <- diag(d)
+#' data <- multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub,sigma)$data
 #' @export
 multivar_sim <- function(
   k, 
@@ -132,15 +128,7 @@ multivar_sim <- function(
       } else {
          stop(paste0("multivar ERROR: One of the arguments prop_fill_com and prop_fill_ind must be nonzero."))
       }
-      
-      
-      
 
-
-        
-
-      
-      
       max_eigs <- any(unlist(lapply(mats[-1], function(x){max(abs(eigen(x)$values))})) > .95)
     }
     
