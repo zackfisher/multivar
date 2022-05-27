@@ -9,13 +9,18 @@ using namespace Rcpp;
 using namespace arma;
 
 // [[Rcpp::export]]
+void showValue(int x) {
+    Rcout << "The value is " << x << std::endl;
+}
+
+// [[Rcpp::export]]
 double norm2(NumericVector x){
 	arma::vec xx = x;
 	double g=arma::norm(xx,2);
 	return (as<double>(wrap(g)));
 }
 
-// Soft thresholding
+// [[Rcpp::export]]
 double ST1a(double z,double gam){
 	if(z>0 && gam<fabs(z)) return(z-gam);
 	if(z<0 && gam<fabs(z)) return(z+gam);
@@ -24,6 +29,7 @@ double ST1a(double z,double gam){
 
 }
 
+// [[Rcpp::export]]
 colvec ST3a(colvec z,colvec gam){
 	int n=z.size();
 	colvec z1(n);
@@ -35,6 +41,7 @@ colvec ST3a(colvec z,colvec gam){
 	return(z1);
 }
 
+// [[Rcpp::export]]
 uvec ind(int n2,int m){
 	std::vector<int> subs;
 	for(int i =0 ; i<n2;++i){
@@ -44,6 +51,7 @@ uvec ind(int n2,int m){
 	return(conv_to<uvec>::from(subs));
 }
 
+// [[Rcpp::export]]
 mat FISTA(
     const mat& Y, 
     const mat& Z, 
@@ -73,6 +81,7 @@ mat FISTA(
 	  j=1;
 	  colvec Wj = W.col(i);
 	  Wj = Wj*templam*step;
+	  //Wj = Wj*templam;
 	  while((thresh>eps) & (j<maxiters)){
 
  			  colvec v=BOLD+((j-2)/(j+1))*(BOLD-BOLDOLD);
@@ -113,20 +122,25 @@ cube lamloopFISTA(
   mat B1F2 = B1;
   mat W2 = B1;
   
-  IntegerVector dims=beta_.attr("dim");
-  cube bcube(beta_.begin(),dims[0],dims[1],dims[2],false);
-  cube bcube2(dims[0],dims[1]+1,dims[2]);
+  
+  // Here we read in the R array as a NumericVector as it retains 
+  // its dims attribute, We can then use these dims to set our 
+  // arma::cube dimensions and recreate the array.
+  
+  // Beta is an array with dimensions 
+  IntegerVector dimsB=beta_.attr("dim");
+  cube bcube(beta_.begin(),dimsB[0],dimsB[1],dimsB[2],false);
+  
+  cube bcube2(dimsB[0],dimsB[1]+1,dimsB[2]);
   bcube2.fill(0);
+  
+  colvec nu=zeros<colvec>(dimsB[0]);
   
   IntegerVector dimsW=W_.attr("dim");
   cube wcube(W_.begin(),dimsW[0],dimsW[1],dimsW[2],false);
-  
-  colvec nu=zeros<colvec>(dims[0]);
 
 	int nlambda1 = lambda1.n_rows;
-	//int nlambda2 = lambda2.size();
-	int n_r = dimsW[2];
-
+  int n_r = dimsW[2];
   for(int i=0;i<nlambda1;++i){ 
     
     //rowvec lam1_temp(1);
@@ -134,9 +148,9 @@ cube lamloopFISTA(
     
 	  for(int j=0;j<n_r;++j){ 
 	    
-	   rowvec lam1_temp(1);
-		 lam1_temp(0) = lambda1(i,j);
-	 
+	    rowvec lam1_temp(1);
+	  	lam1_temp(0) = lambda1(i,j);
+	    //showValue((i)*n_r+j);
 		  //double lam2_temp = lambda2(j);
 		  mat B1F2 = bcube.slice((i)*n_r+j);
 		  mat W1F2 = wcube.slice(j);

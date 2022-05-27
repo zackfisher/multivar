@@ -23,6 +23,8 @@ cv_blocked <- function(B, Z, Y, W, Ak, k, d, lambda1, ratios, t1, t2, eps,interc
       MSFE[fold_id,ii] <- norm2(Y[,test_idx,drop=F]- beta[,-1,ii] %*% Z[,test_idx,drop=F] )^2
     }
   }
+  
+  beta <- wlasso(B, Z, Y, W, k, d, lambda1,eps,intercept)
 
   return(list(beta,MSFE))
   

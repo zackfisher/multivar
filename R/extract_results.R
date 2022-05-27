@@ -19,7 +19,7 @@ extract_results <- function(x){
   # B <- x$beta[,,msfe_min_idx_se]
   #plot(MSFE_mean, col=ifelse(c(1:length(MSFE_mean))==msfe_min_idx_se, "red", "gray"))
 
-  mats <- breakup_transition(B, x$obj@Ak, x$obj@ndk, x$obj@intercept, pendiff=FALSE)
+  mats <- breakup_transition(B, x$obj@Ak, x$obj@ndk, x$obj@intercept)
   
   
   

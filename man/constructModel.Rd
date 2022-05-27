@@ -18,7 +18,7 @@ constructModel(
   tol = 1e-04,
   window = 1,
   standardize = T,
-  weightest = "ols",
+  weightest = "lasso",
   canonical = FALSE,
   threshold = FALSE,
   lassotype = "adaptive",
@@ -27,7 +27,9 @@ constructModel(
   ratios = NULL,
   cv = "rolling",
   nfolds = 10,
-  thresh = 0
+  thresh = 0,
+  lamadapt = FALSE,
+  adapower = 1
 )
 }
 \arguments{
@@ -75,7 +77,11 @@ constructModel(
 
 \item{nfolds}{Numeric. The number of folds for use with "blocked" cross-validation.}
 
-\item{thresh}{Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if they are smaller than given value. Default is zero.}
+\item{thresh}{Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.}
+
+\item{lamadapt}{Logical. Should the lambdas be calculated adaptively. Default is FALSE.}
+
+\item{adpower}{Numeric. The exponent used in the construction of adaptive weights. Default is 1.}
 }
 \description{
 Construct an object of class multivar

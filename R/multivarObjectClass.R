@@ -37,7 +37,7 @@ check.multivar <- function(object){
 #' @slot depth Numeric. Depth of grid construction. Default is 1000.
 #' @slot window Numeric. Size of rolling window.
 #' @slot standardize Logical. Default is true. Whether to standardize the individual data.
-#' @slot weightest Character. Default is "mlr" for multiple linear regression. "sls" for simple linear regression also available. How to estimate the first-stage weights.
+#' @slot weightest Character. How to estimate the first-stage weights. Default is "lasso". Other options include "ridge", "ols" and "var". 
 #' @slot canonical Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.
 #' @slot threshold Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.
 #' @slot lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
@@ -47,6 +47,8 @@ check.multivar <- function(object){
 #' @slot cv Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.
 #' @slot nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
+#' @slot lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
+#' @slot adpower Numeric. The exponent used in the construction of adaptive weights. Default is 1.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -88,7 +90,9 @@ setClass(
         ratios = "numeric",
         cv = "character",
         nfolds = "numeric",
-        thresh = "numeric"
+        thresh = "numeric",
+        lamadapt = "logical",
+        adapower = "numeric"
         ),validity=check.multivar
     )
 
@@ -118,6 +122,8 @@ setClass(
 #' @param cv Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.
 #' @param nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @param thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
+#' @param lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
+#' @param adpower Numeric. The exponent used in the construction of adaptive weights. Default is 1.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -149,7 +155,7 @@ constructModel <- function( data = NULL,
                             tol=1e-4,
                             window = 1,
                             standardize = T,
-                            weightest = "ols",
+                            weightest = "lasso",
                             canonical = FALSE,
                             threshold = FALSE,
                             lassotype = "adaptive",
@@ -158,7 +164,9 @@ constructModel <- function( data = NULL,
                             ratios = NULL,
                             cv = "rolling",
                             nfolds = 10,
-                            thresh = 0){
+                            thresh = 0,
+                            lamadapt = FALSE,
+                            adapower = 1){
   
   if( lag != 1 ){
     stop("multivar ERROR: Currently only lag of order 1 is supported.")
@@ -202,37 +210,29 @@ constructModel <- function( data = NULL,
      A  <- sparseMatrix(i = is, j = js, x = xs, index1=FALSE, dims = c(nz,p*(k+1)))
   }
   
-  #--------------------------------------#
-  #--------------------------------------#
-  # if(pendiff){
-  #   Aplus  <- as.matrix(do.call("cbind",replicate(k,as.matrix(do.call(rbind, Ak)),simplify = FALSE)))
-  #   Aplus  <- Aplus - A[,c((p+1):ncol(A))]
-  #   A      <- cbind(A, Aplus)
-  # }
-  #--------------------------------------#
-  #--------------------------------------#
- 
   b  <- as.matrix(do.call(rbind, bk))
   H  <- as.matrix(do.call(rbind, Hk))
   
   # here we also assume all individuals have the same number
   # of timepoints. (zff 2021-09-15)
   
-  if(is.null(t1)){
-    t1 <- nrow(Ak[[1]]) - floor(.33*(nrow(Ak[[1]]))) 
-  }
+  #if(is.null(t1)){
+    #t1 <- nrow(Ak[[1]]) - floor(.33*(nrow(Ak[[1]]))) 
+  #  t1 <- nrow(Ak[[1]]) - floor(.5*(nrow(Ak[[1]]))) 
+  #}
   
-  if(is.null(t2)){
-    t2 <- nrow(Ak[[1]])
-  }
+  #(is.null(t2)){
+  #  t2 <- nrow(Ak[[1]])
+  #}
   
   # adjust t1 and t2 by max lag to account for initialization
-  t1 <- t1 - lag
-  t2 <- t2 - lag
+  #t1 <- t1 - lag
+  #t2 <- t2 - lag
   
   # what indices do we need for forecasting
   t1k <- unlist(lapply(dat, function(x){floor(nrow(x$b)/3)}))
-  t2k <- unlist(lapply(dat, function(x){floor(2*nrow(x$b)/3)}))
+  #t2k <- unlist(lapply(dat, function(x){floor(2*nrow(x$b)/3)}))
+  t2k <- unlist(lapply(dat, function(x){nrow(x$b)}))
   ntk <- unlist(lapply(dat, function(x){nrow(x$b)})) # number tps
   ndk <- unlist(lapply(dat, function(x){ncol(x$b)})) # number cols
   
@@ -243,11 +243,20 @@ constructModel <- function( data = NULL,
   # t2s <- t1e+1
   # t1e <- cumsum(t1k)
   
-  # construct ratios, and initialize vectors for lambda1, lambda2.
-  ratios <- rev(round(exp(seq(log(k/depth),log(k),length.out = nlambda1)), digits = 10))
-  lambda1 <- matrix(0, nlambda1,length(ratios))
-  lambda2 <- matrix(0, nlambda2,length(ratios))
-  
+  if(is.null(lambda1) & is.null(lambda2)){
+    # construct ratios, and initialize vectors for lambda1, lambda2.
+    ratios <- rev(round(exp(seq(log(k/depth),log(k),length.out = nlambda1)), digits = 10))
+    lambda1 <- matrix(0, nlambda1,length(ratios))
+    lambda2 <- matrix(0, nlambda2,length(ratios))
+  } else {
+    nlambda1 <- length(lambda1)
+    nlambda2 <- length(lambda2)
+    lambda1 <- matrix(lambda1, nrow = 1)
+    lambda2 <- matrix(lambda2, nrow = 1)
+    ratios <- c(0)
+  }
+
+
   # construct W
   W <- matrix(1, nrow = ncol(bk[[1]]), ncol = ncol(A))
   
@@ -284,7 +293,9 @@ constructModel <- function( data = NULL,
     ratios = ratios,
     cv = cv,
     nfolds = nfolds,
-    thresh = thresh
+    thresh = thresh,
+    lamadapt = lamadapt,
+    adapower = adapower
   )
 
   return(obj)
@@ -380,9 +391,6 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     B <- array(0,dim = c((object@d[1]),(object@d[1]*(object@k + 1) + 1), object@nlambda1*length(object@ratios)))
   }
   
-  # if(object@pendiff){
-  #    B <- array(0,dim = c((object@d[1]),(object@d[1]*(2*object@k + 1) + 1), object@nlambda1*length(object@ratios)))
-  # }
   
   object@W <- est_base_weight_mat(
     object@W,
@@ -392,30 +400,40 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@d, 
     object@k, 
     object@lassotype, 
-    object@weightest
+    object@weightest,
+    object@adapower
   )
   
-  object@lambda1 <- lambda_grid(
-    B,
-    object@depth, 
-    object@nlambda1, 
-    t(as.matrix(object@b)), 
-    t(as.matrix(object@A)), 
-    object@W, 
-    object@k,
-    object@tol,
-    object@intercept
-  ) 
-    
+  if (object@estimator != "admm"){
+    object@lambda1 <- lambda_grid(
+      B,
+      object@depth, 
+      object@nlambda1, 
+      t(as.matrix(object@b)), 
+      t(as.matrix(object@A)), 
+      object@W, 
+      object@k,
+      object@tol,
+      object@intercept,
+      object@lamadapt
+    ) 
+  }
+  
+  # if (object@estimator == "admm"){
+  #   object@lambda2 <- object@lambda1
+  # }
+  
   fit <- cv_multivar(
     B, 
     t(as.matrix(object@A)), 
     t(as.matrix(object@b)), 
     object@W, 
     object@Ak,
+    object@bk,
     object@k, 
     object@d, 
     object@lambda1, 
+    object@lambda2, 
     object@ratios, 
     object@t1, 
     object@t2, 

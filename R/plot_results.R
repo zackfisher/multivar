@@ -33,7 +33,7 @@ plot_results <- function(x, plot_type = "common", facet_ncol=3, datasets = "all"
   msfe_min_idx <- which.min(MSFE_mean)
   B <- x$beta[,,msfe_min_idx]
 
-  mats <- breakup_transition(B, x$obj@Ak, x$obj@ndk, x$obj@intercept)
+  mats <- breakup_transition(B, x$obj@Ak, x$obj@ndk, x$obj@intercept,x$obj@thresh)
     
   if(plot_type == "common"){
     

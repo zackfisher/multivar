@@ -1,11 +1,13 @@
 #' @export
-lambda_grid <-function (B, depth, nlam, Y, Z, W, k, tol, intercept) {
+lambda_grid <-function (B, depth, nlam, Y, Z, W, k, tol, intercept,lamadapt) {
 
   lambda1 <- matrix(0, nrow=nlam, ncol=dim(W)[3])
   old_lam_max <- c()  
+  lambdah <- max(Y %*% t(Z))  
   
   for(i in 1:dim(W)[3]){
       
+    if(lamadapt){
       lam1    <- 0
       lambdah <- max(Y %*% t(Z))                 # traditional max lambda
       BOLD <- array(0,dim=c(( dim(W[,,1])[1]),( dim(W[,,1])[2]+1),1))
@@ -25,7 +27,13 @@ lambda_grid <-function (B, depth, nlam, Y, Z, W, k, tol, intercept) {
   
       }
 
-    lambda1[,i] <- exp(seq(from = log(lambdah), to = log(lambdah/depth),length = nlam))
+      lambda1[,i] <- exp(seq(from = log(lambdah), to = log(lambdah/depth),length = nlam))
+    
+    } else {
+      
+      lambda1[,i] <- exp(seq(from = log(lambdah), to = log(lambdah/depth),length = nlam))
+      
+    }
     
   }
   

@@ -82,30 +82,75 @@ multivar_sim <- function(
         permuted_elements <- sample(c(1:d^2))
       }
       
-      idx_grp <- permuted_elements[1:n_elem_prop_fill_com]
-
-      if(!unique_overlap){
-        sub_elements <- permuted_elements[(n_elem_prop_fill_com+1):(n_elem_prop_fill_com+n_elem_total_all_subj)]
-        idx_sub <- split(sub_elements, ceiling(seq_along(sub_elements)/n_elem_prop_fill_ind))
+      if(n_elem_prop_fill_com == 0 & n_elem_prop_fill_ind != 0){
+        
+        idx_grp <- 0
+        if(!unique_overlap){
+          sub_elements <- permuted_elements[(1):(n_elem_total_all_subj)]
+          idx_sub <- split(sub_elements, ceiling(seq_along(sub_elements)/n_elem_prop_fill_ind))
+        } else {
+          sub_elements <- permuted_elements[(1):length(permuted_elements)]
+          idx_sub <- lapply(1:k, function(v){sample(sub_elements,size = n_elem_prop_fill_ind)})
+        }
+        idx_all <- append(list(idx_grp),unname(idx_sub))
+        mats <- replicate(k+1, matrix(0,d,d), simplify = FALSE)
+        mats <- lapply(seq_along(mats), function(i){
+          if(i == 1){
+            mats[[i]]
+          } else {
+            mats[[i]][idx_all[[i]]] <- runif(length(idx_all[[i]]), lb, ub)
+            mats[[i]]
+          }
+        })
+        
+      } else if (n_elem_prop_fill_com != 0 & n_elem_prop_fill_ind == 0){
+        
+        idx_grp <- permuted_elements[1:n_elem_prop_fill_com]
+        idx_all <- list(idx_grp)
+        mats <- replicate(k+1, matrix(0,d,d), simplify = FALSE)
+        mats[[1]][idx_all[[1]]]<- d.fun(length(idx_all[[1]]))
+        mats <- lapply(seq_along(mats), function(i){
+          if(i == 1){
+            mats[[i]]
+          } else {
+            mats[[i]] <-  mats[[1]]
+            mats[[i]]
+          }
+        })
+        
+      } else if (n_elem_prop_fill_com != 0 & n_elem_prop_fill_ind != 0){
+        
+        idx_grp <- permuted_elements[1:n_elem_prop_fill_com]
+        if(!unique_overlap){
+          sub_elements <- permuted_elements[(n_elem_prop_fill_com+1):(n_elem_prop_fill_com+n_elem_total_all_subj)]
+          idx_sub <- split(sub_elements, ceiling(seq_along(sub_elements)/n_elem_prop_fill_ind))
+        } else {
+          sub_elements <- permuted_elements[(n_elem_prop_fill_com+1):length(permuted_elements)]
+          idx_sub <- lapply(1:k, function(v){sample(sub_elements,size = n_elem_prop_fill_ind)})
+        }
+        idx_all <- append(list(idx_grp),unname(idx_sub))
+        mats <- replicate(k+1, matrix(0,d,d), simplify = FALSE)
+        mats[[1]][idx_all[[1]]]<- d.fun(length(idx_all[[1]]))
+        mats <- lapply(seq_along(mats), function(i){
+          if(i == 1){
+            mats[[i]]
+          } else {
+            mats[[i]][idx_all[[i]]] <- runif(length(idx_all[[i]]), lb, ub)
+            mats[[i]] <- mats[[i]] + mats[[1]]
+            mats[[i]]
+          }
+        })
+        
       } else {
-        sub_elements <- permuted_elements[(n_elem_prop_fill_com+1):length(permuted_elements)]
-        idx_sub <- lapply(1:k, function(v){sample(sub_elements,size = n_elem_prop_fill_ind)})
+         stop(paste0("multivar ERROR: One of the arguments prop_fill_com and prop_fill_ind must be nonzero."))
       }
       
-      idx_all <- append(list(idx_grp),unname(idx_sub))
-      mats <- replicate(k+1, matrix(0,d,d), simplify = FALSE)
-      mats[[1]][idx_all[[1]]]<- d.fun(length(idx_all[[1]]))
+      
+      
+
+
         
-      mats <- lapply(seq_along(mats), function(i){
-        if(i == 1){
-          mats[[i]]
-        } else {
-          mats[[i]][idx_all[[i]]] <- runif(length(idx_all[[i]]), lb, ub)
-          mats[[i]] <- mats[[i]] + mats[[1]]
-          mats[[i]]
-        }
-        
-      })
+
       
       
       max_eigs <- any(unlist(lapply(mats[-1], function(x){max(abs(eigen(x)$values))})) > .95)

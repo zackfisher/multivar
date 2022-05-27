@@ -1,7 +1,5 @@
 breakup_transition <- function(B, Ak, ndk, intercept, thresh){
   
-  #pendiff <- FALSE # remove references to pendiff
-  
   if(!intercept){ B <- B[,-1] } 
   
   if(length(Ak) == 1){
@@ -19,11 +17,6 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh){
     first_ind_col_indices <- cumsum(ndk) + 1
     final_ind_col_indices <- first_ind_col_indices + ndk - 1
     
-    # if(pendiff){
-    #   first_ind_col_indices_pd <- first_ind_col_indices + sum(ndk)
-    #   final_ind_col_indices_pd <- final_ind_col_indices + sum(ndk)
-    # }
-    
     # common mat
     common_mat <- B[,first_com_col_index:final_com_col_index]
     rownames(common_mat) <- colnames(common_mat) <- colnames(Ak[[1]])
@@ -35,16 +28,6 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh){
       mat
     })
     
-    # if(pendiff){
-    #   # unique mats
-    #   diff_mats <- lapply(seq_along(ndk), function(i){
-    #     mat <- B[,first_ind_col_indices_pd[i]:final_ind_col_indices_pd[i]]
-    #     rownames(mat) <- colnames(mat) <- colnames(Ak[[i]])
-    #     mat
-    #   })
-    # } else {
-    #   diff_mats <- NULL
-    # }
     
     # total mats
     total_mats <- lapply(unique_mats, function(mat){
