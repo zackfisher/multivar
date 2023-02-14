@@ -417,7 +417,7 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
   
  
   object@lambda1 <- lambda_grid(
-    B,
+    object@B,
     object@depth, 
     object@nlambda1, 
     t(as.matrix(object@b)), 
@@ -432,7 +432,7 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
 
   
   fit <- cv_multivar(
-    B, 
+    object@B, 
     t(as.matrix(object@A)), 
     t(as.matrix(object@b)), 
     object@W, 
