@@ -1,3 +1,4 @@
+#comment
 # Check multivar object.
 check.multivar <- function(object){
 
