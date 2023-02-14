@@ -317,7 +317,8 @@ constructModel <- function( data = NULL,
     cv = cv,
     nfolds = nfolds,
     thresh = thresh,
-    lamadapt = lamadapt
+    lamadapt = lamadapt,
+    subgroup = subgroup
   )
 
   return(obj)
