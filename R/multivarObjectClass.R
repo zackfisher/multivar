@@ -283,6 +283,12 @@ constructModel <- function( data = NULL,
   # construct W
   W <- matrix(1, nrow = ncol(bk[[1]]), ncol = ncol(A))
   
+  if(k == 1){
+    B <- array(0,dim = c((ndk[1]),(ndk[1]*(k) + 1), nlambda1*length(ratios)))
+  } else {
+    B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + 1) + 1), nlambda1*length(ratios)))
+  }
+  
   obj <- new("multivar",
     k  = k,
     n  = ntk,
@@ -318,7 +324,8 @@ constructModel <- function( data = NULL,
     nfolds = nfolds,
     thresh = thresh,
     lamadapt = lamadapt,
-    subgroup = subgroup
+    subgroup = subgroup,
+    B = B
   )
 
   return(obj)
