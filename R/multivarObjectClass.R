@@ -283,6 +283,7 @@ constructModel <- function( data = NULL,
   # construct W
   W <- matrix(1, nrow = ncol(bk[[1]]), ncol = ncol(A))
   
+  # this includes the intercept? do we want this?
   if(k == 1){
     B <- array(0,dim = c((ndk[1]),(ndk[1]*(k) + 1), nlambda1*length(ratios)))
   } else {
@@ -390,20 +391,6 @@ setMethod("show","multivar",function(object){
 setGeneric(name = "cv.multivar",def=function(object){standardGeneric("cv.multivar")})
 setMethod(f = "cv.multivar", signature = "multivar",definition = function(object){
 
-
-  # this includes the intercept? do we want this?
-  #
-  # here we use d[1] and assume all individuals have the same number
-  # of predictors. when this is relaxed this should be modified 
-  # accordingly. (zff 2021-09-15)
-  
-  if(object@k == 1){
-    B <- array(0,dim = c((object@d[1]),(object@d[1]*(object@k) + 1), object@nlambda1*length(object@ratios)))
-  } else {
-    B <- array(0,dim = c((object@d[1]),(object@d[1]*(object@k + 1) + 1), object@nlambda1*length(object@ratios)))
-  }
-  
-  
   object@W <- est_base_weight_mat(
     object@W,
     object@Ak,
