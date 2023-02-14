@@ -49,6 +49,7 @@ check.multivar <- function(object){
 #' @slot nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @slot lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
+#' @slot subgroup Numeric. Vector of subgroup assignments.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -91,7 +92,8 @@ setClass(
         cv = "character",
         nfolds = "numeric",
         thresh = "numeric",
-        lamadapt = "logical"
+        lamadapt = "logical",
+        subgroup = "numeric"
         ),validity=check.multivar
     )
 
@@ -122,6 +124,7 @@ setClass(
 #' @param nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @param thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @param lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
+#' @param subgroup Numeric. Vector of subgroup assignments.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -163,7 +166,8 @@ constructModel <- function( data = NULL,
                             cv = "blocked",
                             nfolds = 10,
                             thresh = 0,
-                            lamadapt = FALSE){
+                            lamadapt = FALSE,
+                            subgroup = NULL){
   
   if( lag != 1 ){
     stop("multivar ERROR: Currently only lag of order 1 is supported.")
@@ -179,6 +183,13 @@ constructModel <- function( data = NULL,
   
   dat <- setup_data(data, standardize, lag, horizon) 
   
+  # what indices do we need for forecasting
+  t1k <- unlist(lapply(dat, function(x){floor(nrow(x$b)/3)}))
+  #t2k <- unlist(lapply(dat, function(x){floor(2*nrow(x$b)/3)}))
+  t2k <- unlist(lapply(dat, function(x){nrow(x$b)}))
+  ntk <- unlist(lapply(dat, function(x){nrow(x$b)})) # number tps
+  ndk <- unlist(lapply(dat, function(x){ncol(x$b)})) # number cols
+  
   getj  <- function(mat){dp = diff(mat@p);rep(seq_along(dp), dp) - 1}
   k     <- length(dat)
   p     <- ncol(dat[[1]]$A)
@@ -188,23 +199,45 @@ constructModel <- function( data = NULL,
   nz    <- tail(cns,1)
   is    <- js <- xs <- NULL
   	
+  
+  
+  if(!is.null(subgroup)){
+   clust <- lapply(seq_along(subgroup), function(i){rep(subgroup[i],ntk[i]*p)})
+  }
+  
   for(ii in 1:k){
-  	is <- c(is, sr[ii] + dat[[ii]]$A@i)
-  	js <- c(js, getj(dat[[ii]]$A))
-  	xs <- c(xs, dat[[ii]]$A@x)
-  	is <- c(is, sr[ii] + dat[[ii]]$A@i)
-  	js <- c(js, getj(dat[[ii]]$A) + p*ii)
-  	xs <- c(xs, dat[[ii]]$A@x)
+    is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for group effects
+    js <- c(js, getj(dat[[ii]]$A)) #get non-zero column indices for group effects
+    xs <- c(xs, dat[[ii]]$A@x) #vectorize data ffor group
+    
+    if(!is.null(subgroup)){
+      is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for subgroup
+      js <- c(js, getj(dat[[ii]]$A) + clust[[ii]]*p) #get non-zero column indices for subgroup
+      xs <- c(xs, dat[[ii]]$A@x) #vectorize data for subgroups
+      is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for individual effects
+      js <- c(js, getj(dat[[ii]]$A) + p*(ii + length(unique(clust)))) #get non-zero column indices for individual effects
+      xs <- c(xs, dat[[ii]]$A@x) #vectorize data for individual
+    } else{
+      is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for individual effects
+      js <- c(js, getj(dat[[ii]]$A) + p*ii) #get non-zero column indices for individual effects
+      xs <- c(xs, dat[[ii]]$A@x) #vectorize data for individual
+    }
   }
   
   Ak <- lapply(dat, "[[", "A")
   bk <- lapply(dat, "[[", "b")
   Hk <- lapply(dat, "[[", "H")
   
+  if(!is.null(subgroup)){
+    dims_a <- c(nz, p*((k+1)+length(unique(clust))))
+  } else{
+    dims_a <- c(nz,p*(k+1))
+  }
+  
   if(k == 1) {
      A  <- Matrix(Ak[[1]], sparse = TRUE)
   } else {
-     A  <- sparseMatrix(i = is, j = js, x = xs, index1=FALSE, dims = c(nz,p*(k+1)))
+     A  <- sparseMatrix(i = is, j = js, x = xs, index1=FALSE, dims = dims_a)
   }
   
   b  <- as.matrix(do.call(rbind, bk))
@@ -225,13 +258,6 @@ constructModel <- function( data = NULL,
   # adjust t1 and t2 by max lag to account for initialization
   #t1 <- t1 - lag
   #t2 <- t2 - lag
-  
-  # what indices do we need for forecasting
-  t1k <- unlist(lapply(dat, function(x){floor(nrow(x$b)/3)}))
-  #t2k <- unlist(lapply(dat, function(x){floor(2*nrow(x$b)/3)}))
-  t2k <- unlist(lapply(dat, function(x){nrow(x$b)}))
-  ntk <- unlist(lapply(dat, function(x){nrow(x$b)})) # number tps
-  ndk <- unlist(lapply(dat, function(x){ncol(x$b)})) # number cols
   
   # tks <- c(1, cumsum(ntk[-length(ntk)])+1)
   # tke <- cumsum(ntk)
