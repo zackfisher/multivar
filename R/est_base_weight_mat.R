@@ -7,8 +7,21 @@ est_base_weight_mat <- function(
   d, 
   k, 
   lassotype, 
-  weightest){
+  weightest,
+  subgroup,
+  ratiostau){
   
+  # W<-object@W
+  # Ak<-object@Ak
+  # bk<- object@bk
+  # ratios<-object@ratios 
+  # d<-object@d 
+  # k<-object@k 
+  # lassotype<-object@lassotype 
+  # weightest<-object@weightest
+  # subgroup <- -object@subgroup
+  
+  # eventually make this an argument
   adapower <- 1
   
  if (lassotype == "standard"){
@@ -18,19 +31,9 @@ est_base_weight_mat <- function(
    
  } else {
    
-   # if(weightest == "ridge"){
-   #   
-   #   b_w  <- lapply(seq_along(Ak),function(g){
-   #     A_multivar_big <- as.matrix(Ak[[g]])
-   #     b_multivar_big <- as.matrix(bk[[g]])
-   #     A   <- as.matrix(Matrix::bdiag(replicate(d, A_multivar_big, simplify=FALSE)))
-   #     b   <- c(b_multivar_big)
-   #     fit <- glmnet::cv.glmnet(A,b,intercept=FALSE,standardize=FALSE,alpha=0)
-   #     b_ols_i <- t(matrix(c(as.matrix(coef(fit,s = "lambda.min")))[-1], d, d, byrow=F))
-   #     b_ols_i
-   #   })
-   #   
-   # } else if (weightest == "ols") {
+   #-----------------------------------#
+   # estimate k= 1,..,K transition mats
+   #-----------------------------------#
    
    if (weightest == "ols") {
      
@@ -119,7 +122,14 @@ est_base_weight_mat <- function(
    }
  
    
-    a <- array(unlist(b_w), c(dim(b_w[[1]]), length(b_w)))
+   
+   
+   #-----------------------------------#
+   # 
+   #-----------------------------------#
+   
+   # convert list of coef matrices (b_w) to array
+   a <- array(unlist(b_w), c(dim(b_w[[1]]), length(b_w)))
     
     if(length(Ak) == 1){
       
@@ -134,24 +144,62 @@ est_base_weight_mat <- function(
       
     } else {
       
+      # create matrix of element-wise medians for group effects
       b_med <- apply(a, 1:2, median)
       
-      v_list <- lapply(seq_along(Ak), function(i){
-        v <- 1/abs(b_w[[i]] - b_med)^adapower
-        v[is.infinite(v)] <- 1e10
-        v
-      })
-      
-      b_med <- 1/abs(b_med)^1
-      b_med[is.infinite(b_med)] <- 1e10
+      # create array of element-wise medians for subgroup effects
+      if(is.null(subgroup)){
         
-      w_mat <- cbind(b_med, do.call("cbind", v_list))
+        v_list <- lapply(seq_along(Ak), function(i){
+          v <- 1/abs(b_w[[i]] - b_med)^adapower
+          v[is.infinite(v)] <- 1e10
+          v
+        })
+
+        b_med <- 1/abs(b_med)^1
+        b_med[is.infinite(b_med)] <- 1e10
+        
+        w_mat <- cbind(b_med, do.call("cbind", v_list))
+        
+      } else {
+        
+        # subgroup level weights
+        b_med_subgrp <- lapply(seq_along(Ak), function(i){
+          apply(a[,,which(subgroup==subgroup[i])], 1:2, median)
+        })
+        
+        s_list <- lapply(seq_along(Ak), function(i){
+          v <- 1/abs(b_med_subgrp[[i]] - b_med)^adapower
+          v[is.infinite(v)] <- 1e10
+          v
+        })
+        
+        # individual level weights
+        v_list <- lapply(seq_along(Ak), function(i){
+          v <- 1/abs(b_w[[i]] - b_med - b_med_subgrp[[i]])^adapower
+          v[is.infinite(v)] <- 1e10
+          v
+        })
+        
+        b_med <- 1/abs(b_med)^1
+        b_med[is.infinite(b_med)] <- 1e10
+        w_mat <- cbind(b_med, do.call("cbind", s_list),do.call("cbind", v_list))
+        
+        
+        
+      }
+      
+
       
     }
 
-  }
+ }
   
-  W <- replicate(length(ratios), w_mat, simplify="array")
+  if(is.null(subgroup)){
+    W <- replicate(length(ratios), w_mat, simplify="array")
+  } else {
+    W <- replicate(length(ratios)*length(ratiostau), w_mat, simplify="array")
+  }
   
   # here we use d[1] and assume all individuals have the same number
   # of predictors. when this is relaxed this should be modified 
@@ -164,9 +212,18 @@ est_base_weight_mat <- function(
     
   } else {
     
-    for(r in 1:length(ratios)){
-     #W[,(d[1]+1):ncol(W[,,1]),r] <- W[,(d[1]+1):ncol(W[,,1]),r] * ratios[r]
-      W[,1:(d[1]),r] <- W[,1:(d[1]),r] * ratios[r]
+    if(is.null(subgroup)){
+      for(r in 1:length(ratios)){
+       #W[,(d[1]+1):ncol(W[,,1]),r] <- W[,(d[1]+1):ncol(W[,,1]),r] * ratios[r]
+        W[,1:(d[1]),r] <- W[,1:(d[1]),r] * ratios[r]
+      }
+    } else {
+      for(r in 1:length(ratios)){
+        for(j in 1:length(ratios)){
+        W[,1:(d[1]),r] <- W[,1:(d[1]),r] * ratios[r]
+        W[,(d[1]+1):(d[1]*max(subgroup)+d[1]),j] <- W[,(d[1]+1):(d[1]*max(subgroup)+d[1]),j] * ratiostau[r]
+        }
+      }
     }
     
   }

@@ -32,8 +32,10 @@ check.multivar <- function(object){
 #' @slot t2 Numeric vector. Index of time series in which to end cross validation for individual k.
 #' @slot lambda1 Numeric vector. Regularization parameter 1.
 #' @slot lambda2 Numeric vector. Regularization parameter 2.
+#' @slot tau Numeric vector. Regularization parameter for subgroup effects.
 #' @slot nlambda1 Numeric. Number of lambda1 values to search over. Default is 30.
 #' @slot nlambda2 Numeric. Number of lambda2 values to search over. Default is 30.
+#' @slot ntau Numeric. Number of tau values to search over. Default is 30.
 #' @slot tol Numeric. Convergence tolerance.
 #' @slot depth Numeric. Depth of grid construction. Default is 1000.
 #' @slot window Numeric. Size of rolling window.
@@ -45,6 +47,7 @@ check.multivar <- function(object){
 #' @slot intercept Logical. Default is FALSE. 
 #' @slot W Matrix. Default is NULL. 
 #' @slot ratios Numeric vector. Default is NULL. 
+#' @slot ratiostau Numeric vector. Default is NULL. 
 #' @slot cv Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.
 #' @slot nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
@@ -75,8 +78,10 @@ setClass(
         ndk = "numeric",
         lambda1="matrix",
         lambda2="matrix",
+        tau="matrix",
         nlambda1="numeric",
         nlambda2="numeric",
+        ntau ="numeric",
         gamma = "numeric",
         tol="numeric",
         depth="numeric",
@@ -89,6 +94,7 @@ setClass(
         intercept = "logical",
         W = "array",
         ratios = "numeric",
+        ratiostau = "numeric",
         cv = "character",
         nfolds = "numeric",
         thresh = "numeric",
@@ -107,8 +113,10 @@ setClass(
 #' @param t2 Numeric. Index of times series in which to end cross validation. If NULL, default is floor(2*nrow(n)/3) where nk is the time series length for individual k.
 #' @param lambda1 Matrix. Regularization parameter 1. Default is NULL.
 #' @param lambda2 Matrix. Regularization parameter 2. Default is NULL.
+#' @param tau Matrix. Regularization parameter for subgroup effects.
 #' @param nlambda1 Numeric. Number of lambda1 values to search over. Default is 30.
 #' @param nlambda2 Numeric. Number of lambda2 values to search over. Default is 30.
+#' @param ntau Numeric. Number of tau values to search over. Default is 30.
 #' @param depth Numeric. Depth of grid construction. Default is 1000.
 #' @param tol Numeric. Optimization tolerance (default 1e-4).
 #' @param window Numeric. Size of rolling window.   
@@ -120,6 +128,7 @@ setClass(
 #' @param intercept Logical. Default is FALSE. 
 #' @param W Matrix. Default is NULL. 
 #' @param ratios Numeric vector. Default is NULL. 
+#' @param ratiostau Numeric vector. Default is NULL. 
 #' @param cv Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.
 #' @param nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @param thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
@@ -150,8 +159,10 @@ constructModel <- function( data = NULL,
                             t2 = NULL, 
                             lambda1=NULL,
                             lambda2=NULL,
+                            tau=NULL,
                             nlambda1=30,
                             nlambda2=30,
+                            ntau=30,
                             depth = 1000,
                             tol=1e-4,
                             window = 1,
@@ -163,6 +174,7 @@ constructModel <- function( data = NULL,
                             intercept = FALSE,
                             W = NULL,
                             ratios = NULL,
+                            ratiostau = NULL,
                             cv = "blocked",
                             nfolds = 10,
                             thresh = 0,
@@ -266,9 +278,21 @@ constructModel <- function( data = NULL,
   # t2s <- t1e+1
   # t1e <- cumsum(t1k)
   
+  # 
+  # we need to review this part of the code for the following issues:
+  # - should S be used to define range of ratios2?
+  # - if user supplies these values (lambda1,lambda2,tau) do we handle them appropriately?
+  
   if(is.null(lambda1) & is.null(lambda2)){
     # construct ratios, and initialize vectors for lambda1, lambda2.
-    ratios <- rev(round(exp(seq(log(k/depth),log(k),length.out = nlambda1)), digits = 10))
+    # ratios is \lambda_{2,k}/\lambda_1
+    ratios <- rev(round(exp(seq(log(k/depth),log(k),length.out = nlambda1)), digits = 10)) 
+    # ratios2 is \tau_{s}/\lambda_1
+    
+    if(!is.null(subgroup)){
+      ratiostau <- rev(round(exp(seq(log(max(subgroup)/depth),log(max(subgroup)),length.out = ntau)), digits = 10))
+    }
+
     lambda1 <- matrix(0, nlambda1,length(ratios))
     lambda2 <- matrix(0, nlambda2,length(ratios))
   } else {
@@ -309,8 +333,10 @@ constructModel <- function( data = NULL,
     ndk = ndk,
     lambda1 = lambda1,
     lambda2 = lambda2,
+    tau = tau,
     nlambda1 = nlambda1,
     nlambda2 = nlambda2,
+    ntau = ntau,
     depth = depth,
     tol = tol,
     window = window,
@@ -321,6 +347,7 @@ constructModel <- function( data = NULL,
     intercept = intercept,
     W = W,
     ratios = ratios,
+    ratiostau = ratiostau,
     cv = cv,
     nfolds = nfolds,
     thresh = thresh,
@@ -399,7 +426,9 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@d, 
     object@k, 
     object@lassotype, 
-    object@weightest
+    object@weightest,
+    object@subgroup,
+    object@ratiostau
   )
   
  
