@@ -1,12 +1,13 @@
 #' @export
-cv_blocked <- function(B, Z, Y, W, Ak, k, d, lambda1, ratios, t1, t2, eps,intercept=FALSE, cv, nfolds){
+cv_blocked <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALSE, cv, nfolds){
   
   make_folds  <- function(x,nfolds) split(x, cut(seq_along(x), nfolds, labels = FALSE))
   final_tmpt <- cumsum(unlist(lapply(Ak,function(x){nrow(x)})))
   first_tmpt <- c(1,(final_tmpt[-length(final_tmpt)]+1))
   subj_indx_list <- lapply(seq_along(first_tmpt), function(g){first_tmpt[g]:final_tmpt[g]})
   cv_list <- lapply(subj_indx_list,function(g){make_folds(g,nfolds)})
-  MSFE <- matrix(NA, nrow = nfolds, ncol = nrow(lambda1)*length(ratios))
+  #MSFE <- matrix(NA, nrow = nfolds, ncol = nrow(lambda1)*length(ratios))
+  MSFE <- matrix(NA, nrow = nfolds, ncol = nrow(lambda1)*dim(W)[3])
   pb   <- txtProgressBar(1, nfolds, style=3)
   
   for(fold_id in 1:nfolds){

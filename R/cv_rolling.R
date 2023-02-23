@@ -1,5 +1,5 @@
 #' @export
-cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, ratios, t1, t2, eps,intercept=FALSE, cv, nfolds){
+cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALSE, cv, nfolds){
   
   t1  <- t1[1]
   t2  <- t2[1]
@@ -9,7 +9,8 @@ cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, ratios, t1, t2, eps,interc
   t0k <- c(1, c(t3k+1)[-k])
   
   rw_n <- length(c(1:(t2-t1)))
-  MSFE <- matrix(NA, nrow = rw_n, ncol = nrow(lambda1)*length(ratios))
+  #MSFE <- matrix(NA, nrow = rw_n, ncol = nrow(lambda1)*length(ratios))
+  MSFE <- matrix(NA, nrow = rw_n, ncol = nrow(lambda1)*dim(W)[3])
   pb   <- txtProgressBar(1, rw_n, style=3)
   
   for(rw_idx in 1:rw_n){

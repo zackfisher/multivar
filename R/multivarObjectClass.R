@@ -53,6 +53,7 @@ check.multivar <- function(object){
 #' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @slot lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
 #' @slot subgroup Numeric. Vector of subgroup assignments.
+#' @slot B Matrix. Default is NULL. 
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -99,7 +100,8 @@ setClass(
         nfolds = "numeric",
         thresh = "numeric",
         lamadapt = "logical",
-        subgroup = "numeric"
+        subgroup = "numeric",
+        B = "array"
         ),validity=check.multivar
     )
 
@@ -134,6 +136,7 @@ setClass(
 #' @param thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @param lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
 #' @param subgroup Numeric. Vector of subgroup assignments.
+#' @param B Matrix. Default is NULL.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -179,7 +182,8 @@ constructModel <- function( data = NULL,
                             nfolds = 10,
                             thresh = 0,
                             lamadapt = FALSE,
-                            subgroup = NULL){
+                            subgroup = NULL,
+                            B = NULL){
   
   if( lag != 1 ){
     stop("multivar ERROR: Currently only lag of order 1 is supported.")
@@ -295,12 +299,13 @@ constructModel <- function( data = NULL,
 
     lambda1 <- matrix(0, nlambda1,length(ratios))
     lambda2 <- matrix(0, nlambda2,length(ratios))
+    tau <- matrix(0, ntau,length(ratiostau))
   } else {
     nlambda1 <- length(lambda1)
     nlambda2 <- length(lambda2)
     lambda1 <- matrix(lambda1, nrow = 1)
     lambda2 <- matrix(lambda2, nrow = 1)
-    ratios <- c(0)
+    ratios <- tau <- c(0)
   }
 
 
@@ -458,7 +463,7 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@d, 
     object@lambda1, 
     object@lambda2, 
-    object@ratios, 
+    #object@ratios, 
     object@t1, 
     object@t2, 
     eps = 1e-3,
