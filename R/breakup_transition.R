@@ -66,7 +66,7 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup){
       
       # total mats
       total_mats <- lapply(seq_along(unique_mats), function(i){
-        g <- unique_mats[i] + subgrp_mats[i] + common_mat;
+        g <- unique_mats[[i]] + subgrp_mats[[i]] + common_mat;
         g[abs(g) < thresh] <- 0
         g
       })
