@@ -313,10 +313,15 @@ constructModel <- function( data = NULL,
   W <- matrix(1, nrow = ncol(bk[[1]]), ncol = ncol(A))
   
   # this includes the intercept? do we want this?
-  if(k == 1){
-    B <- array(0,dim = c((ndk[1]),(ndk[1]*(k) + 1), nlambda1*length(ratios)))
+  if(is.null(subgroup)){
+    if(k == 1){
+      B <- array(0,dim = c((ndk[1]),(ndk[1]*(k) + 1), nlambda1*length(ratios)))
+    } else {
+      B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + 1) + 1), nlambda1*length(ratios)))
+    }
   } else {
-    B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + 1) + 1), nlambda1*length(ratios)))
+    B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + max(subgroup) + 1) + 1), nlambda1*length(ratios)*length(ratiostau)))
+    
   }
   
   obj <- new("multivar",
@@ -478,7 +483,8 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@Ak, 
     object@ndk, 
     object@intercept,
-    object@thresh
+    object@thresh,
+    object@subgroup,
   )
   
   results <- list(
