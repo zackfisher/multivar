@@ -9,6 +9,7 @@ est_base_weight_mat <- function(
   lassotype, 
   weightest,
   subgroup,
+  subgroupflag,
   ratiostau){
   
   # W<-object@W
@@ -148,7 +149,7 @@ est_base_weight_mat <- function(
       b_med <- apply(a, 1:2, median)
       
       # create array of element-wise medians for subgroup effects
-      if(is.null(subgroup)){
+      if(!subgroupflag){
         
         v_list <- lapply(seq_along(Ak), function(i){
           v <- 1/abs(b_w[[i]] - b_med)^adapower
@@ -195,7 +196,7 @@ est_base_weight_mat <- function(
 
  }
   
-  if(is.null(subgroup)){
+  if(!subgroupflag){
     W <- replicate(length(ratios), w_mat, simplify="array")
   } else {
     W <- replicate(length(ratios)*length(ratiostau), w_mat, simplify="array")
@@ -212,7 +213,7 @@ est_base_weight_mat <- function(
     
   } else {
     
-    if(is.null(subgroup)){
+    if(!subgroupflag){
       for(r in 1:length(ratios)){
        #W[,(d[1]+1):ncol(W[,,1]),r] <- W[,(d[1]+1):ncol(W[,,1]),r] * ratios[r]
         W[,1:(d[1]),r] <- W[,1:(d[1]),r] * ratios[r]

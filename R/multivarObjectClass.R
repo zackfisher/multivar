@@ -53,6 +53,7 @@ check.multivar <- function(object){
 #' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @slot lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
 #' @slot subgroup Numeric. Vector of subgroup assignments.
+#' @slot subgroupflag Logical. Internal argument whether to run subgrouping algorithm.
 #' @slot B Matrix. Default is NULL. 
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
@@ -101,6 +102,7 @@ setClass(
         thresh = "numeric",
         lamadapt = "logical",
         subgroup = "numeric",
+        subgroupflag = "logical",
         B = "array"
         ),validity=check.multivar
     )
@@ -185,6 +187,8 @@ constructModel <- function( data = NULL,
                             subgroup = NULL,
                             B = NULL){
   
+
+  
   if( lag != 1 ){
     stop("multivar ERROR: Currently only lag of order 1 is supported.")
   }
@@ -215,9 +219,14 @@ constructModel <- function( data = NULL,
   nz    <- tail(cns,1)
   is    <- js <- xs <- NULL
   	
-  
-  
   if(!is.null(subgroup)){
+    subgroupflag <- TRUE
+  } else {
+    subgroupflag <- FALSE
+    subgroup <- rep(1, k)
+  }
+  
+  if(subgroupflag){
    clust <- lapply(seq_along(subgroup), function(i){rep(subgroup[i],ntk[i]*p)})
   }
   
@@ -226,7 +235,7 @@ constructModel <- function( data = NULL,
     js <- c(js, getj(dat[[ii]]$A)) #get non-zero column indices for group effects
     xs <- c(xs, dat[[ii]]$A@x) #vectorize data ffor group
     
-    if(!is.null(subgroup)){
+    if(subgroupflag){
       is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for subgroup
       js <- c(js, getj(dat[[ii]]$A) + clust[[ii]]*p) #get non-zero column indices for subgroup
       xs <- c(xs, dat[[ii]]$A@x) #vectorize data for subgroups
@@ -244,7 +253,7 @@ constructModel <- function( data = NULL,
   bk <- lapply(dat, "[[", "b")
   Hk <- lapply(dat, "[[", "H")
   
-  if(!is.null(subgroup)){
+  if(subgroupflag){
     dims_a <- c(nz, p*((k+1)+length(unique(clust))))
   } else{
     dims_a <- c(nz,p*(k+1))
@@ -293,8 +302,10 @@ constructModel <- function( data = NULL,
     ratios <- rev(round(exp(seq(log(k/depth),log(k),length.out = nlambda1)), digits = 10)) 
     # ratios2 is \tau_{s}/\lambda_1
     
-    if(!is.null(subgroup)){
+    if(subgroupflag){
       ratiostau <- rev(round(exp(seq(log(max(subgroup)/depth),log(max(subgroup)),length.out = ntau)), digits = 10))
+    } else {
+      ratiostau <- rep(1, ntau)
     }
 
     lambda1 <- matrix(0, nlambda1,length(ratios))
@@ -313,7 +324,7 @@ constructModel <- function( data = NULL,
   W <- matrix(1, nrow = ncol(bk[[1]]), ncol = ncol(A))
   
   # this includes the intercept? do we want this?
-  if(is.null(subgroup)){
+  if(!subgroupflag){
     if(k == 1){
       B <- array(0,dim = c((ndk[1]),(ndk[1]*(k) + 1), nlambda1*length(ratios)))
     } else {
@@ -363,6 +374,7 @@ constructModel <- function( data = NULL,
     thresh = thresh,
     lamadapt = lamadapt,
     subgroup = subgroup,
+    subgroupflag = subgroupflag,
     B = B
   )
 
@@ -438,6 +450,7 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@lassotype, 
     object@weightest,
     object@subgroup,
+    object@subgroupflag,
     object@ratiostau
   )
   
@@ -485,6 +498,7 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@intercept,
     object@thresh,
     object@subgroup,
+    object@subgroupflag
   )
   
   results <- list(

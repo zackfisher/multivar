@@ -1,4 +1,4 @@
-breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup){
+breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup,subgroupflag){
   
   if(!intercept){ B <- B[,-1] } 
   
@@ -19,7 +19,7 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup){
     common_mat <- B[,first_com_col_index:final_com_col_index]
     rownames(common_mat) <- colnames(common_mat) <- colnames(Ak[[1]])
     
-    if(is.null(subgroup)){
+    if(!subgroupflag){
       
       first_ind_col_indices <- cumsum(ndk) + 1
       final_ind_col_indices <- first_ind_col_indices + ndk - 1
