@@ -219,12 +219,18 @@ est_base_weight_mat <- function(
         W[,1:(d[1]),r] <- W[,1:(d[1]),r] * ratios[r]
       }
     } else {
+      
+      cnt <- 1
       for(r in 1:length(ratios)){
         for(j in 1:length(ratios)){
-        W[,1:(d[1]),r] <- W[,1:(d[1]),r] * ratios[r]
-        W[,(d[1]+1):(d[1]*max(subgroup)+d[1]),j] <- W[,(d[1]+1):(d[1]*max(subgroup)+d[1]),j] * ratiostau[r]
+          
+          W[,1:(d[1]),cnt] <- W[,1:(d[1]),cnt] * ratios[r]
+          W[,(d[1]+1):(d[1]*max(subgroup)+d[1]),cnt] <- W[,(d[1]+1):(d[1]*max(subgroup)+d[1]),cnt] * ratiostau[j]
+          cnt <- cnt + 1
+          
         }
       }
+      
     }
     
   }
