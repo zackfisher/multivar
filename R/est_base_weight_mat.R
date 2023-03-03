@@ -15,14 +15,15 @@ est_base_weight_mat <- function(
   # W<-object@W
   # Ak<-object@Ak
   # bk<- object@bk
-  # ratios<-object@ratios 
-  # d<-object@d 
-  # k<-object@k 
-  # lassotype<-object@lassotype 
+  # ratios<-object@ratios
+  # d<-object@d
+  # k<-object@k
+  # lassotype<-object@lassotype
   # weightest<-object@weightest
-  # subgroup <- -object@subgroup
+  # subgroup <- object@subgroup
+  # subgroupflag <- -object@subgroupflag
+  # # eventually make this an argument
   
-  # eventually make this an argument
   adapower <- 1
   
  if (lassotype == "standard"){
@@ -165,11 +166,21 @@ est_base_weight_mat <- function(
       } else {
         
         # subgroup level weights
-        b_med_subgrp <- lapply(seq_along(Ak), function(i){
-          apply(a[,,which(subgroup==subgroup[i])], 1:2, median)
+        # b_med_subgrp <- lapply(seq_along(Ak), function(i){
+        #   apply(a[,,which(subgroup==subgroup[i])], 1:2, median)
+        # })
+        # 
+        # s_list <- lapply(seq_along(Ak), function(i){
+        #   v <- 1/abs(b_med_subgrp[[i]] - b_med)^adapower
+        #   v[is.infinite(v)] <- 1e10
+        #   v
+        # })
+        
+        b_med_subgrp <- lapply(seq_along(1:max(subgroup)), function(i){
+          apply(a[,,which(subgroup==i)], 1:2, median)
         })
         
-        s_list <- lapply(seq_along(Ak), function(i){
+        s_list <- lapply(seq_along(1:length(b_med_subgrp)), function(i){
           v <- 1/abs(b_med_subgrp[[i]] - b_med)^adapower
           v[is.infinite(v)] <- 1e10
           v
@@ -177,7 +188,8 @@ est_base_weight_mat <- function(
         
         # individual level weights
         v_list <- lapply(seq_along(Ak), function(i){
-          v <- 1/abs(b_w[[i]] - b_med - b_med_subgrp[[i]])^adapower
+          v <- 1/abs(b_w[[i]] - b_med - b_med_subgrp[[subgroup[i]]])^adapower
+          #v <- 1/abs(b_w[[i]] - b_med)^adapower
           v[is.infinite(v)] <- 1e10
           v
         })
@@ -222,7 +234,7 @@ est_base_weight_mat <- function(
       
       cnt <- 1
       for(r in 1:length(ratios)){
-        for(j in 1:length(ratios)){
+        for(j in 1:length(ratiostau)){
           
           W[,1:(d[1]),cnt] <- W[,1:(d[1]),cnt] * ratios[r]
           W[,(d[1]+1):(d[1]*max(subgroup)+d[1]),cnt] <- W[,(d[1]+1):(d[1]*max(subgroup)+d[1]),cnt] * ratiostau[j]
@@ -238,3 +250,5 @@ est_base_weight_mat <- function(
  return(W)
     
 }
+
+
