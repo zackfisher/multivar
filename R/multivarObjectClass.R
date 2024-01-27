@@ -55,7 +55,8 @@ check.multivar <- function(object){
 #' @slot subgroup Numeric. Vector of subgroup assignments.
 #' @slot subgroupflag Logical. Internal argument whether to run subgrouping algorithm.
 #' @slot B Matrix. Default is NULL. 
-#' @slot initcoefs List. A list of initial consistent estimates for the total, subgroup, unique and common effects. 
+#' @slot initcoefs List. A list of initial consistent estimates for the total, subgroup, unique and common effects.
+#' @slot pendiag Logical. Logical indicating where autoregressive paramaters should be penalized. Default is true.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -105,7 +106,8 @@ setClass(
         subgroup = "numeric",
         subgroupflag = "logical",
         B = "array",
-        initcoefs = "list"
+        initcoefs = "list",
+        pendiag = "logical"
         ),validity=check.multivar
     )
 
@@ -142,6 +144,7 @@ setClass(
 #' @param subgroup Numeric. Vector of subgroup assignments.
 #' @param subgroupflag Logical. Internal argument whether to run subgrouping algorithm.
 #' @param B Matrix. Default is NULL.
+#' @param pendiag Logical. Logical indicating whether autoregressive parameters should be penalized. Default is TRUE.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -189,7 +192,8 @@ constructModel <- function( data = NULL,
                             lamadapt = FALSE,
                             subgroup = NULL,
                             subgroupflag = FALSE,
-                            B = NULL){
+                            B = NULL,
+                            pendiag = TRUE){
   
 
   
@@ -383,7 +387,8 @@ constructModel <- function( data = NULL,
     subgroup = subgroup,
     subgroupflag = subgroupflag,
     B = B,
-    initcoefs = initcoefs
+    initcoefs = initcoefs,
+    pendiag = pendiag
   )
 
   return(obj)
@@ -472,7 +477,8 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@weightest, 
     object@subgroup,     
     object@subgroupflag, 
-    object@ratiostau
+    object@ratiostau,
+    object@pendiag
   )
 
   # object@W <- est_base_weight_mat(

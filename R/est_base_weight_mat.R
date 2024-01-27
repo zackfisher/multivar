@@ -10,7 +10,8 @@ est_base_weight_mat <- function(
   weightest, 
   subgroup,     
   subgroupflag, 
-  ratiostau){
+  ratiostau,
+  pendiag){
   
   adapower <- 1
   
@@ -24,6 +25,7 @@ est_base_weight_mat <- function(
       
       w_mat <- 1/abs(initcoefs$total_effects[[1]])^adapower
       w_mat[is.infinite(w_mat)] <- 1e10
+      if(!pendiag){ diag(w_mat) <- 1e-10 }
       
     } else {
       
@@ -37,6 +39,7 @@ est_base_weight_mat <- function(
       
         b_med <- 1/abs(initcoefs$common_effects)^1
         b_med[is.infinite(b_med)] <- 1e10
+        if(!pendiag){ diag(b_med) <- 1e-10 }
       
         w_mat <- cbind(b_med, do.call("cbind", v_list))
         
@@ -57,6 +60,8 @@ est_base_weight_mat <- function(
         
         b_med <- 1/abs(initcoefs$common_effects)^1
         b_med[is.infinite(b_med)] <- 1e10
+        if(!pendiag){ diag(b_med) <- 1e-10 }
+        
         w_mat <- cbind(b_med, do.call("cbind", s_list),do.call("cbind", v_list))
 
       }
