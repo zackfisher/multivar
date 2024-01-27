@@ -50,7 +50,7 @@ est_base_weight_mat <- function(
         })
         
         v_list <- lapply(seq_along(Ak), function(i){
-          v <- 1/abs(initcoefs$unique_effects)^adapower
+          v <- 1/abs(initcoefs$unique_effects[[i]])^adapower
           v[is.infinite(v)] <- 1e10
           v
         })
