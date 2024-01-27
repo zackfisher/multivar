@@ -55,6 +55,7 @@ check.multivar <- function(object){
 #' @slot subgroup Numeric. Vector of subgroup assignments.
 #' @slot subgroupflag Logical. Internal argument whether to run subgrouping algorithm.
 #' @slot B Matrix. Default is NULL. 
+#' @slot initcoefs List. A list of initial consistent estimates for the total, subgroup, unique and common effects. 
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -103,7 +104,8 @@ setClass(
         lamadapt = "logical",
         subgroup = "numeric",
         subgroupflag = "logical",
-        B = "array"
+        B = "array",
+        initcoefs = "list"
         ),validity=check.multivar
     )
 
@@ -138,6 +140,7 @@ setClass(
 #' @param thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @param lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
 #' @param subgroup Numeric. Vector of subgroup assignments.
+#' @param subgroupflag Logical. Internal argument whether to run subgrouping algorithm.
 #' @param B Matrix. Default is NULL.
 #' @examples
 #' 
@@ -185,6 +188,7 @@ constructModel <- function( data = NULL,
                             thresh = 0,
                             lamadapt = FALSE,
                             subgroup = NULL,
+                            subgroupflag = FALSE,
                             B = NULL){
   
 
@@ -200,6 +204,8 @@ constructModel <- function( data = NULL,
   if( tol<0 | tol>1e-1 ){
     stop("Tolerance must be positive")
   }
+  
+  initcoefs <- list()
   
   dat <- setup_data(data, standardize, lag, horizon) 
   
@@ -224,6 +230,7 @@ constructModel <- function( data = NULL,
   } else {
     subgroupflag <- FALSE
     subgroup <- rep(1, k)
+    #subgroup <- NULL
   }
   
   if(subgroupflag){
@@ -375,7 +382,8 @@ constructModel <- function( data = NULL,
     lamadapt = lamadapt,
     subgroup = subgroup,
     subgroupflag = subgroupflag,
-    B = B
+    B = B,
+    initcoefs = initcoefs
   )
 
   return(obj)
@@ -440,21 +448,49 @@ setMethod("show","multivar",function(object){
 setGeneric(name = "cv.multivar",def=function(object){standardGeneric("cv.multivar")})
 setMethod(f = "cv.multivar", signature = "multivar",definition = function(object){
 
-  object@W <- est_base_weight_mat(
-    object@W,
+  object@initcoefs <- estimate_initial_coefs(
     object@Ak,
     object@bk,
-    object@ratios, 
     object@d, 
     object@k, 
     object@lassotype, 
     object@weightest,
     object@subgroup,
     object@subgroupflag,
-    object@ratiostau
+    object@nlambda1,
+    object@nlambda2
   )
   
- 
+  object@W <- est_base_weight_mat(
+    object@W,        
+    object@Ak,        
+    object@initcoefs, 
+    object@ratios,    
+    object@d, 
+    object@k, 
+    object@lassotype, 
+    object@weightest, 
+    object@subgroup,     
+    object@subgroupflag, 
+    object@ratiostau
+  )
+
+  # object@W <- est_base_weight_mat(
+  #   object@W,
+  #   object@Ak,
+  #   object@bk,
+  #   object@ratios, 
+  #   object@d, 
+  #   object@k, 
+  #   object@lassotype, 
+  #   object@weightest,
+  #   object@subgroup,
+  #   object@subgroupflag,
+  #   object@ratiostau,
+  #   object@nlambda1,
+  #   object@nlambda2
+  # )
+  
   object@lambda1 <- lambda_grid(
     object@B,
     object@depth, 
@@ -467,9 +503,7 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@intercept,
     object@lamadapt
   ) 
-  
 
-  
   fit <- cv_multivar(
     object@B, 
     t(as.matrix(object@A)), 
