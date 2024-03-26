@@ -164,8 +164,8 @@ setup_data <- function (data, standardize, lag, horizon) {
     } else {
       H  <- NA
     }
-    A  <- Matrix(df[1:(nrow(df)-1), ], sparse = TRUE)
-    b  <- Matrix(df[2:(nrow(df)  ), ], sparse = TRUE)
+    A  <- Matrix(df[1:(nrow(df)-1), ], sparse = FALSE)
+    b  <- Matrix(df[2:(nrow(df)  ), ], sparse = FALSE)
     colnames(A) <- colnames(b) <- colnames(df)
     list(b = b, A = A, H = H)
   })
