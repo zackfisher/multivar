@@ -244,22 +244,27 @@ constructModel <- function( data = NULL,
   
   for(ii in 1:k){
     #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for group effects
-    is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
+    #is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
+    is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A)-1,ncol(dat[[ii]]$A)))
     js <- c(js, getj(dat[[ii]]$A)) #get non-zero column indices for group effects
     xs <- c(xs, dat[[ii]]$A@x) #vectorize data ffor group
     
     if(subgroupflag){
       #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for subgroup
-      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
+      #is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
+      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A)-1,ncol(dat[[ii]]$A)))
       js <- c(js, getj(dat[[ii]]$A) + clust[[ii]]*p) #get non-zero column indices for subgroup
       xs <- c(xs, dat[[ii]]$A@x) #vectorize data for subgroups
       #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for individual effects
-      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
-      js <- c(js, getj(dat[[ii]]$A) + p*(ii + length(unique(clust)))) #get non-zero column indices for individual effects
+      #is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
+      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A)-1,ncol(dat[[ii]]$A)))
+      #js <- c(js, getj(dat[[ii]]$A) + p*(ii + length(unique(clust)))) #get non-zero column indices for individual effects
+      js <- c(js, getj(dat[[ii]]$A) + p*(ii + length(unique(subgroup))))
       xs <- c(xs, dat[[ii]]$A@x) #vectorize data for individual
     } else{
       #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for individual effects
-      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
+      #is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
+      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A)-1,ncol(dat[[ii]]$A)))
       js <- c(js, getj(dat[[ii]]$A) + p*ii) #get non-zero column indices for individual effects
       xs <- c(xs, dat[[ii]]$A@x) #vectorize data for individual
     }
