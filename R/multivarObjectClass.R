@@ -220,7 +220,8 @@ constructModel <- function( data = NULL,
   ntk <- unlist(lapply(dat, function(x){nrow(x$b)})) # number tps
   ndk <- unlist(lapply(dat, function(x){ncol(x$b)})) # number cols
   
-  getj  <- function(mat){dp = diff(mat@p);rep(seq_along(dp), dp) - 1}
+  #getj  <- function(mat){dp = diff(mat@p);rep(seq_along(dp), dp) - 1}
+  getj <- function(mat){rep(0:(ncol(mat)-1),each=nrow(mat))}
   k     <- length(dat)
   p     <- ncol(dat[[1]]$A)
   ns    <- sapply(dat, function(item){nrow(item$A)})
@@ -242,19 +243,23 @@ constructModel <- function( data = NULL,
   }
   
   for(ii in 1:k){
-    is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for group effects
+    #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for group effects
+    is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
     js <- c(js, getj(dat[[ii]]$A)) #get non-zero column indices for group effects
     xs <- c(xs, dat[[ii]]$A@x) #vectorize data ffor group
     
     if(subgroupflag){
-      is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for subgroup
+      #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for subgroup
+      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
       js <- c(js, getj(dat[[ii]]$A) + clust[[ii]]*p) #get non-zero column indices for subgroup
       xs <- c(xs, dat[[ii]]$A@x) #vectorize data for subgroups
-      is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for individual effects
+      #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for individual effects
+      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
       js <- c(js, getj(dat[[ii]]$A) + p*(ii + length(unique(clust)))) #get non-zero column indices for individual effects
       xs <- c(xs, dat[[ii]]$A@x) #vectorize data for individual
     } else{
-      is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for individual effects
+      #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for individual effects
+      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
       js <- c(js, getj(dat[[ii]]$A) + p*ii) #get non-zero column indices for individual effects
       xs <- c(xs, dat[[ii]]$A@x) #vectorize data for individual
     }
@@ -265,7 +270,7 @@ constructModel <- function( data = NULL,
   Hk <- lapply(dat, "[[", "H")
   
   if(subgroupflag){
-    dims_a <- c(nz, p*((k+1)+length(unique(clust))))
+    dims_a <- c(nz, p*((k+1)+length(unique(subgroup))))
   } else{
     dims_a <- c(nz,p*(k+1))
   }
