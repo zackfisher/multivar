@@ -8,8 +8,8 @@ est_base_weight_mat <- function(
   k, 
   lassotype, 
   weightest, 
-  subgroup,     
-  subgroupflag, 
+  subgroup_membership,     
+  subgroup, 
   ratiostau,
   pendiag){
   
@@ -29,7 +29,7 @@ est_base_weight_mat <- function(
       
     } else {
       
-      if(!subgroupflag){
+      if(!subgroup){
         
         v_list <- lapply(seq_along(Ak), function(i){
           v <- 1/abs(initcoefs$unique_effects[[i]])^adapower
@@ -74,7 +74,7 @@ est_base_weight_mat <- function(
   #-----------------------------------#
 
 
-  if(!subgroupflag){
+  if(!subgroup){
     
     W <- replicate(length(ratios), w_mat, simplify="array")
     
@@ -97,7 +97,7 @@ est_base_weight_mat <- function(
     
   } else {
   
-    if(!subgroupflag){
+    if(!subgroup){
       
       for(r in 1:length(ratios)){
         
@@ -113,7 +113,7 @@ est_base_weight_mat <- function(
         for(j in 1:length(ratiostau)){
           
           W[,1:(d[1]),cnt] <- W[,1:(d[1]),cnt] * ratios[r]
-          W[,(d[1]+1):(d[1]*max(subgroup)+d[1]),cnt] <- W[,(d[1]+1):(d[1]*max(subgroup)+d[1]),cnt] * ratiostau[j]
+          W[,(d[1]+1):(d[1]*max(subgroup_membership)+d[1]),cnt] <- W[,(d[1]+1):(d[1]*max(subgroup_membership)+d[1]),cnt] * ratiostau[j]
           cnt <- cnt + 1
           
         }

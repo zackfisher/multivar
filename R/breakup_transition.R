@@ -1,4 +1,4 @@
-breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup,subgroupflag){
+breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup_membership, subgroup){
   
   if(!intercept){ B <- B[,-1] } 
   
@@ -19,7 +19,7 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup,subgroupf
     common_mat <- B[,first_com_col_index:final_com_col_index]
     rownames(common_mat) <- colnames(common_mat) <- colnames(Ak[[1]])
     
-    if(!subgroupflag){
+    if(!subgroup){
       
       first_ind_col_indices <- cumsum(ndk) + 1
       final_ind_col_indices <- first_ind_col_indices + ndk - 1
@@ -43,15 +43,15 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup,subgroupf
       
     } else {
       
-      first_sub_col_indices <- cumsum(rep(ndk[1],max(subgroup))) + 1
+      first_sub_col_indices <- cumsum(rep(ndk[1],max(subgroup_membership))) + 1
       final_sub_col_indices <- first_sub_col_indices + ndk[1] - 1
       
-      first_ind_col_indices <- cumsum(ndk) + (ndk[1]*max(subgroup)) + 1 
+      first_ind_col_indices <- cumsum(ndk) + (ndk[1]*max(subgroup_membership)) + 1 
       final_ind_col_indices <- first_ind_col_indices + ndk - 1
       
       # subgrp mats
       subgrp_mats <- lapply(seq_along(ndk), function(i){
-        mat <- B[,first_sub_col_indices[subgroup[i]]:final_sub_col_indices[subgroup[i]]]
+        mat <- B[,first_sub_col_indices[subgroup_membership[i]]:final_sub_col_indices[subgroup_membership[i]]]
         rownames(mat) <- colnames(mat) <- colnames(Ak[[i]])
         mat
       })
