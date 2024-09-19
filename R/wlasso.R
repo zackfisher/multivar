@@ -1,6 +1,13 @@
 #' @export
 wlasso <- function(B, Z, Y, W, k, d, lambda1,eps,intercept=FALSE){
   
+  # B <- B[1,,,drop=F]
+  # Z <- Z[,train_idx]
+  # Y <- Y[1,train_idx,drop=F]
+  # W <- W[1,,,drop=F]
+ 
+  
+  
   if(!"matrix"%in%class(Y)){
     Y <- matrix(Y,nrow=1)
   }
@@ -23,8 +30,15 @@ wlasso <- function(B, Z, Y, W, k, d, lambda1,eps,intercept=FALSE){
 
   nc <- apply(B,3,ncol)[1]
 
-  BFOO1 <- B[,2:ncol(B[,,1]),1] 
-  BFOO  <- B[,2:nc,,drop=F]     
+  #BFOO1 <- B[,2:ncol(B[,,1]),1] 
+  BFOO1 <- B[,2:nc,1] 
+  BFOO  <- B[,2:nc,,drop=F] 
+  
+  # is.matrix(Y)
+  # is.matrix(Z)
+  # is.matrix(lambda1)
+  # is.matrix(Y)
+  
   
   beta <- lamloopFISTA(
     BFOO, 
@@ -35,7 +49,7 @@ wlasso <- function(B, Z, Y, W, k, d, lambda1,eps,intercept=FALSE){
     eps,
     as.matrix(YMean), 
     as.matrix(ZMean), 
-    BFOO1,
+    as.matrix(BFOO1),
     tk)
 
   return(beta)

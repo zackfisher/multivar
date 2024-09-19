@@ -12,8 +12,10 @@ constructModel(
   t2 = NULL,
   lambda1 = NULL,
   lambda2 = NULL,
+  tau = NULL,
   nlambda1 = 30,
   nlambda2 = 30,
+  ntau = 30,
   depth = 1000,
   tol = 1e-04,
   window = 1,
@@ -25,10 +27,19 @@ constructModel(
   intercept = FALSE,
   W = NULL,
   ratios = NULL,
+  ratiostau = NULL,
+  ratiosalpha = NULL,
   cv = "blocked",
   nfolds = 10,
   thresh = 0,
-  lamadapt = FALSE
+  lamadapt = FALSE,
+  subgroup = NULL,
+  subgroupflag = FALSE,
+  B = NULL,
+  pendiag = TRUE,
+  tvp = FALSE,
+  inittvpcoefs = list(),
+  breaks = list()
 )
 }
 \arguments{
@@ -46,9 +57,13 @@ constructModel(
 
 \item{lambda2}{Matrix. Regularization parameter 2. Default is NULL.}
 
+\item{tau}{Matrix. Regularization parameter for subgroup effects.}
+
 \item{nlambda1}{Numeric. Number of lambda1 values to search over. Default is 30.}
 
 \item{nlambda2}{Numeric. Number of lambda2 values to search over. Default is 30.}
+
+\item{ntau}{Numeric. Number of tau values to search over. Default is 30.}
 
 \item{depth}{Numeric. Depth of grid construction. Default is 1000.}
 
@@ -72,6 +87,10 @@ constructModel(
 
 \item{ratios}{Numeric vector. Default is NULL.}
 
+\item{ratiostau}{Numeric vector. Default is NULL.}
+
+\item{ratiosalpha}{Numeric vector. Default is NULL.}
+
 \item{cv}{Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.}
 
 \item{nfolds}{Numeric. The number of folds for use with "blocked" cross-validation.}
@@ -79,6 +98,20 @@ constructModel(
 \item{thresh}{Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.}
 
 \item{lamadapt}{Logical. Should the lambdas be calculated adaptively. Default is FALSE.}
+
+\item{subgroup}{Numeric. Vector of subgroup assignments.}
+
+\item{subgroupflag}{Logical. Internal argument whether to run subgrouping algorithm.}
+
+\item{B}{Matrix. Default is NULL.}
+
+\item{pendiag}{Logical. Logical indicating whether autoregressive parameters should be penalized. Default is TRUE.}
+
+\item{tvp}{Logical. Default is FALSE.}
+
+\item{inittvpcoefs}{List.}
+
+\item{breaks}{List. A list of length K indicating structural breaks in the time series.}
 }
 \description{
 Construct an object of class multivar

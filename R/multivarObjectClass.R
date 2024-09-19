@@ -48,6 +48,7 @@ check.multivar <- function(object){
 #' @slot W Matrix. Default is NULL. 
 #' @slot ratios Numeric vector. Default is NULL. 
 #' @slot ratiostau Numeric vector. Default is NULL. 
+#' @slot ratiosalpha Numeric vector. Default is NULL. 
 #' @slot cv Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.
 #' @slot nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
@@ -57,6 +58,9 @@ check.multivar <- function(object){
 #' @slot B Matrix. Default is NULL. 
 #' @slot initcoefs List. A list of initial consistent estimates for the total, subgroup, unique and common effects.
 #' @slot pendiag Logical. Logical indicating where autoregressive paramaters should be penalized. Default is true.
+#' @slot tvp Logical.
+#' @slot inittvpcoefs List. A list of initial tvp estimates.
+#' @slot breaks List. A list of length K indicating structural breaks in the time series.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -99,6 +103,7 @@ setClass(
         W = "array",
         ratios = "numeric",
         ratiostau = "numeric",
+        ratiosalpha = "numeric",
         cv = "character",
         nfolds = "numeric",
         thresh = "numeric",
@@ -107,7 +112,10 @@ setClass(
         subgroupflag = "logical",
         B = "array",
         initcoefs = "list",
-        pendiag = "logical"
+        pendiag = "logical",
+        tvp = "logical",
+        inittvpcoefs = "list",
+        breaks = "list"
         ),validity=check.multivar
     )
 
@@ -137,6 +145,7 @@ setClass(
 #' @param W Matrix. Default is NULL. 
 #' @param ratios Numeric vector. Default is NULL. 
 #' @param ratiostau Numeric vector. Default is NULL. 
+#' @param ratiosalpha Numeric vector. Default is NULL. 
 #' @param cv Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.
 #' @param nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @param thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
@@ -145,6 +154,9 @@ setClass(
 #' @param subgroupflag Logical. Internal argument whether to run subgrouping algorithm.
 #' @param B Matrix. Default is NULL.
 #' @param pendiag Logical. Logical indicating whether autoregressive parameters should be penalized. Default is TRUE.
+#' @param tvp Logical. Default is FALSE.
+#' @param inittvpcoefs List. 
+#' @param breaks List. A list of length K indicating structural breaks in the time series.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -186,6 +198,7 @@ constructModel <- function( data = NULL,
                             W = NULL,
                             ratios = NULL,
                             ratiostau = NULL,
+                            ratiosalpha = NULL,
                             cv = "blocked",
                             nfolds = 10,
                             thresh = 0,
@@ -193,9 +206,10 @@ constructModel <- function( data = NULL,
                             subgroup = NULL,
                             subgroupflag = FALSE,
                             B = NULL,
-                            pendiag = TRUE){
-  
-
+                            pendiag = TRUE,
+                            tvp = FALSE,
+                            inittvpcoefs = list(),
+                            breaks = list()){
   
   if( lag != 1 ){
     stop("multivar ERROR: Currently only lag of order 1 is supported.")
@@ -289,6 +303,30 @@ constructModel <- function( data = NULL,
   b  <- as.matrix(do.call(rbind, bk))
   H  <- as.matrix(do.call(rbind, Hk))
   
+  if(tvp){
+    
+    splitAt <- function(x, pos) unname(split(x, cumsum(seq_along(x) %in% pos)))
+    
+    if(length(breaks)==0){
+      
+      breaks <- lapply(1:k, function(j){seq(from = 1, to = ntk[j], by = 1)})
+
+    } 
+    
+    breaks <- lapply(1:k, function(j){splitAt(c(1:(ntk[j])), breaks[[j]])})
+      
+    A <- Matrix(cbind(A, Matrix::bdiag(lapply(seq_along(Ak), function(i){
+      tvp <- do.call(cbind,lapply(1:ncol(Ak[[i]]), function(j){
+        Matrix::bdiag(
+          lapply(breaks[[i]],function(window){
+            Ak[[i]][window,j]
+          })
+        )
+      }))
+    }))), sparse=TRUE)
+      
+  }
+  
   # here we also assume all individuals have the same number
   # of timepoints. (zff 2021-09-15)
   
@@ -328,16 +366,26 @@ constructModel <- function( data = NULL,
     } else {
       ratiostau <- rep(1, ntau)
     }
+    
+    if(tvp){
+      nalpha <- nlambda1
+      ratiosalpha <- rev(round(exp(seq(log((max(ntk))/depth),log((max(ntk))),length.out = nalpha)), digits = 10))
+    } else {
+      nalpha <- nlambda1
+      ratiosalpha <- rep(1, nalpha)
+    }
 
     lambda1 <- matrix(0, nlambda1,length(ratios))
     lambda2 <- matrix(0, nlambda2,length(ratios))
     tau <- matrix(0, ntau,length(ratiostau))
+    
   } else {
+    
     nlambda1 <- length(lambda1)
     nlambda2 <- length(lambda2)
     lambda1 <- matrix(lambda1, nrow = 1)
     lambda2 <- matrix(lambda2, nrow = 1)
-    ratios <- tau <- c(0)
+    ratios <- tau <- alpha <- c(0)
   }
 
 
@@ -353,7 +401,10 @@ constructModel <- function( data = NULL,
     }
   } else {
     B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + max(subgroup) + 1) + 1), nlambda1*length(ratios)*length(ratiostau)))
-    
+  }
+  
+  if(tvp){
+    B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + 1) + (ndk[1]*sum(unlist(lapply(breaks,function(g){length(g)})))) + 1), nlambda1*length(ratios)*length(ratiosalpha)))
   }
   
   obj <- new("multivar",
@@ -390,6 +441,7 @@ constructModel <- function( data = NULL,
     W = W,
     ratios = ratios,
     ratiostau = ratiostau,
+    ratiosalpha = ratiosalpha,
     cv = cv,
     nfolds = nfolds,
     thresh = thresh,
@@ -398,7 +450,10 @@ constructModel <- function( data = NULL,
     subgroupflag = subgroupflag,
     B = B,
     initcoefs = initcoefs,
-    pendiag = pendiag
+    pendiag = pendiag,
+    tvp = tvp,
+    inittvpcoefs = inittvpcoefs,
+    breaks = breaks
   )
 
   return(obj)
@@ -473,7 +528,9 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@subgroup,
     object@subgroupflag,
     object@nlambda1,
-    object@nlambda2
+    object@nlambda2,
+    object@tvp,
+    object@breaks
   )
   
   object@W <- est_base_weight_mat(
@@ -488,7 +545,9 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@subgroup,     
     object@subgroupflag, 
     object@ratiostau,
-    object@pendiag
+    object@pendiag,
+    object@tvp,
+    object@ratiosalpha
   )
 
   # object@W <- est_base_weight_mat(
@@ -518,7 +577,7 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@tol,
     object@intercept,
     object@lamadapt
-  ) 
+  )
 
   fit <- cv_multivar(
     object@B, 
@@ -539,7 +598,7 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@cv,
     object@nfolds
   )
-  
+
 
   mats <- breakup_transition(
     fit[[1]][,,which.min(colMeans(fit[[2]]))], 
@@ -548,7 +607,10 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@intercept,
     object@thresh,
     object@subgroup,
-    object@subgroupflag
+    object@subgroupflag,
+    object@tvp,
+    object@ntk,
+    object@breaks
   )
   
   results <- list(

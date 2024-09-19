@@ -26,7 +26,9 @@ estimate_initial_coefs <- function(
     subgroup,
     subgroupflag,
     nlambda1,
-    nlambda2){
+    nlambda2,
+    tvp,
+    breaks){
   
   # Ak<-object@Ak
   # bk<- object@bk
@@ -39,6 +41,8 @@ estimate_initial_coefs <- function(
   # subgroupflag <- object@subgroupflag
   # nlambda1 <- object@nlambda1
   # nlambda2 <- object@nlambda2
+  # tvp <- object@tvp
+  # breaks <- object@breaks
   
   if (lassotype == "standard"){
     
@@ -47,16 +51,29 @@ estimate_initial_coefs <- function(
         common_effects = matrix(1, d, d),
         subgroup_effects = NULL,
         unique_effects = replicate(k,  matrix(1, d, d)),
-        total_effects = replicate(k,  matrix(1, d, d))
+        total_effects = replicate(k,  matrix(1, d, d)),
+        tvp_effects = NULL
       )
     } else {
       res <- list(
         common_effects = matrix(1, d, d),
         subgroup_effects = replicate(max(subgroup),  matrix(1, d, d)),
         unique_effects = replicate(k,  matrix(1, d, d)),
-        total_effects = replicate(k,  matrix(1, d, d))
+        total_effects = replicate(k,  matrix(1, d, d)),
+        tvp_effects = NULL
       )
     }
+    
+    if(tvp){
+      res <- list(
+        common_effects = matrix(1, d, d),
+        subgroup_effects = NULL,
+        unique_effects = replicate(k,  matrix(1, d, d)),
+        total_effects = replicate(k,  matrix(1, d, d)),
+        tvp_effects = replicate(k,  matrix(1, nrow(Ak[[1]]), d))
+      )
+    }
+    
     
   } else {
     
@@ -95,6 +112,29 @@ estimate_initial_coefs <- function(
         ))[-1], ncol(Ak[[g]]), ncol(Ak[[g]])))
       })
       
+      if(tvp){
+        
+        inittvpcoefs <- lapply(seq_along(object@Ak),function(g){
+          lapply(seq_along(breaks[[g]]), function(q){
+            lasso.fit <- glmnet::cv.glmnet(
+              diag(ncol(object@Ak[[g]][breaks[[g]][[q]],])) %x% object@Ak[[g]][breaks[[g]][[q]],], 
+              as.vector(object@bk[[g]][breaks[[g]][[q]],]), 
+              family = "gaussian", 
+              alpha = 1, 
+              standardize = FALSE, 
+              nfolds = 5
+            )
+            t(matrix(as.vector(predict(
+              lasso.fit, 
+              diag(ncol(object@Ak[[g]][breaks[[g]][[q]],])) %x% object@Ak[[g]][breaks[[g]][[q]],], 
+              type="coefficients", 
+              s="lambda.1se"
+            ))[-1], ncol(object@Ak[[g]]), ncol(object@Ak[[g]])))
+          })
+        })
+        
+      }
+      
     } else if (weightest == "ridge") {
       
       total_effects <- lapply(seq_along(Ak),function(g){
@@ -123,33 +163,46 @@ estimate_initial_coefs <- function(
         })))
       })
       
-    } else if (weightest == "multivar1" | weightest == "multivar2" ) {
-      
-      if(subgroupflag){
+      if(tvp){
         
-        mod <- constructModel(
-          data = Ak, 
-          lassotype = "standard",
-          nlambda1 = nlambda1, 
-          nlambda2 = nlambda2,
-          subgroup = subgroup)
-        
-        fit <- cv.multivar(mod)
-        total_effects <- fit$mats$total
-        
-      }else{
-        
-        mod <- constructModel(
-          data = Ak, 
-          lassotype = "standard",
-          nlambda1 = nlambda1, 
-          nlambda2 = nlambda2
-        )
-        
-        fit <- cv.multivar(mod)
-        total_effects <- fit$mats$total
+        inittvpcoefs <- lapply(seq_along(object@Ak),function(g){
+          lapply(seq_along(breaks[[g]]), function(q){
+            fit<- vars::VAR(as.matrix(object@Ak[[g]][breaks[[g]][[q]],]), p=1, type="none")$varresult
+            as.matrix(do.call("rbind",lapply(seq_along(colnames(object@Ak[[g]])), function(x) {
+              fit[[x]]$coefficients
+            })))
+          })
+        })
         
       }
+      
+    # } else if (weightest == "multivar1" | weightest == "multivar2" ) {
+    #   
+    #   if(subgroupflag){
+    #     
+    #     mod <- constructModel(
+    #       data = Ak, 
+    #       lassotype = "standard",
+    #       nlambda1 = nlambda1, 
+    #       nlambda2 = nlambda2,
+    #       subgroup = subgroup)
+    #     
+    #     fit <- cv.multivar(mod)
+    #     total_effects <- fit$mats$total
+    #     
+    #   }else{
+    #     
+    #     mod <- constructModel(
+    #       data = Ak, 
+    #       lassotype = "standard",
+    #       nlambda1 = nlambda1, 
+    #       nlambda2 = nlambda2
+    #     )
+    #     
+    #     fit <- cv.multivar(mod)
+    #     total_effects <- fit$mats$total
+    #     
+    #   }
  
     } else if (weightest == "variable") {
       
@@ -209,9 +262,9 @@ estimate_initial_coefs <- function(
       
       if(subgroupflag){
         
-        subgroup_effects <- lapply(seq_along(1:max(subgroup)), function(i){
-          apply(total_effects_array[,,which(subgroup==i)], 1:2, median)
-        })
+        # subgroup_effects <- lapply(seq_along(1:max(subgroup)), function(i){
+        #   apply(total_effects_array[,,which(subgroup==i)], 1:2, median)
+        # })
         
         # zf: is this backwards?
         subgroup_effects <- lapply(seq_along(1:length(subgroup_effects)), function(i){
@@ -224,13 +277,32 @@ estimate_initial_coefs <- function(
           total_effects[[i]] - subgroup_effects[[subgroup[i]]]
         })
         
+        tvp_effects <- NULL
+        
       } else {
+        
+        subgroup_effects <- tvp_effects <-  NULL
+        
+        unique_effects <- lapply(seq_along(Ak), function(i){
+          total_effects[[i]] - common_effects
+        })
+        
+      }
+      
+      if (tvp) {
         
         subgroup_effects <- NULL
         
         unique_effects <- lapply(seq_along(Ak), function(i){
           total_effects[[i]] - common_effects
         })
+        
+        tvp_effects <- lapply(seq_along(1:length(inittvpcoefs)), function(i){
+          lapply(seq_along(1:length(inittvpcoefs[[i]])), function(j){
+            unique_effects[[i]] - inittvpcoefs[[i]][[j]]
+          })
+        })
+        
         
       }
     
@@ -240,6 +312,7 @@ estimate_initial_coefs <- function(
       common_effects = common_effects,
       subgroup_effects = subgroup_effects,
       unique_effects = unique_effects,
+      tvp_effects = tvp_effects,
       total_effects = total_effects
     )
     

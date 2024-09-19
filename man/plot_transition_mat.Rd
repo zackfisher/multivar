@@ -4,7 +4,15 @@
 \alias{plot_transition_mat}
 \title{Plot arbitrary transition matrix.}
 \usage{
-plot_transition_mat(x, title = NULL, subtitle = NULL, ub = 1, lb = -1)
+plot_transition_mat(
+  x,
+  title = NULL,
+  subtitle = NULL,
+  ub = 1,
+  lb = -1,
+  legend = TRUE,
+  dimnames = TRUE
+)
 }
 \arguments{
 \item{x}{Matrix. An arbitrary transition matrix.}
@@ -16,6 +24,10 @@ plot_transition_mat(x, title = NULL, subtitle = NULL, ub = 1, lb = -1)
 \item{ub}{Numeric. Upper bound on coefficient values for heatmap index. Default is 1.}
 
 \item{lb}{Numeric. Lower bound on coefficient values for heatmap index. Default is -1.}
+
+\item{legend}{Logical. Should a legend be included.}
+
+\item{dimnames}{Logical. Should variable names be included.}
 }
 \description{
 Plot arbitrary transition matrix.

@@ -1,7 +1,7 @@
 Encoding: UTF-8
 Package: multivar
 Title: Penalized Estimation of Multiple-Subject Vector Autoregressive (multi-VAR) Models
-Version: 1.1.0
+Version: 1.2.0
 Authors@R: c(
  person("Zachary","Fisher", email = "fish.zachary@gmail.com", role = c("aut", "cre")),
  person("Younghoon", "Kim", role = "ctb"),
@@ -13,7 +13,7 @@ Imports: methods, stats, utils, MASS, Rcpp (>= 1.0.3), Matrix, ggplot2, vars, re
 License: GPL (>= 2)
 LazyData: true
 ByteCompile: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.3.1
 NeedsCompilation: no
 Packaged: 2017-05-19 21:30:05 UTC; 
 Maintainer: Zachary Fisher <fish.zachary@gmail.com>

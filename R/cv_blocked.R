@@ -1,6 +1,21 @@
 #' @export
 cv_blocked <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALSE, cv, nfolds){
   
+  # B  <- object@B
+  # Z  <- t(as.matrix(object@A))
+  # Y  <- t(as.matrix(object@b))
+  # W  <- object@W
+  # Ak  <- object@Ak
+  # k  <- object@k
+  # d  <- object@d
+  # lambda1  <- object@lambda1
+  # t1  <- object@t1
+  # t2  <- object@t2
+  # eps  <- 1e-3
+  # intercept  <- object@intercept
+  # cv  <- object@cv
+  # nfolds  <- object@nfolds
+  
   make_folds  <- function(x,nfolds) split(x, cut(seq_along(x), nfolds, labels = FALSE))
   final_tmpt <- cumsum(unlist(lapply(Ak,function(x){nrow(x)})))
   first_tmpt <- c(1,(final_tmpt[-length(final_tmpt)]+1))
@@ -18,7 +33,10 @@ cv_blocked <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALS
     train_idx <- unlist(lapply(1:k,function(a){cv_list[[a]][-fold_id]})) 
   
     beta <- wlasso(B, Z[,train_idx], Y[,train_idx], W, k, d, lambda1,eps,intercept)
-
+    
+    # beta <- multivar:::wlasso(B[1,,,drop=F], Z[,train_idx], Y[1,train_idx,drop=F], W[1,,,drop=F], k, d, lambda1,eps,intercept)
+    # beta <- multivar:::wlasso(B, Z[,train_idx], Y[1,train_idx,drop=F], W, k, d, lambda1,eps,intercept)
+    
     # Calculate h-step MSFE for each penalty parameter
     for (ii in 1:dim(beta)[3]) {
       MSFE[fold_id,ii] <- norm2(Y[,test_idx,drop=F]- beta[,-1,ii] %*% Z[,test_idx,drop=F] )^2

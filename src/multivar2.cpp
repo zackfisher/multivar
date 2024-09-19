@@ -118,11 +118,11 @@ cube lamloopFISTA(
     mat& B1, 
     double step){
 
+  
   mat b2 = B1;
   mat B1F2 = B1;
   mat W2 = B1;
-  
-  
+
   // Here we read in the R array as a NumericVector as it retains 
   // its dims attribute, We can then use these dims to set our 
   // arma::cube dimensions and recreate the array.

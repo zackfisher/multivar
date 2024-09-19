@@ -10,6 +10,7 @@ importFrom("stats", "coef", "lm.fit", "median", "runif", "sd","setNames","predic
 importFrom("utils", "read.table", "setTxtProgressBar","txtProgressBar")
 importFrom("reshape2", "melt")
 export(multivar_sim)
+export(tvp_sim)
 export(canonical.multivar)
 export(plot_results)
 export(plot_sim)
