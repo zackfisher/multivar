@@ -43,13 +43,9 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{lambda2}}{Numeric vector. Regularization parameter 2.}
 
-\item{\code{tau}}{Numeric vector. Regularization parameter for subgroup effects.}
-
 \item{\code{nlambda1}}{Numeric. Number of lambda1 values to search over. Default is 30.}
 
 \item{\code{nlambda2}}{Numeric. Number of lambda2 values to search over. Default is 30.}
-
-\item{\code{ntau}}{Numeric. Number of tau values to search over. Default is 30.}
 
 \item{\code{tol}}{Numeric. Convergence tolerance.}
 
@@ -73,8 +69,6 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{ratios}}{Numeric vector. Default is NULL.}
 
-\item{\code{ratiostau}}{Numeric vector. Default is NULL.}
-
 \item{\code{cv}}{Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.}
 
 \item{\code{nfolds}}{Numeric. The number of folds for use with "blocked" cross-validation.}
@@ -82,16 +76,6 @@ To construct an object of class multivar, use the function \code{\link{construct
 \item{\code{thresh}}{Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.}
 
 \item{\code{lamadapt}}{Logical. Should the lambdas be calculated adaptively. Default is FALSE.}
-
-\item{\code{subgroup_membership}}{Numeric. Vector of subgroup assignments.}
-
-\item{\code{subgroup}}{Logical. Argument whether to run subgrouping algorithm.}
-
-\item{\code{B}}{Matrix. Default is NULL.}
-
-\item{\code{initcoefs}}{List. A list of initial consistent estimates for the total, subgroup, unique and common effects.}
-
-\item{\code{pendiag}}{Logical. Logical indicating where autoregressive paramaters should be penalized. Default is true.}
 }}
 
 \seealso{

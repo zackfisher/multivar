@@ -52,8 +52,8 @@ check.multivar <- function(object){
 #' @slot nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @slot lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
-#' @slot subgroup_membership Numeric. Vector of subgroup assignments.
-#' @slot subgroup Logical. Argument whether to run subgrouping algorithm.
+#' @slot subgroup Numeric. Vector of subgroup assignments.
+#' @slot subgroupflag Logical. Internal argument whether to run subgrouping algorithm.
 #' @slot B Matrix. Default is NULL. 
 #' @slot initcoefs List. A list of initial consistent estimates for the total, subgroup, unique and common effects.
 #' @slot pendiag Logical. Logical indicating where autoregressive paramaters should be penalized. Default is true.
@@ -103,8 +103,8 @@ setClass(
         nfolds = "numeric",
         thresh = "numeric",
         lamadapt = "logical",
-        subgroup_membership = "numeric",
-        subgroup = "logical",
+        subgroup = "numeric",
+        subgroupflag = "logical",
         B = "array",
         initcoefs = "list",
         pendiag = "logical"
@@ -141,8 +141,8 @@ setClass(
 #' @param nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @param thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @param lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
-#' @param subgroup_membership Numeric. Vector of subgroup assignments.
-#' @param subgroup Logical. Argument whether to run subgrouping algorithm.
+#' @param subgroup Numeric. Vector of subgroup assignments.
+#' @param subgroupflag Logical. Internal argument whether to run subgrouping algorithm.
 #' @param B Matrix. Default is NULL.
 #' @param pendiag Logical. Logical indicating whether autoregressive parameters should be penalized. Default is TRUE.
 #' @examples
@@ -190,10 +190,12 @@ constructModel <- function( data = NULL,
                             nfolds = 10,
                             thresh = 0,
                             lamadapt = FALSE,
-                            subgroup_membership = NULL,
-                            subgroup = FALSE,
+                            subgroup = NULL,
+                            subgroupflag = FALSE,
                             B = NULL,
                             pendiag = TRUE){
+  
+
   
   if( lag != 1 ){
     stop("multivar ERROR: Currently only lag of order 1 is supported.")
@@ -219,7 +221,7 @@ constructModel <- function( data = NULL,
   ndk <- unlist(lapply(dat, function(x){ncol(x$b)})) # number cols
   
   #getj  <- function(mat){dp = diff(mat@p);rep(seq_along(dp), dp) - 1}
-  getj  <- function(mat){rep(0:(ncol(mat)-1),each=nrow(mat))}
+  getj <- function(mat){rep(0:(ncol(mat)-1),each=nrow(mat))}
   k     <- length(dat)
   p     <- ncol(dat[[1]]$A)
   ns    <- sapply(dat, function(item){nrow(item$A)})
@@ -227,19 +229,17 @@ constructModel <- function( data = NULL,
   sr    <- c(1,cns[-length(cns)] + 1) - 1
   nz    <- tail(cns,1)
   is    <- js <- xs <- NULL
-  
-  if(!is.null(subgroup_membership)){
-    subgroup <- TRUE
-  } else if (subgroup == TRUE & is.null(subgroup_membership)){
-    subgroup_membership <- get_subgroups(data = data, nlambda1 = nlambda1, nlambda2 = nlambda2, pendiag = pendiag)
+  	
+  if(!is.null(subgroup)){
+    subgroupflag <- TRUE
   } else {
-    subgroup <- FALSE
-    subgroup_membership <- rep(1, k)
+    subgroupflag <- FALSE
+    subgroup <- rep(1, k)
     #subgroup <- NULL
   }
   
-  if(subgroup){
-   clust <- lapply(seq_along(subgroup_membership), function(i){rep(subgroup_membership[i],ntk[i]*p)})
+  if(subgroupflag){
+   clust <- lapply(seq_along(subgroup), function(i){rep(subgroup[i],ntk[i]*p)})
   }
   
   for(ii in 1:k){
@@ -249,7 +249,7 @@ constructModel <- function( data = NULL,
     js <- c(js, getj(dat[[ii]]$A)) #get non-zero column indices for group effects
     xs <- c(xs, dat[[ii]]$A@x) #vectorize data ffor group
     
-    if(subgroup){
+    if(subgroupflag){
       #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for subgroup
       #is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
       is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A)-1,ncol(dat[[ii]]$A)))
@@ -259,7 +259,7 @@ constructModel <- function( data = NULL,
       #is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
       is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A)-1,ncol(dat[[ii]]$A)))
       #js <- c(js, getj(dat[[ii]]$A) + p*(ii + length(unique(clust)))) #get non-zero column indices for individual effects
-      js <- c(js, getj(dat[[ii]]$A) + p*(ii + length(unique(subgroup_membership))))
+      js <- c(js, getj(dat[[ii]]$A) + p*(ii + length(unique(subgroup))))
       xs <- c(xs, dat[[ii]]$A@x) #vectorize data for individual
     } else{
       #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for individual effects
@@ -274,8 +274,8 @@ constructModel <- function( data = NULL,
   bk <- lapply(dat, "[[", "b")
   Hk <- lapply(dat, "[[", "H")
   
-  if(subgroup){
-    dims_a <- c(nz, p*((k+1)+length(unique(subgroup_membership))))
+  if(subgroupflag){
+    dims_a <- c(nz, p*((k+1)+length(unique(subgroup))))
   } else{
     dims_a <- c(nz,p*(k+1))
   }
@@ -323,8 +323,8 @@ constructModel <- function( data = NULL,
     ratios <- rev(round(exp(seq(log(k/depth),log(k),length.out = nlambda1)), digits = 10)) 
     # ratios2 is \tau_{s}/\lambda_1
     
-    if(subgroup){
-      ratiostau <- rev(round(exp(seq(log(max(subgroup_membership)/depth),log(max(subgroup_membership)),length.out = ntau)), digits = 10))
+    if(subgroupflag){
+      ratiostau <- rev(round(exp(seq(log(max(subgroup)/depth),log(max(subgroup)),length.out = ntau)), digits = 10))
     } else {
       ratiostau <- rep(1, ntau)
     }
@@ -345,14 +345,14 @@ constructModel <- function( data = NULL,
   W <- matrix(1, nrow = ncol(bk[[1]]), ncol = ncol(A))
   
   # this includes the intercept? do we want this?
-  if(!subgroup){
+  if(!subgroupflag){
     if(k == 1){
       B <- array(0,dim = c((ndk[1]),(ndk[1]*(k) + 1), nlambda1*length(ratios)))
     } else {
       B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + 1) + 1), nlambda1*length(ratios)))
     }
   } else {
-    B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + max(subgroup_membership) + 1) + 1), nlambda1*length(ratios)*length(ratiostau)))
+    B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + max(subgroup) + 1) + 1), nlambda1*length(ratios)*length(ratiostau)))
     
   }
   
@@ -394,8 +394,8 @@ constructModel <- function( data = NULL,
     nfolds = nfolds,
     thresh = thresh,
     lamadapt = lamadapt,
-    subgroup_membership = subgroup_membership,
     subgroup = subgroup,
+    subgroupflag = subgroupflag,
     B = B,
     initcoefs = initcoefs,
     pendiag = pendiag
@@ -470,8 +470,8 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@k, 
     object@lassotype, 
     object@weightest,
-    object@subgroup_membership,
     object@subgroup,
+    object@subgroupflag,
     object@nlambda1,
     object@nlambda2
   )
@@ -485,8 +485,8 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@k, 
     object@lassotype, 
     object@weightest, 
-    object@subgroup_membership,     
-    object@subgroup, 
+    object@subgroup,     
+    object@subgroupflag, 
     object@ratiostau,
     object@pendiag
   )
@@ -547,8 +547,8 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@ndk, 
     object@intercept,
     object@thresh,
-    object@subgroup_membership,
-    object@subgroup
+    object@subgroup,
+    object@subgroupflag
   )
   
   results <- list(

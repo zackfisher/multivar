@@ -23,8 +23,8 @@ estimate_initial_coefs <- function(
     k, 
     lassotype, 
     weightest,
-    subgroup_membership,
     subgroup,
+    subgroupflag,
     nlambda1,
     nlambda2){
   
@@ -42,7 +42,7 @@ estimate_initial_coefs <- function(
   
   if (lassotype == "standard"){
     
-    if(!subgroup){
+    if(!subgroupflag){
       res <- list(
         common_effects = matrix(1, d, d),
         subgroup_effects = NULL,
@@ -52,7 +52,7 @@ estimate_initial_coefs <- function(
     } else {
       res <- list(
         common_effects = matrix(1, d, d),
-        subgroup_effects = replicate(max(subgroup_membership),  matrix(1, d, d)),
+        subgroup_effects = replicate(max(subgroup),  matrix(1, d, d)),
         unique_effects = replicate(k,  matrix(1, d, d)),
         total_effects = replicate(k,  matrix(1, d, d))
       )
@@ -125,14 +125,14 @@ estimate_initial_coefs <- function(
       
     } else if (weightest == "multivar1" | weightest == "multivar2" ) {
       
-      if(subgroup){
+      if(subgroupflag){
         
         mod <- constructModel(
           data = Ak, 
           lassotype = "standard",
           nlambda1 = nlambda1, 
           nlambda2 = nlambda2,
-          subgroup_membership = subgroup_membership)
+          subgroup = subgroup)
         
         fit <- cv.multivar(mod)
         total_effects <- fit$mats$total
@@ -187,9 +187,9 @@ estimate_initial_coefs <- function(
       common_effects <- fit$mats$common
       unique_effects <- fit$mats$unique
       
-      if(subgroup){
+      if(subgroupflag){
         
-        subgroup_effects <- fit$mats$subgrp
+        subgroup_effects <- fit$mats$subgroup
         
       } else {
         
@@ -207,10 +207,10 @@ estimate_initial_coefs <- function(
       # elementwise median of list of total effect matrices
       common_effects <- apply(total_effects_array, 1:2, median)
       
-      if(subgroup){
+      if(subgroupflag){
         
-        subgroup_effects <- lapply(seq_along(1:max(subgroup_membership)), function(i){
-          apply(total_effects_array[,,which(subgroup_membership==i)], 1:2, median)
+        subgroup_effects <- lapply(seq_along(1:max(subgroup)), function(i){
+          apply(total_effects_array[,,which(subgroup==i)], 1:2, median)
         })
         
         # zf: is this backwards?
@@ -221,7 +221,7 @@ estimate_initial_coefs <- function(
         unique_effects <- lapply(seq_along(Ak), function(i){
           # already subtracted out the common effects
           # total_effects[[i]] - common_effects - subgroup_effects[[subgroup[i]]]
-          total_effects[[i]] - subgroup_effects[[subgroup_membership[i]]]
+          total_effects[[i]] - subgroup_effects[[subgroup[i]]]
         })
         
       } else {
