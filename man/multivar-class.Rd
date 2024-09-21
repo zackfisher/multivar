@@ -85,9 +85,9 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{lamadapt}}{Logical. Should the lambdas be calculated adaptively. Default is FALSE.}
 
-\item{\code{subgroup}}{Numeric. Vector of subgroup assignments.}
+\item{\code{subgroup_membership}}{Numeric. Vector of subgroup assignments.}
 
-\item{\code{subgroupflag}}{Logical. Internal argument whether to run subgrouping algorithm.}
+\item{\code{subgroup}}{Logical. Argument whether to run subgrouping algorithm.}
 
 \item{\code{B}}{Matrix. Default is NULL.}
 

@@ -33,8 +33,8 @@ constructModel(
   nfolds = 10,
   thresh = 0,
   lamadapt = FALSE,
-  subgroup = NULL,
-  subgroupflag = FALSE,
+  subgroup_membership = NULL,
+  subgroup = FALSE,
   B = NULL,
   pendiag = TRUE,
   tvp = FALSE,
@@ -99,9 +99,9 @@ constructModel(
 
 \item{lamadapt}{Logical. Should the lambdas be calculated adaptively. Default is FALSE.}
 
-\item{subgroup}{Numeric. Vector of subgroup assignments.}
+\item{subgroup_membership}{Numeric. Vector of subgroup assignments.}
 
-\item{subgroupflag}{Logical. Internal argument whether to run subgrouping algorithm.}
+\item{subgroup}{Logical. Internal argument whether to run subgrouping algorithm.}
 
 \item{B}{Matrix. Default is NULL.}
 
