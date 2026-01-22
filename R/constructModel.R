@@ -19,7 +19,9 @@
 #' @param canonical Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.
 #' @param threshold Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.
 #' @param lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
-#' @param intercept Logical. Default is FALSE. 
+#' @param intercept Logical. Default is FALSE.
+#' @param pen_common_intercept Logical. Default is FALSE. Whether to penalize the common intercept.
+#' @param pen_unique_intercept Logical. Default is TRUE. Whether to penalize individual-specific intercept deviations.
 #' @param W Matrix. Default is NULL. 
 #' @param ratios Numeric vector. Default is NULL. 
 #' @param ratiostau Numeric vector. Default is NULL. 
@@ -73,6 +75,8 @@ constructModel <- function( data = NULL,
                             threshold = FALSE,
                             lassotype = "adaptive",
                             intercept = FALSE,
+                            pen_common_intercept = FALSE,
+                            pen_unique_intercept = TRUE,
                             W = NULL,
                             ratios = NULL,
                             ratiostau = NULL,
@@ -395,13 +399,16 @@ constructModel <- function( data = NULL,
   #     )
   #   )
   # }
+  # B dimensions: rows = outcome vars (d), cols = predictor coefficients
+
+  # p accounts for intercept column when intercept=TRUE
   if (!subgroup){
     if (k == 1){
       B <- array(
         0,
         dim = c(
           ndk[1],
-          ndk[1],
+          p,
           nlambda1 * length(ratios)
         )
       )
@@ -410,7 +417,7 @@ constructModel <- function( data = NULL,
         0,
         dim = c(
           ndk[1],
-          ndk[1] * (k + 1),
+          p * (k + 1),
           nlambda1 * length(ratios)
         )
       )
@@ -420,7 +427,7 @@ constructModel <- function( data = NULL,
       0,
       dim = c(
         ndk[1],
-        ndk[1] * (k + max(subgroup_membership) + 1),
+        p * (k + max(subgroup_membership) + 1),
         nlambda1 * length(ratios) * length(ratiostau)
       )
     )
@@ -483,6 +490,8 @@ constructModel <- function( data = NULL,
              threshold  = threshold,
              lassotype = lassotype,
              intercept = intercept,
+             pen_common_intercept = pen_common_intercept,
+             pen_unique_intercept = pen_unique_intercept,
              W = W,
              ratios = ratios,
              ratiostau = ratiostau,

@@ -44,7 +44,9 @@ pretrained_var_stage2 <- function(object, stage1, alpha = 0, stage2adaptive = FA
       nlambda1  = object@nlambda1,
       nlambda2  = object@nlambda2,
       tvp       = object@tvp,
-      breaks    = object@breaks
+      breaks    = object@breaks,
+      intercept = object@intercept,
+      nfolds    = object@nfolds
     )$total_effects
     
   }

@@ -22,7 +22,9 @@ cv.var <- function(object, lambda_best = "min", adaptive = TRUE, intercept = FAL
       nlambda1  = object@nlambda1,
       nlambda2  = object@nlambda2,
       tvp       = object@tvp,
-      breaks    = object@breaks
+      breaks    = object@breaks,
+      intercept = object@intercept,
+      nfolds    = object@nfolds
     )$total_effects
     
   }

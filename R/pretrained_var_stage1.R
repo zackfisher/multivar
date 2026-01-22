@@ -40,7 +40,9 @@ pretrained_var_stage1 <- function(object, stage1adaptive = FALSE, stage1ratios =
       nlambda1  = object@nlambda1,
       nlambda2  = object@nlambda2,
       tvp       = object@tvp,
-      breaks    = object@breaks
+      breaks    = object@breaks,
+      intercept = object@intercept,
+      nfolds    = object@nfolds
     )
     
     Ahat  <- as.matrix(initcoefs$total_effects[[1]])   # d x (d+1)

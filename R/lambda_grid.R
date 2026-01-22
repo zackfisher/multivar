@@ -223,16 +223,10 @@ lambda_grid <- function(depth = 1000,
           intercept = intercept
         )
 
-        #-----------------------------------------------------------#
-        # NOTE: drop the intercept columns when checking all zero?
-        # we need to investigate this further, how large do lambdas
-        # have to be to zero out intercepts too?
-        #
-        # yes, we should drop all the intercept columns if 
-        # intercept=TRUE.
-        #-----------------------------------------------------------#
-        
-        penalized_block <- B_fit[, 1:dim(B_fit)[2], , drop = FALSE]
+        # Drop intercept column when checking if all coefficients are zero
+        # (intercept is unpenalized, so it shouldn't affect lambda_max search)
+        start_col <- if(intercept) 2 else 1
+        penalized_block <- B_fit[, start_col:dim(B_fit)[2], , drop = FALSE]
 
         if (max(abs(penalized_block)) < tol) {
           # still all basically zero at this lambda_try:

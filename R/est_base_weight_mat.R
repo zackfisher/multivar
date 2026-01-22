@@ -1,23 +1,25 @@
 #' @export
 est_base_weight_mat <- function(
-  W,        
-  Ak,        
-  initcoefs, 
-  ratios,    
-  d, 
-  k, 
-  lassotype, 
-  weightest, 
-  subgroup_membership,     
-  subgroup, 
+  W,
+  Ak,
+  initcoefs,
+  ratios,
+  d,
+  k,
+  lassotype,
+  weightest,
+  subgroup_membership,
+  subgroup,
   ratiostau,
   pendiag,
   tvp,
   ratiosalpha,
-  intercept){
-  
-  # Note, if intercepts are included pendiag should taken into account AR
-  # effects are no longer on the diagonal of the dymamics.
+  intercept,
+  pen_common_intercept = FALSE,
+  pen_unique_intercept = TRUE){
+
+  # Note, if intercepts are included pendiag should take into account AR
+  # effects are no longer on the diagonal of the dynamics (they shift by 1 column).
   
   
   # W      <- object@W
@@ -46,12 +48,12 @@ est_base_weight_mat <- function(
   } else {
 
     if(length(Ak) == 1){
-      
+
       w_mat <- 1/abs(initcoefs$total_effects[[1]])^adapower
       w_mat[is.infinite(w_mat)] <- 1e10
-      
+
       if(intercept){
-        if(!penintercept){ w_mat[,1] <- 1e-10 }
+        if(!pen_common_intercept){ w_mat[,1] <- 1e-10 }
         if(!pendiag){ diag(w_mat[,-1]) <- 1e-10 }
       } else {
         if(!pendiag){ diag(w_mat) <- 1e-10 }
@@ -60,57 +62,65 @@ est_base_weight_mat <- function(
     } else {
       
       if(!subgroup){
-        
+
         v_list <- lapply(seq_along(Ak), function(i){
           v <- 1/abs(initcoefs$unique_effects[[i]])^adapower
           v[is.infinite(v)] <- 1e10
+          if(intercept){
+            if(!pen_unique_intercept){ v[,1] <- 1e-10 }
+          }
           v
         })
-      
+
         b_med <- 1/abs(initcoefs$common_effects)^1
         b_med[is.infinite(b_med)] <- 1e10
-      
+
         if(intercept){
-          if(!penintercept){ b_med[,1] <- 1e-10 }
+          if(!pen_common_intercept){ b_med[,1] <- 1e-10 }
           if(!pendiag){ diag(b_med[,-1]) <- 1e-10 }
         } else {
           if(!pendiag){ diag(b_med) <- 1e-10 }
         }
-      
+
         w_mat <- cbind(b_med, do.call("cbind", v_list))
         
       } else {
-        
-        
+
         s_list <- lapply(seq_along(1:length(initcoefs$subgroup_effects)), function(i){
           v <- 1/abs(initcoefs$subgroup_effects[[i]])^adapower
           v[is.infinite(v)] <- 1e10
+          if(intercept){
+            if(!pen_unique_intercept){ v[,1] <- 1e-10 }
+          }
           v
         })
-        
+
         v_list <- lapply(seq_along(Ak), function(i){
           v <- 1/abs(initcoefs$unique_effects[[i]])^adapower
           v[is.infinite(v)] <- 1e10
+          if(intercept){
+            if(!pen_unique_intercept){ v[,1] <- 1e-10 }
+          }
           v
         })
-        
+
         b_med <- 1/abs(initcoefs$common_effects)^1
         b_med[is.infinite(b_med)] <- 1e10
-        
+
         if(intercept){
-          if(!penintercept){ b_med[,1] <- 1e-10 }
+          if(!pen_common_intercept){ b_med[,1] <- 1e-10 }
           if(!pendiag){ diag(b_med[,-1]) <- 1e-10 }
         } else {
           if(!pendiag){ diag(b_med) <- 1e-10 }
         }
-        
-        w_mat <- cbind(b_med, do.call("cbind", s_list),do.call("cbind", v_list))
+
+        w_mat <- cbind(b_med, do.call("cbind", s_list), do.call("cbind", v_list))
 
       }
       
-      # did not adjust intercept in this section
+      # TODO: TVP-specific intercept handling not yet implemented
       if(tvp){
-        
+
         tvp_list <- lapply(seq_along(1:length(initcoefs$tvp_effects)), function(i){
           lapply(seq_along(1:length(initcoefs$tvp_effects[[i]])), function(j){
             v <- 1/abs(initcoefs$tvp_effects[[i]][[j]])^adapower
@@ -118,18 +128,21 @@ est_base_weight_mat <- function(
             v
           })
         })
-        
+
         v_list <- lapply(seq_along(Ak), function(i){
           v <- 1/abs(initcoefs$unique_effects[[i]])^adapower
           v[is.infinite(v)] <- 1e10
+          if(intercept){
+            if(!pen_unique_intercept){ v[,1] <- 1e-10 }
+          }
           v
         })
-        
+
         b_med <- 1/abs(initcoefs$common_effects)^1
         b_med[is.infinite(b_med)] <- 1e10
-        
+
         if(intercept){
-          if(!penintercept){ b_med[,1] <- 1e-10 }
+          if(!pen_common_intercept){ b_med[,1] <- 1e-10 }
           if(!pendiag){ diag(b_med[,-1]) <- 1e-10 }
         } else {
           if(!pendiag){ diag(b_med) <- 1e-10 }

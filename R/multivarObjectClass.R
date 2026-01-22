@@ -44,7 +44,9 @@ check.multivar <- function(object){
 #' @slot canonical Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.
 #' @slot threshold Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.
 #' @slot lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
-#' @slot intercept Logical. Default is FALSE. 
+#' @slot intercept Logical. Default is FALSE.
+#' @slot pen_common_intercept Logical. Default is FALSE. Whether to penalize the common intercept.
+#' @slot pen_unique_intercept Logical. Default is TRUE. Whether to penalize individual-specific intercept deviations.
 #' @slot W Matrix. Default is NULL. 
 #' @slot ratios Numeric vector. Default is NULL. 
 #' @slot ratiostau Numeric vector. Default is NULL. 
@@ -100,6 +102,8 @@ setClass(
         threshold = "logical",
         lassotype = "character",
         intercept = "logical",
+        pen_common_intercept = "logical",
+        pen_unique_intercept = "logical",
         W = "array",
         ratios = "numeric",
         ratiostau = "numeric",
@@ -197,21 +201,23 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
   )
   
   object@W <- est_base_weight_mat(
-    object@W,        
-    object@Ak,        
-    object@initcoefs, 
-    object@ratios,    
-    object@d, 
-    object@k, 
-    object@lassotype, 
-    object@weightest, 
-    object@subgroup_membership,     
-    object@subgroup, 
+    object@W,
+    object@Ak,
+    object@initcoefs,
+    object@ratios,
+    object@d,
+    object@k,
+    object@lassotype,
+    object@weightest,
+    object@subgroup_membership,
+    object@subgroup,
     object@ratiostau,
     object@pendiag,
     object@tvp,
     object@ratiosalpha,
-    object@intercept
+    object@intercept,
+    object@pen_common_intercept,
+    object@pen_unique_intercept
   )
 
   # object@W <- est_base_weight_mat(

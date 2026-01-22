@@ -237,14 +237,13 @@ estimate_initial_coefs <- function(
            apply(total_effects_array[,,which(subgroup_membership==i)], 1:2, median)
          })
         
-        # zf: is this backwards?
+        # subgroup effects are deviation from common
         subgroup_effects <- lapply(seq_along(1:length(subgroup_effects)), function(i){
           subgroup_effects[[i]] <- subgroup_effects[[i]] - common_effects
         })
-        
+
+        # unique = total - common - subgroup ensures: total = common + subgroup + unique
         unique_effects <- lapply(seq_along(Ak), function(i){
-          # already subtracted out the common effects
-          # total_effects[[i]] - common_effects - subgroup_effects[[subgroup[i]]]
           total_effects[[i]] - common_effects - subgroup_effects[[subgroup_membership[i]]]
         })
         
