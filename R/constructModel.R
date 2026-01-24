@@ -35,8 +35,9 @@
 #' @param B Matrix. Default is NULL.
 #' @param pendiag Logical. Logical indicating whether autoregressive parameters should be penalized. Default is TRUE.
 #' @param tvp Logical. Default is FALSE.
-#' @param inittvpcoefs List. 
+#' @param inittvpcoefs List.
 #' @param breaks List. A list of length K indicating structural breaks in the time series.
+#' @param lambda_choice Character. Which lambda to use for initial coefficient estimation: "lambda.min" (default) or "lambda.1se". lambda.min is recommended for parameter recovery in adaptive LASSO; lambda.1se may cause over-shrinkage.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -58,8 +59,8 @@
 constructModel <- function( data = NULL,
                             lag = 1,
                             horizon = 0,
-                            t1 = NULL, 
-                            t2 = NULL, 
+                            t1 = NULL,
+                            t2 = NULL,
                             lambda1 = NULL,
                             lambda2 = NULL,
                             tau = NULL,
@@ -91,7 +92,8 @@ constructModel <- function( data = NULL,
                             pendiag = TRUE,
                             tvp = FALSE,
                             inittvpcoefs = list(),
-                            breaks = list() ){
+                            breaks = list(),
+                            lambda_choice = "lambda.min" ){
   
   #------------------------------------------------------------------
   # basic checks (unchanged)
@@ -99,11 +101,15 @@ constructModel <- function( data = NULL,
   if (lag != 1){
     stop("multivar ERROR: Currently only lag of order 1 is supported.")
   }
-  
+
   if (tol < 0 | tol > 1e-1){
     stop("Tolerance must be positive")
   }
-  
+
+  if (!lambda_choice %in% c("lambda.min", "lambda.1se")){
+    stop("multivar ERROR: lambda_choice must be either 'lambda.min' or 'lambda.1se'")
+  }
+
   initcoefs <- list()
   
   #------------------------------------------------------------------
@@ -258,23 +264,132 @@ constructModel <- function( data = NULL,
   # we split using each subject's own length ntk[i]
   #------------------------------------------------------------------
   if (tvp){
-    
+
     splitAt <- function(x, pos){
       unname(split(x, cumsum(seq_along(x) %in% pos)))
     }
-    
+
+    # Track whether user provided breaks or we're using defaults
+    user_provided_breaks <- (length(breaks) > 0)
+
     # if user didn't provide breaks, default is each timepoint as a "break"
-    if (length(breaks) == 0){
+    # NOTE: This default may not be suitable for TVP estimation (creates single-obs periods)
+    # TODO: Consider changing default to create reasonable-sized periods
+    if (!user_provided_breaks){
       breaks <- lapply(1:k, function(j){
         seq(from = 1, to = ntk[j], by = 1)
       })
+    }
+
+    #------------------------------------------------------------------
+    # Validate breaks parameter (only for user-provided breaks)
+    #------------------------------------------------------------------
+    if (user_provided_breaks){
+
+      # Check breaks is a list of length k
+      if (!is.list(breaks)){
+        stop("multivar ERROR: breaks must be a list when tvp = TRUE.")
+      }
+
+      if (length(breaks) != k){
+        stop(sprintf(
+          "multivar ERROR: breaks must be a list of length k=%d (got length %d).",
+          k, length(breaks)
+        ))
+      }
+
+      # Validate each subject's breaks before converting to windows
+      for (i in seq_along(breaks)){
+
+        # Check breaks[i] is numeric
+        if (!is.numeric(breaks[[i]])){
+          stop(sprintf(
+            "multivar ERROR: breaks[[%d]] must be a numeric vector.",
+            i
+          ))
+        }
+
+        # Check breaks are within valid range
+        if (any(breaks[[i]] < 1) || any(breaks[[i]] > ntk[i])){
+          stop(sprintf(
+            "multivar ERROR: breaks[[%d]] contains indices outside valid range [1, %d].",
+            i, ntk[i]
+          ))
+        }
+
+        # Check breaks are sorted
+        if (is.unsorted(breaks[[i]])){
+          stop(sprintf(
+            "multivar ERROR: breaks[[%d]] must be in chronological order.",
+            i
+          ))
+        }
+
+        # Check for duplicates
+        if (any(duplicated(breaks[[i]]))){
+          stop(sprintf(
+            "multivar ERROR: breaks[[%d]] contains duplicate indices.",
+            i
+          ))
+        }
+      }
     }
     
     # convert each subject's break vector into list of contiguous windows
     breaks <- lapply(1:k, function(j){
       splitAt(seq_len(ntk[j]), breaks[[j]])
     })
-    
+
+    #------------------------------------------------------------------
+    # Validate period lengths after window conversion (only for user-provided breaks)
+    #------------------------------------------------------------------
+    if (user_provided_breaks){
+      min_period_length <- Inf
+      short_period_warnings <- character(0)
+
+      for (i in seq_along(breaks)){
+        for (j in seq_along(breaks[[i]])){
+          period_len <- length(breaks[[i]][[j]])
+          min_period_length <- min(min_period_length, period_len)
+
+          # Check if period is too short for VAR estimation
+          # Need at least d*(d+1) observations to estimate d*d transition matrix + d intercepts
+          min_obs_needed <- ndk[i] * (ndk[i] + 1)
+          if (period_len < min_obs_needed){
+            stop(sprintf(
+              "multivar ERROR: Period %d for subject %d has only %d observations but needs at least %d (d*(d+1) = %d*%d) for VAR estimation.",
+              j, i, period_len, min_obs_needed, ndk[i], ndk[i] + 1
+            ))
+          }
+
+          # Warn if period is too short for reliable CV
+          if (period_len < nfolds){
+            short_period_warnings <- c(short_period_warnings, sprintf(
+              "Period %d for subject %d has only %d observations but nfolds=%d. CV will use fewer folds for this period.",
+              j, i, period_len, nfolds
+            ))
+          }
+        }
+      }
+
+      # Issue all warnings at once
+      if (length(short_period_warnings) > 0){
+        warning(paste(c(
+          "Some periods are shorter than nfolds:",
+          short_period_warnings
+        ), collapse = "\n  "))
+      }
+
+      # Provide guidance for very short periods
+      if (min_period_length < 30){
+        message(sprintf(
+          "Shortest TVP period has %d observations. Consider using fewer CV folds (nfolds < %d) for more stable estimation.",
+          min_period_length,
+          max(3, floor(min_period_length / 3))
+        ))
+      }
+    }
+
     # add block-diagonal time-varying columns to A
     A <- Matrix(
       cbind(
@@ -507,8 +622,9 @@ constructModel <- function( data = NULL,
              pendiag = pendiag,
              tvp = tvp,
              inittvpcoefs = inittvpcoefs,
-             breaks = breaks
+             breaks = breaks,
+             lambda_choice = lambda_choice
   )
-  
+
   return(obj)
 }

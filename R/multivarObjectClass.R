@@ -63,6 +63,7 @@ check.multivar <- function(object){
 #' @slot tvp Logical.
 #' @slot inittvpcoefs List. A list of initial tvp estimates.
 #' @slot breaks List. A list of length K indicating structural breaks in the time series.
+#' @slot lambda_choice Character. Which lambda to use for initial coefficient estimation ("lambda.min" or "lambda.1se").
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -119,7 +120,8 @@ setClass(
         pendiag = "logical",
         tvp = "logical",
         inittvpcoefs = "list",
-        breaks = "list"
+        breaks = "list",
+        lambda_choice = "character"
         ),validity=check.multivar
     )
 
@@ -186,9 +188,9 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
   object@initcoefs <- estimate_initial_coefs(
     object@Ak,
     object@bk,
-    object@d, 
-    object@k, 
-    object@lassotype, 
+    object@d,
+    object@k,
+    object@lassotype,
     object@weightest,
     object@subgroup_membership,
     object@subgroup,
@@ -197,7 +199,8 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@tvp,
     object@breaks,
     object@intercept,
-    object@nfolds
+    object@nfolds,
+    object@lambda_choice
   )
   
   object@W <- est_base_weight_mat(

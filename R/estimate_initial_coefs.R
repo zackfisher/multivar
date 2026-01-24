@@ -6,11 +6,11 @@
 #'
 #' @export
 estimate_initial_coefs <- function(
-    Ak, 
+    Ak,
     bk,
-    d, 
-    k, 
-    lassotype, 
+    d,
+    k,
+    lassotype,
     weightest,
     subgroup_membership,
     subgroup,
@@ -19,7 +19,8 @@ estimate_initial_coefs <- function(
     tvp,
     breaks,
     intercept,
-    nfolds){
+    nfolds,
+    lambda_choice = "lambda.min"){
   
   # Ak<-object@Ak
   # bk<- object@bk
@@ -127,7 +128,7 @@ estimate_initial_coefs <- function(
           foldid = rep(unlist(glmnet_folds[[g]]), d[1])
         )
         
-        g_coefs <- coef(lasso.fit, s = "lambda.1se")[-1]
+        g_coefs <- coef(lasso.fit, s = lambda_choice)[-1]
         
         mat <- matrix(g_coefs, ncol(bk[[g]]), ncol(Ak[[g]]), byrow=TRUE)
         
@@ -139,25 +140,41 @@ estimate_initial_coefs <- function(
       # did not carry intercept through tvp yet
       if(tvp){
 
-        inittvpcoefs <- lapply(seq_along(object@Ak),function(g){
+        inittvpcoefs <- lapply(seq_along(Ak),function(g){
           lapply(seq_along(breaks[[g]]), function(q){
+
+            # Create blocked folds for this period
+            period_length <- length(breaks[[g]][[q]])
+            period_indices <- seq_len(period_length)
+
+            # Use blocked folds for time series data
+            period_folds <- make_folds(period_indices, nfolds)
+
+            # Convert to fold IDs for glmnet
+            period_foldid <- unlist(lapply(seq_along(period_folds), function(fold_num){
+              rep(fold_num, length(period_folds[[fold_num]]))
+            }))
+
+            # Replicate fold IDs for each outcome variable (Kronecker structure)
+            foldid_glmnet <- rep(period_foldid, ncol(bk[[g]]))
+
             lasso.fit <- glmnet::cv.glmnet(
-              diag(ncol(object@Ak[[g]][breaks[[g]][[q]],])) %x% object@Ak[[g]][breaks[[g]][[q]],], 
-              as.vector(object@bk[[g]][breaks[[g]][[q]],]), 
-              family = "gaussian", 
-              alpha = 1, 
-              standardize = FALSE, 
-              nfolds = nfolds
+              diag(ncol(Ak[[g]][breaks[[g]][[q]],])) %x% Ak[[g]][breaks[[g]][[q]],],
+              as.vector(bk[[g]][breaks[[g]][[q]],]),
+              family = "gaussian",
+              alpha = 1,
+              standardize = FALSE,
+              foldid = foldid_glmnet
             )
             t(matrix(as.vector(predict(
-              lasso.fit, 
-              diag(ncol(object@Ak[[g]][breaks[[g]][[q]],])) %x% object@Ak[[g]][breaks[[g]][[q]],], 
-              type="coefficients", 
-              s="lambda.1se"
-            ))[-1], ncol(object@Ak[[g]]), ncol(object@Ak[[g]])))
+              lasso.fit,
+              diag(ncol(Ak[[g]][breaks[[g]][[q]],])) %x% Ak[[g]][breaks[[g]][[q]],],
+              type="coefficients",
+              s=lambda_choice
+            ))[-1], ncol(Ak[[g]]), ncol(Ak[[g]])))
           })
         })
-        
+
       }
       
     } else if (weightest == "ridge") {
@@ -175,7 +192,7 @@ estimate_initial_coefs <- function(
           foldid =  rep(unlist(glmnet_folds[[g]]), d[1])
         )
         
-        g_coefs <- coef(ridge.fit, s = "lambda.1se")[-1]
+        g_coefs <- coef(ridge.fit, s = lambda_choice)[-1]
         
         mat <- matrix(g_coefs, ncol(bk[[g]]), ncol(Ak[[g]]), byrow=TRUE)
         
@@ -278,13 +295,25 @@ estimate_initial_coefs <- function(
     
     #}
     
-    res <- list(
-      common_effects = common_effects,
-      subgroup_effects = subgroup_effects,
-      unique_effects = unique_effects,
-      tvp_effects = tvp_effects,
-      total_effects = total_effects
-    )
+    # Add inittvpcoefs to return list if tvp is TRUE
+    if (tvp && exists("inittvpcoefs")) {
+      res <- list(
+        common_effects = common_effects,
+        subgroup_effects = subgroup_effects,
+        unique_effects = unique_effects,
+        tvp_effects = tvp_effects,
+        total_effects = total_effects,
+        inittvpcoefs = inittvpcoefs
+      )
+    } else {
+      res <- list(
+        common_effects = common_effects,
+        subgroup_effects = subgroup_effects,
+        unique_effects = unique_effects,
+        tvp_effects = tvp_effects,
+        total_effects = total_effects
+      )
+    }
     
   }
   
