@@ -9,7 +9,7 @@ plot_cv_lambda_grid(fit, object = NULL, log_scale = TRUE, show_best = TRUE)
 \arguments{
 \item{fit}{result from cv.multivar(...)}
 
-\item{object}{OPTIONAL; only used if fit does NOT contain the original model as fit$obj}
+\item{object}{OPTIONAL; only used if fit does NOT contain hyperparams or obj}
 
 \item{log_scale}{logical; plot on log10 scale?}
 

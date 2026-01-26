@@ -2,7 +2,7 @@
 % Please edit documentation in R/extract_multivar_hyperparams.R
 \name{extract_multivar_hyperparams}
 \alias{extract_multivar_hyperparams}
-\title{Extract hyperparameter info from multivar CV fit}
+\title{Extract hyperparameter grid search results}
 \usage{
 extract_multivar_hyperparams(object, fit)
 }
@@ -11,15 +11,28 @@ extract_multivar_hyperparams(object, fit)
 
 \item{fit}{result returned by cv_multivar(...); MSFE is assumed to be fit[[2]]}
 }
+\value{
+A data frame with columns:
+  \describe{
+    \item{ratio_index}{Index of ratio (1 to n_ratios)}
+    \item{lambda1_index}{Index of lambda1 (1 to n_lambda)}
+    \item{slice_index}{Flattened index using C++ ordering}
+    \item{lambda1_value}{Actual lambda1 penalty value}
+    \item{ratio_value}{Actual ratio value}
+    \item{lambda2_value}{Computed lambda2 = lambda1 * ratio}
+    \item{MSFE}{Mean squared forecast error averaged across CV folds}
+  }
+}
 \description{
-Run this right after:
-  fit <- cv_multivar(...)
+Creates a tidy dataframe with all tested hyperparameter combinations and their
+cross-validation error (MSFE). Each row represents one (lambda1, ratio) combination.
 }
 \details{
-It reconstructs:
-  - full lambda1 grid (from the model object)
-  - implied lambda2 grid (lambda1 * ratio)
-  - scenario table (one row per scenario)
-  - MSFE surface (nlam x n_scenarios) from fit[[2]]
-  - best hyperparameter combo (lambda1, ratio, lambda2)
+The function averages MSFE across cross-validation folds and returns one row
+per hyperparameter combination. The dataframe can be used for:
+\itemize{
+  \item Finding best hyperparameters: \code{df[which.min(df$MSFE), ]}
+  \item Plotting MSFE surface
+  \item Filtering/analyzing hyperparameter performance
+}
 }
