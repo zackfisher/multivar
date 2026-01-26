@@ -1,103 +1,76 @@
-#' Plot arbitrary transition matrix.
+#' Plot arbitrary transition matrix
 #'
-#' @param x Matrix. An arbitrary transition matrix.
-#' @param title Character. A title for the plot.
-#' @param subtitle Character. A subtitle for the plot.
-#' @param ub Numeric. Upper bound on coefficient values for heatmap index. Default is 1.
-#' @param lb Numeric. Lower bound on coefficient values for heatmap index. Default is -1.
-#' @param legend Logical. Should a legend be included.
-#' @param dimnames Logical. Should variable names be included.
-#' @keywords var multivar lot
+#' Creates a heatmap visualization of an arbitrary transition matrix.
+#' Useful for plotting custom matrices or comparing different estimates.
+#'
+#' @param x Matrix. A transition matrix to plot
+#' @param title Character. Main title for the plot
+#' @param subtitle Character. Subtitle for the plot
+#' @param ub Numeric. Upper bound for color scale. Default is 1
+#' @param lb Numeric. Lower bound for color scale. Default is -1
+#' @param legend Logical. Should a legend be included? Default TRUE
+#' @param dimnames Logical. Should variable names be shown? Default TRUE
+#' @param palette Character. Color palette: "default", "viridis", or "greyscale"
+#' @param show_zeros Logical. If FALSE (default), zero values shown as white/NA
+#' @param ... Additional arguments passed to plotting engine
+#'
+#' @return A ggplot2 object that can be further customized
 #'
 #' @examples
+#' \dontrun{
+#' # Plot random matrix
+#' plot_transition_mat(matrix(rnorm(25), 5, 5), title = "Random Matrix")
 #'
-#' plot_transition_mat(matrix(rnorm(25),5,5), title= "Example")
+#' # Plot with custom bounds
+#' mat <- matrix(runif(25, -0.5, 0.5), 5, 5)
+#' plot_transition_mat(mat, title = "Small Coefficients", lb = -0.5, ub = 0.5)
 #'
+#' # Without legend or dimension names
+#' plot_transition_mat(mat, legend = FALSE, dimnames = FALSE)
+#' }
+#'
+#' @seealso \code{\link{plot_results}}, \code{\link{plot_sim}}
 #' @export
-plot_transition_mat <- function(x, title = NULL, subtitle = NULL, ub = 1, lb = -1, legend = TRUE, dimnames=TRUE){
-  
-  if(!dimnames){
-    colnames(x) <- rownames(x) <- NULL
-  }
-  rows <- values <- NULL
-  mats <- list("common" = x)
-  df   <- setNames(reshape2::melt(mats$common), c('rows', 'vars', 'values'))
- 
-  if(!is.null(subtitle)){
-    df$Subject <- subtitle
-  }
-  
-  
-  df$values[df$values == 0] <- NA
+plot_transition_mat <- function(x,
+                               title = NULL,
+                               subtitle = NULL,
+                               ub = 1,
+                               lb = -1,
+                               legend = TRUE,
+                               dimnames = TRUE,
+                               palette = "default",
+                               show_zeros = FALSE,
+                               ...) {
 
-  zf_red <- rgb(255,0,90, maxColorValue=255)
-  zf_green <- rgb(90, 168, 0, maxColorValue=255)
-  zf_blue <- rgb(0, 152, 233, maxColorValue=255)
-  zf_yellow <- rgb(242, 147, 24, maxColorValue=255)
-  zf_back <- rgb(51,51,51, maxColorValue=255)
-  #zf_fore <- rgb(249,242,215, maxColorValue=255)
-  zf_fore <- "white"
-  
-  text_color <- zf_back
-  grid_color <- zf_back
-  plot_background <- "white"
-  
-  colfunc_low <- colorRampPalette(c(zf_red, zf_fore))
-  colfunc_high <- colorRampPalette(c(zf_fore, zf_blue))
-  colors_to_use <- c(colfunc_low(6)[1:3],zf_fore,colfunc_high(6)[4:6])
-  
-  limit <- max(abs(c(lb,ub))) * c(-1, 1)
-  
-  if(is.null(colnames(mats$common))){
-    df$rows <- factor(df$rows,levels = rev(1:ncol(mats$common)))
-  } else {
-    df$rows <- factor(df$rows,levels = rev(colnames(mats$common)))
+  if (!is.matrix(x)) {
+    stop("x must be a matrix")
   }
-  
-  gg <- ggplot(df, aes(y=factor(rows), x=factor(vars), fill = values)) # original
-  #gg <- gg + geom_tile(color=grid_color, size=.5) 
-  gg <- gg + geom_tile() 
-  gg <- gg + scale_fill_gradientn(colors=colors_to_use,limits=limit,na.value = zf_fore,guide = guide_colorbar(frame.colour = "black", ticks.colour = "black",ticks.linewidth = 1,frame.linewidth = 1))
-  gg <- gg + coord_equal()
-  gg <- gg + theme(panel.grid.minor=element_blank())
-  gg <- gg + theme(panel.grid.major=element_blank())
-  gg <- gg + theme(axis.ticks =element_blank())
-  if(is.null(colnames(mats$common))){
-    gg <- gg + theme(axis.text.x=element_blank())
-  } else {
-    gg <- gg + theme(axis.text.x=element_text(size=10, color=text_color,angle=45,hjust=1))
+
+  # Remove dimnames if requested
+  if (!dimnames) {
+    colnames(x) <- NULL
+    rownames(x) <- NULL
   }
-  if(is.null(rownames(mats$common))){
-    gg <- gg + theme(axis.text.y=element_blank())
-  } else {
-    gg <- gg + theme(axis.text.y=element_text(size=10, color=text_color))
+
+  # Call core plotting engine
+  p <- .plot_transition_heatmap(
+    mat_list = x,
+    titles = NULL,
+    facet_ncol = 1,
+    lb = lb,
+    ub = ub,
+    show_zeros = show_zeros,
+    palette = palette,
+    show_dimnames = dimnames,
+    title = title,
+    subtitle = subtitle,
+    ...
+  )
+
+  # Remove legend if requested
+  if (!legend) {
+    p <- p + ggplot2::theme(legend.position = "none")
   }
-  gg <- gg + theme(panel.border=element_blank())
-  gg <- gg + theme(plot.title=element_text(hjust=0, color=text_color,face="bold"))
-  gg <- gg + theme(strip.text=element_text(hjust=0, color=text_color,size=12,face="bold"))
-  gg <- gg + theme(strip.background=element_rect(fill=plot_background, color=plot_background))
-  gg <- gg + theme(panel.spacing.x=unit(0.5, "cm"))
-  gg <- gg + theme(panel.spacing.y=unit(0.5, "cm"))
-  if(legend){
-    gg <- gg + theme(legend.background=element_rect(fill=plot_background, color=plot_background)) 
-    gg <- gg + theme(legend.title=element_text(size=12, color=text_color))
-    gg <- gg + theme(legend.title.align=1)
-    gg <- gg + theme(legend.text=element_text(size=10, color=text_color))
-    gg <- gg + theme(legend.text.align=1)
-  } else {
-    gg <- gg + theme(legend.position = "none")
-  }
-  gg <- gg + theme(plot.background=element_rect(fill=plot_background,color=plot_background)) 
-  gg <- gg + theme(panel.border=element_rect(fill = NA, colour='black',size=1))
-  gg <- gg + labs(fill='') 
-  gg <- gg + labs(x=NULL, y=NULL, title=title)
-  
-  if(!is.null(subtitle)){
-    gg + facet_wrap(~Subject, ncol=1)
-    gg
-  } else {
-    gg
-  }
-  
-  
+
+  return(p)
 }

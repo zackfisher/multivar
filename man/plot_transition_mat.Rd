@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_transition_mat.R
 \name{plot_transition_mat}
 \alias{plot_transition_mat}
-\title{Plot arbitrary transition matrix.}
+\title{Plot arbitrary transition matrix}
 \usage{
 plot_transition_mat(
   x,
@@ -11,32 +11,54 @@ plot_transition_mat(
   ub = 1,
   lb = -1,
   legend = TRUE,
-  dimnames = TRUE
+  dimnames = TRUE,
+  palette = "default",
+  show_zeros = FALSE,
+  ...
 )
 }
 \arguments{
-\item{x}{Matrix. An arbitrary transition matrix.}
+\item{x}{Matrix. A transition matrix to plot}
 
-\item{title}{Character. A title for the plot.}
+\item{title}{Character. Main title for the plot}
 
-\item{subtitle}{Character. A subtitle for the plot.}
+\item{subtitle}{Character. Subtitle for the plot}
 
-\item{ub}{Numeric. Upper bound on coefficient values for heatmap index. Default is 1.}
+\item{ub}{Numeric. Upper bound for color scale. Default is 1}
 
-\item{lb}{Numeric. Lower bound on coefficient values for heatmap index. Default is -1.}
+\item{lb}{Numeric. Lower bound for color scale. Default is -1}
 
-\item{legend}{Logical. Should a legend be included.}
+\item{legend}{Logical. Should a legend be included? Default TRUE}
 
-\item{dimnames}{Logical. Should variable names be included.}
+\item{dimnames}{Logical. Should variable names be shown? Default TRUE}
+
+\item{palette}{Character. Color palette: "default", "viridis", or "greyscale"}
+
+\item{show_zeros}{Logical. If FALSE (default), zero values shown as white/NA}
+
+\item{...}{Additional arguments passed to plotting engine}
+}
+\value{
+A ggplot2 object that can be further customized
 }
 \description{
-Plot arbitrary transition matrix.
+Creates a heatmap visualization of an arbitrary transition matrix.
+Useful for plotting custom matrices or comparing different estimates.
 }
 \examples{
+\dontrun{
+# Plot random matrix
+plot_transition_mat(matrix(rnorm(25), 5, 5), title = "Random Matrix")
 
-plot_transition_mat(matrix(rnorm(25),5,5), title= "Example")
+# Plot with custom bounds
+mat <- matrix(runif(25, -0.5, 0.5), 5, 5)
+plot_transition_mat(mat, title = "Small Coefficients", lb = -0.5, ub = 0.5)
+
+# Without legend or dimension names
+plot_transition_mat(mat, legend = FALSE, dimnames = FALSE)
+}
 
 }
-\keyword{lot}
-\keyword{multivar}
-\keyword{var}
+\seealso{
+\code{\link{plot_results}}, \code{\link{plot_sim}}
+}

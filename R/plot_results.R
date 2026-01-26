@@ -1,150 +1,160 @@
-#' Plot data arising from cv.multivar.
+#' Plot fitted multivar model results
 #'
-#' @param x Object. An object returned by multivar_sim.
-#' @param plot_type Character. User can specify "common" to plot the common effects matrix, "unique" to plot the unique effects matrix, or "total" to plot the total effects matrix.
-#' @param facet_ncol Numeric. Number of columns to use in the "unique" or "total" effects plot.
-#' @param datasets Numeric. A vector containing the index of datasets to plot. Default is "all".
-#' @param ub Numeric. Upper bound on coefficient values for heatmap index. Default is 1.
-#' @param lb Numeric. Lower bound on coefficient values for heatmap index. Default is -1.
-#' @keywords var multivar simulate plot
+#' Creates heatmap visualizations of transition matrices from fitted multivar models.
+#' Supports plotting common effects, unique (subject-specific) effects, total effects,
+#' subgroup effects, and time-varying parameter (TVP) effects.
+#'
+#' @param x Object returned by \code{cv.multivar()} or related fitting functions
+#' @param plot_type Character. Type of effects to plot:
+#'   \itemize{
+#'     \item "common" - Common effects shared across all subjects
+#'     \item "unique" - Subject-specific unique effects
+#'     \item "total" - Total effects (common + unique for each subject)
+#'     \item "subgrp" - Subgroup effects (if model includes subgroups)
+#'     \item "tvp" - Time-varying parameter effects (unique TVP deviations)
+#'     \item "common_tvp" - Common time-varying effects across subjects
+#'     \item "tvp_total" - Total effects for TVP models by period
+#'   }
+#' @param facet_ncol Numeric. Number of columns when faceting multiple matrices
+#' @param subjects Character "all" or numeric vector. Which subjects to plot for
+#'   "unique", "total", or "tvp" types. Default is "all"
+#' @param periods Character "all" or numeric vector. Which time periods to plot for
+#'   TVP models. Default is "all"
+#' @param ub Numeric. Upper bound for color scale. Default is 1
+#' @param lb Numeric. Lower bound for color scale. Default is -1
+#' @param palette Character. Color palette: "default", "viridis", or "greyscale"
+#' @param show_zeros Logical. If FALSE (default), zero values shown as white/NA
+#' @param ... Additional arguments passed to plotting engine
+#'
+#' @return A ggplot2 object that can be further customized
 #'
 #' @examples
+#' \dontrun{
+#' sim <- multivar_sim(k = 3, d = 5, n = 50, prop_fill_com = 0.2,
+#'                     prop_fill_ind = 0.1, sigma = diag(5))
+#' model <- constructModel(sim$data)
+#' fit <- cv.multivar(model)
 #'
-#' sim1  <- multivar_sim(
-#'   k = 2,  # individuals
-#'   d = 3,  # number of variables
-#'   n = 20, # number of timepoints
-#'   prop_fill_com = 0.1, # proportion of paths common
-#'   prop_fill_ind = 0.1, # proportion of paths unique
-#'   lb = 0.1,  # lower bound on coefficient magnitude
-#'   ub = 0.9,  # upper bound on coefficient magnitude
-#'   sigma = diag(1,3) # noise
-#' )
-#' 
-#' model1 <- constructModel(data = sim1$data, weightest = "ols")
-#' fit1 <- cv.multivar(model1)
-#' plot_results(fit1, plot_type = "common")
+#' # Plot common effects
+#' plot_results(fit, plot_type = "common")
 #'
+#' # Plot unique effects for first 2 subjects
+#' plot_results(fit, plot_type = "unique", subjects = 1:2)
+#'
+#' # For TVP models
+#' fit_tvp <- cv.multivar(constructModel(data, tvp = TRUE, breaks = list(c(50, 100))))
+#' plot_results(fit_tvp, plot_type = "tvp")  # TVP deviations by period
+#' plot_results(fit_tvp, plot_type = "tvp_total")  # Total effects by period
+#'
+#' # Customize the plot
+#' p <- plot_results(fit, plot_type = "total")
+#' p + ggplot2::ggtitle("My Custom Title") + ggplot2::theme_minimal()
+#' }
+#'
+#' @seealso \code{\link{plot_sim}}, \code{\link{plot_transition_mat}}
 #' @export
-plot_results <- function(x, plot_type = "common", facet_ncol=3, datasets = "all",ub = 1, lb = -1){
-  
-  rows <- values <- NULL
-  MSFE_mean    <- colMeans(x$MSFE)
-  msfe_min_idx <- which.min(MSFE_mean)
-  B <- x$beta[,,msfe_min_idx]
+plot_results <- function(x,
+                        plot_type = c("common", "unique", "total", "subgrp", "tvp", "common_tvp", "tvp_total"),
+                        facet_ncol = 3,
+                        subjects = "all",
+                        periods = "all",
+                        ub = 1,
+                        lb = -1,
+                        palette = "default",
+                        show_zeros = FALSE,
+                        ...) {
 
-  mats <- breakup_transition(B, x$obj@Ak, x$obj@ndk, x$obj@intercept,x$obj@thresh, x$obj@subgroup,x$obj@subgroupflag)
-    
-  if(plot_type == "common"){
-    
-    df <- setNames(melt(mats$common), c('rows', 'vars', 'values'))
-  }
-  
-  if(plot_type == "unique"){
-    if(datasets[1] == "all"){
-      df <- as.data.frame(do.call("rbind",lapply(seq_along(mats$unique), function(j){
-        mat <- mats$unique[[j]]
-        df <- setNames(melt(mat), c('rows', 'vars', 'values'))
-        df$Subject <- paste0("Dataset 1 ", j)
-        df
-      })))
-    } else {
-      df <- as.data.frame(do.call("rbind",lapply(datasets, function(j){
-        mat <- mats$unique[[j]]
-        df <- setNames(melt(mat), c('rows', 'vars', 'values'))
-        df$Subject <- paste0("Dataset 1 ", j)
-        df
-      })))
+  # Validate plot_type
+  plot_type <- match.arg(plot_type)
+
+  # Handle tvp_total as a special case (plot total effects by period)
+  if (plot_type == "tvp_total") {
+    # For TVP models, total effects are already organized by period
+    # For K=1: mats$total[[1]] is a list of period matrices
+    # For K>1: mats$total[[i]] is a list of time-point matrices
+
+    mats <- x$mats
+    if (is.null(mats$total)) {
+      stop("No total effects in this model")
     }
-  }
-  
-  if(plot_type == "total"){
-    if(datasets[1] == "all"){
-      df <- as.data.frame(do.call("rbind",lapply(seq_along(mats$total), function(j){
-        mat <- mats$total[[j]]
-        df <- setNames(melt(mat), c('rows', 'vars', 'values'))
-        df$Subject <- paste0("Dataset ", j)
-        df
-      })))
+
+    k <- length(mats$total)
+
+    if (k == 1) {
+      # K=1: Total effects organized by period
+      period_mats <- mats$total[[1]]
+
+      # Select periods
+      if (periods[1] == "all") {
+        period_idx <- seq_along(period_mats)
+      } else {
+        period_idx <- periods
+      }
+
+      mat_list <- period_mats[period_idx]
+      names(mat_list) <- paste0("Total Period ", period_idx)
+
     } else {
-      df <- as.data.frame(do.call("rbind",lapply(datasets, function(j){
-        mat <- mats$total[[j]]
-        df <- setNames(melt(mat), c('rows', 'vars', 'values'))
-        df$Subject <- paste0("Dataset ", j)
-        df
-      })))
+      # K>1: Select subjects first
+      if (subjects[1] == "all") {
+        subject_idx <- seq_along(mats$total)
+      } else {
+        subject_idx <- subjects
+      }
+
+      # For each subject, extract period-specific matrices
+      mat_list <- list()
+      for (s in subject_idx) {
+        if (is.list(mats$total[[s]])) {
+          num_periods <- length(mats$total[[s]])
+
+          # Select periods
+          if (periods[1] == "all") {
+            period_idx <- seq_len(num_periods)
+          } else {
+            period_idx <- periods
+          }
+
+          for (p in period_idx) {
+            mat_list[[length(mat_list) + 1]] <- mats$total[[s]][[p]]
+            names(mat_list)[length(mat_list)] <- paste0("Subject ", s, " Period ", p)
+          }
+        }
+      }
     }
+
+    title <- "Total Transition Matrices by Period"
+
+  } else {
+    # Standard extraction for non-TVP types
+    mat_list <- .extract_matrices_from_fit(
+      fit = x,
+      type = plot_type,
+      subjects = subjects,
+      periods = periods
+    )
+
+    # Determine title
+    title <- switch(plot_type,
+      common = "Common Transition Matrix",
+      unique = "Unique Transition Matrices",
+      total = "Total Transition Matrices",
+      subgrp = "Subgroup Transition Matrices",
+      tvp = "TVP Transition Matrices",
+      common_tvp = "Common TVP Transition Matrices"
+    )
   }
 
-  df$values[df$values == 0] <- NA
-  
-  max_val <- max(df$values)
-  min_val <- min(df$values)
-
-
-  zf_red <- rgb(255,0,90, maxColorValue=255)
-  zf_green <- rgb(90, 168, 0, maxColorValue=255)
-  zf_blue <- rgb(0, 152, 233, maxColorValue=255)
-  zf_yellow <- rgb(242, 147, 24, maxColorValue=255)
-  zf_back <- rgb(51,51,51, maxColorValue=255)
-  zf_fore <- rgb(249,242,215, maxColorValue=255)
-  zf_fore <- "white"
-  
-  text_color <- zf_back
-  grid_color <- zf_back
-  plot_background <- "white"
-  
-  colfunc_low <- colorRampPalette(c(zf_red, zf_fore))
-  colfunc_high <- colorRampPalette(c(zf_fore, zf_blue))
-  colors_to_use <- c(colfunc_low(6)[1:3],zf_fore,colfunc_high(6)[4:6])
-  
-  df$rows <- factor(df$rows,levels = rev(colnames(mats$common)))
-  
-  limit <- max(abs(c(lb,ub))) * c(-1, 1)
- 
-  gg <- ggplot(df, aes(y=rows, x=vars, fill = values)) # original
-  #gg <- gg + geom_tile(color=grid_color, size=.5) 
-  gg <- gg + geom_tile() 
-  #gg <- gg + scale_fill_gradientn(colors=colors_to_use,limits=c(-1,1),na.value = zf_fore)
-  gg <- gg + scale_fill_gradientn(colors=colors_to_use,limits=limit,na.value = zf_fore,guide = guide_colorbar(frame.colour = "black", ticks.colour = "black",ticks.linewidth = 1,frame.linewidth = 1))
-  gg <- gg + coord_equal()
-  gg <- gg + theme(panel.grid.minor=element_blank())
-  gg <- gg + theme(panel.grid.major=element_blank())
-  gg <- gg + theme(axis.text.x = element_text(angle=45,hjust=1))
-  gg <- gg + theme(axis.ticks =element_blank())
-  gg <- gg + theme(axis.text.x=element_text(size=10, color=text_color))
-  gg <- gg + theme(axis.text.y=element_text(size=10, color=text_color))
-  gg <- gg + theme(panel.border=element_blank())
-  gg <- gg + theme(plot.title=element_text(hjust=0, color=text_color,face="bold"))
-  gg <- gg + theme(strip.text=element_text(hjust=0, color=text_color,size=12,face="bold"))
-  gg <- gg + theme(strip.background=element_rect(fill=plot_background, color=plot_background))
-  gg <- gg + theme(panel.spacing.x=unit(0.5, "cm"))
-  gg <- gg + theme(panel.spacing.y=unit(0.5, "cm"))
-  gg <- gg + theme(legend.background=element_rect(fill=plot_background, color=plot_background)) 
-  gg <- gg + theme(legend.title=element_text(size=12, color=text_color))
-  gg <- gg + theme(legend.title.align=1)
-  gg <- gg + theme(legend.text=element_text(size=10, color=text_color))
-  gg <- gg + theme(plot.background=element_rect(fill=plot_background,color=plot_background)) 
-  gg <- gg + theme(panel.border=element_rect(fill = NA, colour='black',size=1))
-  gg <- gg + theme(legend.text.align=1)
-  
-  gg <- gg + labs(fill='') 
-  
-  if(plot_type == "common"){
-     gg <- gg + labs(x=NULL, y=NULL, title="Common Transition Matrix")
-  }
-  
-  if(plot_type == "unique"){
-     gg <- gg + labs(x=NULL, y=NULL, title="Unique Transition Matrices")
-     gg <- gg + facet_wrap(~Subject, ncol=facet_ncol)
-  }
-  
-  if(plot_type == "total"){
-     gg <- gg + labs(x=NULL, y=NULL, title="Total Transition Matrices")
-     gg <- gg + facet_wrap(~Subject, ncol=facet_ncol)
-  }
-  
-  gg
-
-  
+  # Call core plotting engine
+  .plot_transition_heatmap(
+    mat_list = mat_list,
+    titles = names(mat_list),
+    facet_ncol = facet_ncol,
+    lb = lb,
+    ub = ub,
+    show_zeros = show_zeros,
+    palette = palette,
+    title = title,
+    ...
+  )
 }
