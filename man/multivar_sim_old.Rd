@@ -31,9 +31,9 @@ multivar_sim_old(
 
 \item{prop_fill_ind}{Numeric. The proportion of nonzero unique (not in the common transition matrix or transition matrix of other individuals) paths in each individual transition matrix.}
 
-\item{lb}{Numeric. The upper bound for individual elements of the transition matrices.}
+\item{lb}{Numeric. The lower bound for individual elements of the transition matrices.}
 
-\item{ub}{Numeric. The lower bound for individual elements of the transition matrices.}
+\item{ub}{Numeric. The upper bound for individual elements of the transition matrices.}
 
 \item{sigma}{Matrix. The (population) innovation covariance matrix.}
 

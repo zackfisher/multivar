@@ -40,7 +40,7 @@ check.multivar <- function(object){
 #' @slot depth Numeric. Depth of grid construction. Default is 1000.
 #' @slot window Numeric. Size of rolling window.
 #' @slot standardize Logical. Default is true. Whether to standardize the individual data.
-#' @slot weightest Character. How to estimate the first-stage weights. Default is "lasso". Other options include "ridge" and "ols". 
+#' @slot weightest Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "ridge" and "ols". 
 #' @slot canonical Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.
 #' @slot threshold Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.
 #' @slot lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
@@ -48,9 +48,10 @@ check.multivar <- function(object){
 #' @slot pen_common_intercept Logical. Default is FALSE. Whether to penalize the common intercept.
 #' @slot pen_unique_intercept Logical. Default is TRUE. Whether to penalize individual-specific intercept deviations.
 #' @slot W Matrix. Default is NULL. 
-#' @slot ratios Numeric vector. Default is NULL. 
-#' @slot ratiostau Numeric vector. Default is NULL. 
-#' @slot ratiosalpha Numeric vector. Default is NULL. 
+#' @slot ratios Numeric vector. Default is NULL.
+#' @slot ratiostau Numeric vector. Default is NULL.
+#' @slot ratiosalpha Numeric vector. Default is NULL.
+#' @slot ratiosbeta Numeric vector. Penalty ratio for common TVP effects. Default is NULL. 
 #' @slot cv Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.
 #' @slot nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
@@ -64,6 +65,8 @@ check.multivar <- function(object){
 #' @slot inittvpcoefs List. A list of initial tvp estimates.
 #' @slot breaks List. A list of length K indicating structural breaks in the time series.
 #' @slot lambda_choice Character. Which lambda to use for initial coefficient estimation ("lambda.min" or "lambda.1se").
+#' @slot common_effects Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE.
+#' @slot common_tvp_effects Logical. Whether to include common TVP effects (shared time-varying patterns) in TVP models. Only applies when tvp = TRUE.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -109,6 +112,7 @@ setClass(
         ratios = "numeric",
         ratiostau = "numeric",
         ratiosalpha = "numeric",
+        ratiosbeta = "numeric",
         cv = "character",
         nfolds = "numeric",
         thresh = "numeric",
@@ -121,7 +125,9 @@ setClass(
         tvp = "logical",
         inittvpcoefs = "list",
         breaks = "list",
-        lambda_choice = "character"
+        lambda_choice = "character",
+        common_effects = "logical",
+        common_tvp_effects = "logical"
         ),validity=check.multivar
     )
 
@@ -200,9 +206,11 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@breaks,
     object@intercept,
     object@nfolds,
-    object@lambda_choice
+    object@lambda_choice,
+    object@common_effects,
+    object@common_tvp_effects
   )
-  
+
   object@W <- est_base_weight_mat(
     object@W,
     object@Ak,
@@ -218,9 +226,12 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@pendiag,
     object@tvp,
     object@ratiosalpha,
+    object@ratiosbeta,
     object@intercept,
     object@pen_common_intercept,
-    object@pen_unique_intercept
+    object@pen_unique_intercept,
+    object@common_effects,
+    object@common_tvp_effects
   )
 
   # object@W <- est_base_weight_mat(
@@ -253,17 +264,17 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
   )
 
   fit <- cv_multivar(
-    object@B, 
-    t(as.matrix(object@A)), 
-    t(as.matrix(object@b)), 
-    object@W, 
+    object@B,
+    t(as.matrix(object@A)),
+    t(as.matrix(object@b)),
+    object@W,
     object@Ak,
     object@bk,
-    object@k, 
-    object@d, 
-    object@lambda1, 
-    object@t1, 
-    object@t2, 
+    object@k,
+    object@d,
+    object@lambda1,
+    object@t1,
+    object@t2,
     eps = 1e-3,
     object@intercept,
     object@cv,
@@ -278,16 +289,18 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
 
 
   mats <- breakup_transition(
-    fit[[1]][,,which.min(colMeans(fit[[2]]))], 
-    object@Ak, 
-    object@ndk, 
+    fit[[1]][,,which.min(colMeans(fit[[2]]))],
+    object@Ak,
+    object@ndk,
     object@intercept,
     object@thresh,
     object@subgroup_membership,
     object@subgroup,
     object@tvp,
     object@ntk,
-    object@breaks
+    object@breaks,
+    object@common_effects,
+    object@common_tvp_effects
   )
   
   results <- list(
@@ -297,7 +310,10 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     obj  = object,
     hyperparams = hyp
   )
-  
+
+  # Add S3 class for method dispatch
+  class(results) <- c("multivar_fit", "list")
+
   #results <- new("multivar.results",object)
   return(results)
 })

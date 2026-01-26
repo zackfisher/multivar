@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="multivar package" />
+
+<meta name="date" content="2026-01-25" />
+
+<title>Summary and Visualization Functions</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Summary and Visualization Functions</h1>
+<h4 class="author">multivar package</h4>
+<h4 class="date">2026-01-25</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction" id="toc-introduction">Introduction</a></li>
+<li><a href="#getting-started" id="toc-getting-started">Getting
+Started</a></li>
+<li><a href="#model-summary-summary_multivar" id="toc-model-summary-summary_multivar">Model Summary:
+<code>summary_multivar()</code></a>
+<ul>
+<li><a href="#basic-usage" id="toc-basic-usage">Basic Usage</a></li>
+<li><a href="#what-information-is-displayed" id="toc-what-information-is-displayed">What Information is
+Displayed?</a>
+<ul>
+<li><a href="#dataset-information" id="toc-dataset-information">Dataset
+Information</a></li>
+<li><a href="#model-specification" id="toc-model-specification">Model
+Specification</a></li>
+<li><a href="#adaptive-weights" id="toc-adaptive-weights">Adaptive
+Weights</a></li>
+<li><a href="#overview-of-dynamics" id="toc-overview-of-dynamics">Overview of Dynamics</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#visualizing-dynamics-print_dynamics" id="toc-visualizing-dynamics-print_dynamics">Visualizing Dynamics:
+<code>print_dynamics()</code></a>
+<ul>
+<li><a href="#direct-use-with-fit-objects" id="toc-direct-use-with-fit-objects">Direct Use with Fit
+Objects</a></li>
+<li><a href="#key-features" id="toc-key-features">Key Features</a></li>
+<li><a href="#customization-options" id="toc-customization-options">Customization Options</a></li>
+</ul></li>
+<li><a href="#time-varying-models" id="toc-time-varying-models">Time-Varying Models</a>
+<ul>
+<li><a href="#fitting-a-tvp-model" id="toc-fitting-a-tvp-model">Fitting
+a TVP Model</a></li>
+<li><a href="#tvp-model-summary" id="toc-tvp-model-summary">TVP Model
+Summary</a></li>
+<li><a href="#tvp-dynamics-with-custom-labels" id="toc-tvp-dynamics-with-custom-labels">TVP Dynamics with Custom
+Labels</a></li>
+</ul></li>
+<li><a href="#edge-prevalence-across-subjects" id="toc-edge-prevalence-across-subjects">Edge Prevalence Across
+Subjects</a>
+<ul>
+<li><a href="#proportion-display" id="toc-proportion-display">Proportion
+Display</a></li>
+<li><a href="#count-display" id="toc-count-display">Count
+Display</a></li>
+<li><a href="#interpreting-the-output" id="toc-interpreting-the-output">Interpreting the Output</a></li>
+</ul></li>
+<li><a href="#comparison-with-k3-model" id="toc-comparison-with-k3-model">Comparison with K=3 Model</a></li>
+<li><a href="#complete-workflow-example" id="toc-complete-workflow-example">Complete Workflow Example</a></li>
+<li><a href="#tips-and-best-practices" id="toc-tips-and-best-practices">Tips and Best Practices</a>
+<ul>
+<li><a href="#when-to-use-each-function" id="toc-when-to-use-each-function">When to Use Each Function</a></li>
+<li><a href="#customization" id="toc-customization">Customization</a></li>
+<li><a href="#working-with-different-model-types" id="toc-working-with-different-model-types">Working with Different Model
+Types</a>
+<ul>
+<li><a href="#k1-models" id="toc-k1-models">K=1 Models</a></li>
+<li><a href="#k1-models-1" id="toc-k1-models-1">K&gt;1 Models</a></li>
+<li><a href="#tvp-models" id="toc-tvp-models">TVP Models</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#summary" id="toc-summary">Summary</a></li>
+</ul>
+</div>
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>The <code>multivar</code> package provides three main functions for
+summarizing and visualizing fitted models:</p>
+<ol style="list-style-type: decimal">
+<li><strong><code>summary_multivar()</code></strong> - Comprehensive
+model summary</li>
+<li><strong><code>print_dynamics()</code></strong> - Visualize dynamics
+matrices</li>
+<li><strong><code>print_edge_prevalence()</code></strong> - Show edge
+prevalence across subjects (K&gt;1)</li>
+</ol>
+<p>This vignette demonstrates how to use these functions to explore and
+interpret your multivar model results.</p>
+<hr />
+</div>
+<div id="getting-started" class="section level1">
+<h1>Getting Started</h1>
+<p>First, let’s load the package and fit a simple model:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(multivar)</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Simulate data with K=2 subjects</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>sim <span class="ot">&lt;-</span> <span class="fu">multivar_sim</span>(</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">k =</span> <span class="dv">2</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">d =</span> <span class="dv">4</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">n =</span> <span class="dv">100</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">prop_fill_com =</span> <span class="fl">0.3</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">prop_fill_ind =</span> <span class="fl">0.15</span>,</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">sigma =</span> <span class="fu">diag</span>(<span class="dv">4</span>),</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="at">lb =</span> <span class="fl">0.1</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="at">ub =</span> <span class="fl">0.9</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>)</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co"># Fit the model</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>object <span class="ot">&lt;-</span> <span class="fu">constructModel</span>(sim<span class="sc">$</span>data, <span class="at">intercept =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt; Warning in constructModel(sim$data, intercept = FALSE): multivar </span><span class="al">WARNING</span><span class="co">:</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt; common_tvp_effects = TRUE has no effect when tvp = FALSE.</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">cv.multivar</span>(object)</span></code></pre></div>
+<hr />
+</div>
+<div id="model-summary-summary_multivar" class="section level1">
+<h1>Model Summary: <code>summary_multivar()</code></h1>
+<p>The <code>summary_multivar()</code> function provides a comprehensive
+overview of your fitted model.</p>
+<div id="basic-usage" class="section level2">
+<h2>Basic Usage</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">summary_multivar</span>(fit)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; MULTIVAR Model Summary</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; Dataset Information:</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------------------------------------- </span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt;   Number of datasets (subjects): 2</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt;   Number of timepoints:          99 (all subjects)</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt;   Number of variables:           4 (all subjects)</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; Model Specification:</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------------------------------------- </span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt;   Time-varying parameters:       NO (stationary)</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;   Intercepts:                    NO</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; Adaptive Weights:</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------------------------------------- </span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt;   Method:                        LASSO</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt;   Type:                          Adaptive</span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt;   Lambda selection:              1 SE rule (lambda.1se)</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt;   Cross-validation:              Blocked (10-fold)</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; Overview of Dynamics:</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------------------------------------- </span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt;   Common effects:  7 edges, 56.2% sparse, range [0.071, 0.638]</span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt;   Total effects by subject:</span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt;     Subject 1:   9 edges, 43.8% sparse, range [-0.008, 0.638]</span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt;     Subject 2:   8 edges, 50.0% sparse, range [0.044, 0.696]</span></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt; ======================================================================</span></span></code></pre></div>
+</div>
+<div id="what-information-is-displayed" class="section level2">
+<h2>What Information is Displayed?</h2>
+<div id="dataset-information" class="section level3">
+<h3>Dataset Information</h3>
+<ul>
+<li><strong>Number of datasets (subjects)</strong>: The K value</li>
+<li><strong>Number of timepoints</strong>: Handles varying lengths
+across subjects</li>
+<li><strong>Number of variables</strong>: The d value</li>
+</ul>
+</div>
+<div id="model-specification" class="section level3">
+<h3>Model Specification</h3>
+<ul>
+<li><strong>Time-varying parameters</strong>: Whether the model includes
+TVP</li>
+<li><strong>Period ranges</strong>: For TVP models, shows time ranges
+for each period</li>
+<li><strong>Intercepts</strong>: Whether intercepts are included and
+penalized</li>
+</ul>
+</div>
+<div id="adaptive-weights" class="section level3">
+<h3>Adaptive Weights</h3>
+<ul>
+<li><strong>Method</strong>: LASSO, RIDGE, etc.</li>
+<li><strong>Type</strong>: Adaptive or Standard</li>
+<li><strong>Lambda selection</strong>: Minimum CV error or 1 SE
+rule</li>
+<li><strong>Cross-validation</strong>: Type and number of folds</li>
+</ul>
+</div>
+<div id="overview-of-dynamics" class="section level3">
+<h3>Overview of Dynamics</h3>
+<ul>
+<li><strong>Edge counts</strong>: Number of non-zero entries</li>
+<li><strong>Sparsity</strong>: Percentage of zero entries</li>
+<li><strong>Value ranges</strong>: Range of non-zero coefficients</li>
+</ul>
+<hr />
+</div>
+</div>
+</div>
+<div id="visualizing-dynamics-print_dynamics" class="section level1">
+<h1>Visualizing Dynamics: <code>print_dynamics()</code></h1>
+<p>The <code>print_dynamics()</code> function displays dynamics matrices
+with clear formatting and time subscripts.</p>
+<div id="direct-use-with-fit-objects" class="section level2">
+<h2>Direct Use with Fit Objects</h2>
+<p>One of the key features is that you can pass the fit object
+directly:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">print_dynamics</span>(fit, <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; FIT OBJECT: Total Effects</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; Subject 1 Dynamics </span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt;    V1     V2    V3    V4    </span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; V1 0.473  0.071 0.242 0.294 </span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt; V2 0.638  .     .     .     </span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; V3 -0.006 .     .     0.438 </span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt; V4 .      0.278 .     -0.008</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; Non-zero entries: 9 / 16 (43.8% sparse)</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; Range of non-zero values: [-0.008, 0.638]</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; Subject 2 Dynamics </span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt;    V1    V2    V3    V4   </span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; V1 0.044 0.071 0.242 0.496</span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt; V2 0.638 .     .     .    </span></span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt; V3 0.236 .     .     .    </span></span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a><span class="co">#&gt; V4 .     0.278 .     0.696</span></span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a><span class="co">#&gt; Non-zero entries: 8 / 16 (50.0% sparse)</span></span>
+<span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a><span class="co">#&gt; Range of non-zero values: [0.044, 0.696]</span></span></code></pre></div>
+</div>
+<div id="key-features" class="section level2">
+<h2>Key Features</h2>
+<ul>
+<li><strong>Time subscripts</strong>: Rows labeled as <code>V1_t</code>,
+columns as <code>V1_{t-1}</code></li>
+<li><strong>Dots for zeros</strong>: Uses <code>.</code> to display zero
+entries for better readability</li>
+<li><strong>Summary statistics</strong>: Shows sparsity and value
+ranges</li>
+<li><strong>Automatic routing</strong>: Detects TVP models and formats
+accordingly</li>
+</ul>
+</div>
+<div id="customization-options" class="section level2">
+<h2>Customization Options</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># More decimal places</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">print_dynamics</span>(fit, <span class="at">digits =</span> <span class="dv">4</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co"># Show zeros as &quot;0&quot; instead of &quot;.&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="fu">print_dynamics</span>(fit, <span class="at">zero_char =</span> <span class="st">&quot;0&quot;</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co"># Without time subscripts</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="fu">print_dynamics</span>(fit, <span class="at">time_labels =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<hr />
+</div>
+</div>
+<div id="time-varying-models" class="section level1">
+<h1>Time-Varying Models</h1>
+<p>Let’s demonstrate the summary functions with a time-varying parameter
+(TVP) model.</p>
+<div id="fitting-a-tvp-model" class="section level2">
+<h2>Fitting a TVP Model</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># Create time-varying dynamics</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>phi_period1 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="fl">0.3</span>,  <span class="fl">0.4</span>,  <span class="fl">0.0</span>,  <span class="fl">0.0</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="fl">0.0</span>,  <span class="fl">0.5</span>,  <span class="fl">0.3</span>,  <span class="fl">0.0</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="fl">0.4</span>,  <span class="fl">0.0</span>,  <span class="fl">0.2</span>,  <span class="fl">0.0</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="fl">0.0</span>,  <span class="fl">0.3</span>,  <span class="fl">0.0</span>,  <span class="fl">0.4</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>), <span class="at">nrow =</span> <span class="dv">4</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>phi_period2 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="fl">0.4</span>,  <span class="fl">0.3</span>,  <span class="fl">0.0</span>,  <span class="fl">0.2</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  <span class="fl">0.0</span>,  <span class="fl">0.6</span>,  <span class="fl">0.4</span>,  <span class="fl">0.0</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>  <span class="fl">0.3</span>,  <span class="fl">0.0</span>,  <span class="fl">0.3</span>,  <span class="fl">0.0</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="fl">0.0</span>,  <span class="fl">0.4</span>,  <span class="fl">0.0</span>,  <span class="fl">0.5</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>), <span class="at">nrow =</span> <span class="dv">4</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>phi_period3 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="fl">0.5</span>,  <span class="fl">0.2</span>,  <span class="fl">0.0</span>,  <span class="fl">0.0</span>,</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  <span class="fl">0.0</span>,  <span class="fl">0.4</span>,  <span class="fl">0.5</span>,  <span class="fl">0.0</span>,</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>  <span class="fl">0.5</span>,  <span class="fl">0.0</span>,  <span class="fl">0.4</span>,  <span class="fl">0.2</span>,</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>  <span class="fl">0.0</span>,  <span class="fl">0.5</span>,  <span class="fl">0.0</span>,  <span class="fl">0.3</span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>), <span class="at">nrow =</span> <span class="dv">4</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co"># Generate data</span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>phi_list <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>  <span class="fu">rep</span>(<span class="fu">list</span>(phi_period1), <span class="dv">80</span>),</span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a>  <span class="fu">rep</span>(<span class="fu">list</span>(phi_period2), <span class="dv">80</span>),</span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a>  <span class="fu">rep</span>(<span class="fu">list</span>(phi_period3), <span class="dv">80</span>)</span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a>)</span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a></span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>data1 <span class="ot">&lt;-</span> multivar<span class="sc">:::</span><span class="fu">var_sim_growth</span>(</span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a>  <span class="at">n =</span> <span class="dv">240</span>,</span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a>  <span class="at">phi =</span> phi_list,</span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>  <span class="at">sigma =</span> <span class="fu">diag</span>(<span class="dv">4</span>),</span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a>  <span class="at">intercept =</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>)</span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a>)</span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a></span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a><span class="co"># Fit TVP model</span></span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a>object_tvp <span class="ot">&lt;-</span> <span class="fu">constructModel</span>(</span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a>  <span class="fu">list</span>(data1),</span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a>  <span class="at">intercept =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a>  <span class="at">tvp =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="dv">80</span>, <span class="dv">160</span>)),</span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a>  <span class="at">cv =</span> <span class="st">&quot;blocked&quot;</span>,</span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a>  <span class="at">nfolds =</span> <span class="dv">5</span></span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a>)</span>
+<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a></span>
+<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a>fit_tvp <span class="ot">&lt;-</span> <span class="fu">cv.multivar</span>(object_tvp)</span></code></pre></div>
+</div>
+<div id="tvp-model-summary" class="section level2">
+<h2>TVP Model Summary</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">summary_multivar</span>(fit_tvp)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; MULTIVAR Model Summary</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt; Dataset Information:</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------------------------------------- </span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt;   Number of datasets (subjects): 1</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt;   Number of timepoints:          239</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt;   Number of variables:           4</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; Model Specification:</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------------------------------------- </span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt;   Time-varying parameters:       YES</span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt;   Number of periods:             3</span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="co">#&gt;   Period ranges:                 t=1-79, t=80-159, t=160-239</span></span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co">#&gt;   Intercepts:                    NO</span></span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co">#&gt; Adaptive Weights:</span></span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------------------------------------- </span></span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a><span class="co">#&gt;   Method:                        LASSO</span></span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="co">#&gt;   Type:                          Adaptive</span></span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a><span class="co">#&gt;   Lambda selection:              1 SE rule (lambda.1se)</span></span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a><span class="co">#&gt;   Cross-validation:              Blocked (5-fold)</span></span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a><span class="co">#&gt; Overview of Dynamics:</span></span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------------------------------------- </span></span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a><span class="co">#&gt;   Total effects (time-varying, 3 periods):</span></span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a><span class="co">#&gt;     Period 1:   9 edges, 43.8% sparse, range [0.022, 0.517]</span></span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a><span class="co">#&gt;     Period 2:   9 edges, 43.8% sparse, range [0.243, 0.583]</span></span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a><span class="co">#&gt;     Period 3:   8 edges, 50.0% sparse, range [0.291, 0.584]</span></span>
+<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a><span class="co">#&gt; ======================================================================</span></span></code></pre></div>
+<p>Notice how the summary automatically detects the TVP structure and
+shows: - Number of periods - Period ranges (t=1-79, t=80-159, t=160-239)
+- Per-period edge statistics</p>
+</div>
+<div id="tvp-dynamics-with-custom-labels" class="section level2">
+<h2>TVP Dynamics with Custom Labels</h2>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">print_dynamics</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  fit_tvp,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">period_labels =</span> <span class="fu">c</span>(<span class="st">&quot;Early&quot;</span>, <span class="st">&quot;Middle&quot;</span>, <span class="st">&quot;Late&quot;</span>),</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>)</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; FIT OBJECT: Time-Varying Parameter Model</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; TIME-VARYING DYNAMICS (3 periods)</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; Period 1: Early </span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt;    V1    V2    V3    V4   </span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; V1 0.259 0.517 .     .    </span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; V2 .     0.494 0.258 .    </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; V3 0.352 .     0.243 .    </span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt; V4 .     0.389 0.022 0.291</span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt; Non-zero entries: 9 / 16 (43.8% sparse)</span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; Range of non-zero values: [0.022, 0.517]</span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt; Period 2: Middle </span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt;    V1    V2    V3    V4   </span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt; V1 0.259 0.417 .     0.257</span></span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a><span class="co">#&gt; V2 .     0.583 0.258 .    </span></span>
+<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a><span class="co">#&gt; V3 0.352 .     0.243 .    </span></span>
+<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a><span class="co">#&gt; V4 .     0.401 .     0.500</span></span>
+<span id="cb8-38"><a href="#cb8-38" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-39"><a href="#cb8-39" tabindex="-1"></a><span class="co">#&gt; Non-zero entries: 9 / 16 (43.8% sparse)</span></span>
+<span id="cb8-40"><a href="#cb8-40" tabindex="-1"></a><span class="co">#&gt; Range of non-zero values: [0.243, 0.583]</span></span>
+<span id="cb8-41"><a href="#cb8-41" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-42"><a href="#cb8-42" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-43"><a href="#cb8-43" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb8-44"><a href="#cb8-44" tabindex="-1"></a><span class="co">#&gt; Period 3: Late </span></span>
+<span id="cb8-45"><a href="#cb8-45" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb8-46"><a href="#cb8-46" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-47"><a href="#cb8-47" tabindex="-1"></a><span class="co">#&gt;    V1    V2    V3    V4   </span></span>
+<span id="cb8-48"><a href="#cb8-48" tabindex="-1"></a><span class="co">#&gt; V1 0.434 0.352 .     .    </span></span>
+<span id="cb8-49"><a href="#cb8-49" tabindex="-1"></a><span class="co">#&gt; V2 .     0.397 0.492 .    </span></span>
+<span id="cb8-50"><a href="#cb8-50" tabindex="-1"></a><span class="co">#&gt; V3 0.584 .     0.317 .    </span></span>
+<span id="cb8-51"><a href="#cb8-51" tabindex="-1"></a><span class="co">#&gt; V4 .     0.428 .     0.291</span></span>
+<span id="cb8-52"><a href="#cb8-52" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-53"><a href="#cb8-53" tabindex="-1"></a><span class="co">#&gt; Non-zero entries: 8 / 16 (50.0% sparse)</span></span>
+<span id="cb8-54"><a href="#cb8-54" tabindex="-1"></a><span class="co">#&gt; Range of non-zero values: [0.291, 0.584]</span></span></code></pre></div>
+<hr />
+</div>
+</div>
+<div id="edge-prevalence-across-subjects" class="section level1">
+<h1>Edge Prevalence Across Subjects</h1>
+<p>For models with multiple subjects (K&gt;1),
+<code>print_edge_prevalence()</code> shows which edges are present
+across subjects.</p>
+<div id="proportion-display" class="section level2">
+<h2>Proportion Display</h2>
+<p>Shows what proportion of subjects have each edge:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">print_edge_prevalence</span>(fit, <span class="at">type =</span> <span class="st">&quot;proportion&quot;</span>, <span class="at">digits =</span> <span class="dv">2</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt; Edge Prevalence (Proportion of Subjects)</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt;    V1   V2   V3   V4  </span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; V1 1.00 1.00 1.00 1.00</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt; V2 1.00 .    .    .   </span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; V3 1.00 .    .    0.50</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; V4 .    1.00 .    1.00</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;   Universal edges (100%):        8</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;   Common edges (&gt;50%):           8</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;   Rare edges (&lt;50%):             0</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt;   Absent edges (0%):             7</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; ======================================================================</span></span></code></pre></div>
+</div>
+<div id="count-display" class="section level2">
+<h2>Count Display</h2>
+<p>Shows the actual count of subjects with each edge:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">print_edge_prevalence</span>(fit, <span class="at">type =</span> <span class="st">&quot;count&quot;</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co">#&gt; Edge Prevalence (Count of Subjects)</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt;    V1  V2  V3  V4 </span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; V1 2/2 2/2 2/2 2/2</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; V2 2/2 .   .   .  </span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; V3 2/2 .   .   1/2</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#&gt; V4 .   2/2 .   2/2</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co">#&gt;   Universal edges (all 2):       8</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#&gt;   Variable edges (between 1-1):  1</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="co">#&gt;   Absent edges (0):               7</span></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co">#&gt; ======================================================================</span></span></code></pre></div>
+</div>
+<div id="interpreting-the-output" class="section level2">
+<h2>Interpreting the Output</h2>
+<p>The summary statistics tell you:</p>
+<ul>
+<li><strong>Universal edges (100%)</strong>: Present in all
+subjects</li>
+<li><strong>Common edges (&gt;50%)</strong>: Present in more than half
+of subjects</li>
+<li><strong>Rare edges (&lt;50%)</strong>: Present in less than half of
+subjects</li>
+<li><strong>Absent edges (0%)</strong>: Not present in any subject</li>
+</ul>
+<p>This helps identify: - <strong>Shared network structure</strong>:
+Universal and common edges represent the common dynamics -
+<strong>Individual variation</strong>: Rare edges show subject-specific
+patterns - <strong>Network sparsity</strong>: Absent edges indicate
+where no relationships exist</p>
+<hr />
+</div>
+</div>
+<div id="comparison-with-k3-model" class="section level1">
+<h1>Comparison with K=3 Model</h1>
+<p>Let’s see how edge prevalence looks with more subjects:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Simulate K=3 model</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>sim3 <span class="ot">&lt;-</span> <span class="fu">multivar_sim</span>(</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>  <span class="at">k =</span> <span class="dv">3</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>  <span class="at">d =</span> <span class="dv">4</span>,</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>  <span class="at">n =</span> <span class="dv">100</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>  <span class="at">prop_fill_com =</span> <span class="fl">0.3</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>  <span class="at">prop_fill_ind =</span> <span class="fl">0.15</span>,</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>  <span class="at">sigma =</span> <span class="fu">diag</span>(<span class="dv">4</span>),</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>  <span class="at">lb =</span> <span class="fl">0.1</span>,</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>  <span class="at">ub =</span> <span class="fl">0.9</span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>)</span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a></span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>object3 <span class="ot">&lt;-</span> <span class="fu">constructModel</span>(sim3<span class="sc">$</span>data, <span class="at">intercept =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a><span class="co">#&gt; Warning in constructModel(sim3$data, intercept = FALSE): multivar </span><span class="al">WARNING</span><span class="co">:</span></span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="co">#&gt; common_tvp_effects = TRUE has no effect when tvp = FALSE.</span></span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a>fit3 <span class="ot">&lt;-</span> <span class="fu">cv.multivar</span>(object3)</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">print_edge_prevalence</span>(fit3, <span class="at">type =</span> <span class="st">&quot;proportion&quot;</span>, <span class="at">digits =</span> <span class="dv">2</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co">#&gt; Edge Prevalence (Proportion of Subjects)</span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="co">#&gt; ====================================================================== </span></span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a><span class="co">#&gt;    V1 V2   V3   V4  </span></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="co">#&gt; V1 .  0.33 0.33 1.00</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a><span class="co">#&gt; V2 .  1.00 0.33 1.00</span></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="co">#&gt; V3 .  .    .    0.33</span></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a><span class="co">#&gt; V4 .  1.00 1.00 0.33</span></span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a><span class="co">#&gt;   Universal edges (100%):        5</span></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co">#&gt;   Common edges (&gt;50%):           5</span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="co">#&gt;   Rare edges (&lt;50%):             5</span></span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a><span class="co">#&gt;   Absent edges (0%):             6</span></span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co">#&gt; ======================================================================</span></span></code></pre></div>
+<p>With more subjects, you can see more nuanced patterns of edge
+prevalence.</p>
+<hr />
+</div>
+<div id="complete-workflow-example" class="section level1">
+<h1>Complete Workflow Example</h1>
+<p>Here’s a typical workflow combining all three functions:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># 1. Fit your model</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">cv.multivar</span>(object)</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co"># 2. Get comprehensive summary</span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="fu">summary_multivar</span>(fit)</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="co"># 3. Visualize dynamics</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="fu">print_dynamics</span>(fit)</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="co"># 4. For K&gt;1: Check edge prevalence</span></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="fu">print_edge_prevalence</span>(fit, <span class="at">type =</span> <span class="st">&quot;proportion&quot;</span>)</span></code></pre></div>
+<hr />
+</div>
+<div id="tips-and-best-practices" class="section level1">
+<h1>Tips and Best Practices</h1>
+<div id="when-to-use-each-function" class="section level2">
+<h2>When to Use Each Function</h2>
+<ul>
+<li><strong><code>summary_multivar()</code></strong>: Always use this
+first to understand your model structure</li>
+<li><strong><code>print_dynamics()</code></strong>: Use to examine
+specific dynamics matrices with clear formatting</li>
+<li><strong><code>print_edge_prevalence()</code></strong>: Use for
+K&gt;1 models to understand shared vs. unique structure</li>
+</ul>
+</div>
+<div id="customization" class="section level2">
+<h2>Customization</h2>
+<p>All functions support customization:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co"># Summary (no customization needed - automatic)</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="fu">summary_multivar</span>(fit)</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co"># Dynamics with custom formatting</span></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="fu">print_dynamics</span>(</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>  fit,</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">4</span>,              <span class="co"># More precision</span></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>  <span class="at">zero_char =</span> <span class="st">&quot;—&quot;</span>,         <span class="co"># Custom zero character</span></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>  <span class="at">period_labels =</span> <span class="fu">c</span>(...)   <span class="co"># For TVP models</span></span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>)</span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a><span class="co"># Edge prevalence with custom display</span></span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="fu">print_edge_prevalence</span>(</span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a>  fit,</span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;count&quot;</span>,          <span class="co"># Show counts instead of proportions</span></span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>,              <span class="co"># Decimal places for proportions</span></span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a>  <span class="at">zero_char =</span> <span class="st">&quot;—&quot;</span>          <span class="co"># Custom zero character</span></span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="working-with-different-model-types" class="section level2">
+<h2>Working with Different Model Types</h2>
+<div id="k1-models" class="section level3">
+<h3>K=1 Models</h3>
+<ul>
+<li><code>summary_multivar()</code> shows single-subject statistics</li>
+<li><code>print_dynamics()</code> displays one matrix</li>
+<li><code>print_edge_prevalence()</code> returns a message (not
+applicable)</li>
+</ul>
+</div>
+<div id="k1-models-1" class="section level3">
+<h3>K&gt;1 Models</h3>
+<ul>
+<li><code>summary_multivar()</code> shows common + subject-specific
+statistics</li>
+<li><code>print_dynamics()</code> displays matrices for all
+subjects</li>
+<li><code>print_edge_prevalence()</code> shows edge overlap across
+subjects</li>
+</ul>
+</div>
+<div id="tvp-models" class="section level3">
+<h3>TVP Models</h3>
+<ul>
+<li><code>summary_multivar()</code> shows per-period statistics</li>
+<li><code>print_dynamics()</code> displays time-varying matrices with
+period labels</li>
+<li><code>print_edge_prevalence()</code> shows prevalence separately for
+each period (if K&gt;1)</li>
+</ul>
+<hr />
+</div>
+</div>
+</div>
+<div id="summary" class="section level1">
+<h1>Summary</h1>
+<p>The multivar summary functions provide:</p>
+<p>✓ <strong>Comprehensive information</strong> about model structure
+and results ✓ <strong>Clear visualization</strong> of dynamics with
+readable formatting ✓ <strong>Cross-subject comparisons</strong> via
+edge prevalence ✓ <strong>Automatic detection</strong> of model types
+(TVP, K=1 vs K&gt;1) ✓ <strong>Flexible customization</strong> for
+different display needs</p>
+<p>These tools make it easy to explore, interpret, and communicate your
+multivar model results.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

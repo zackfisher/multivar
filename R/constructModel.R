@@ -15,7 +15,7 @@
 #' @param tol Numeric. Optimization tolerance (default 1e-4).
 #' @param window Numeric. Size of rolling window.   
 #' @param standardize Logical. Default is true. Whether to standardize the individual data. Note, if intercept = TRUE and standardize = TRUE, the data is scaled but not de-meaned.
-#' @param weightest Character. How to estimate the first-stage weights. Default is "lasso". Other options include "ridge" and "ols". 
+#' @param weightest Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "ridge" and "ols". Only used when lassotype = "adaptive" (ignored for standard LASSO).
 #' @param canonical Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.
 #' @param threshold Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.
 #' @param lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
@@ -37,7 +37,9 @@
 #' @param tvp Logical. Default is FALSE.
 #' @param inittvpcoefs List.
 #' @param breaks List. A list of length K indicating structural breaks in the time series.
-#' @param lambda_choice Character. Which lambda to use for initial coefficient estimation: "lambda.min" (default) or "lambda.1se". lambda.min is recommended for parameter recovery in adaptive LASSO; lambda.1se may cause over-shrinkage.
+#' @param lambda_choice Character. Which lambda to use for initial coefficient estimation: "lambda.1se" (default) or "lambda.min". lambda.1se is recommended for sparser, more stable solutions; lambda.min may overfit.
+#' @param common_effects Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE. Default is TRUE (include common effects). When FALSE, the model becomes Total = Unique + TVP instead of Total = Common + Unique + TVP. This can be useful when you expect no shared dynamics across subjects.
+#' @param common_tvp_effects Logical. Whether to include time-varying common effects in TVP models. Default is NULL, which automatically sets to TRUE when tvp = TRUE and FALSE when tvp = FALSE. Only meaningful when tvp = TRUE.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -55,6 +57,7 @@
 #' 
 #' model <- constructModel(data = sim$data, weightest = "ols")
 #'
+#' @import Matrix
 #' @export
 constructModel <- function( data = NULL,
                             lag = 1,
@@ -93,8 +96,10 @@ constructModel <- function( data = NULL,
                             tvp = FALSE,
                             inittvpcoefs = list(),
                             breaks = list(),
-                            lambda_choice = "lambda.min" ){
-  
+                            lambda_choice = "lambda.1se",
+                            common_effects = TRUE,
+                            common_tvp_effects = NULL ){
+
   #------------------------------------------------------------------
   # basic checks (unchanged)
   #------------------------------------------------------------------
@@ -108,6 +113,36 @@ constructModel <- function( data = NULL,
 
   if (!lambda_choice %in% c("lambda.min", "lambda.1se")){
     stop("multivar ERROR: lambda_choice must be either 'lambda.min' or 'lambda.1se'")
+  }
+
+  # Validate common_effects
+  if (!is.logical(common_effects) || length(common_effects) != 1){
+    stop("multivar ERROR: common_effects must be TRUE or FALSE.")
+  }
+
+  # common_effects only works with TVP
+  if (!common_effects && !tvp){
+    stop("multivar ERROR: common_effects = FALSE requires tvp = TRUE.")
+  }
+
+  # common_effects = FALSE not yet supported with subgroups
+  if (!common_effects && subgroup){
+    stop("multivar ERROR: common_effects = FALSE is not yet supported with subgroups.")
+  }
+
+  # Set common_tvp_effects intelligently if not specified
+  if (is.null(common_tvp_effects)) {
+    common_tvp_effects <- tvp  # TRUE if tvp=TRUE, FALSE otherwise
+  }
+
+  # Validate common_tvp_effects
+  if (!is.logical(common_tvp_effects) || length(common_tvp_effects) != 1){
+    stop("multivar ERROR: common_tvp_effects must be TRUE or FALSE.")
+  }
+
+  # common_tvp_effects = FALSE not yet supported with subgroups
+  if (!common_tvp_effects && subgroup && tvp){
+    stop("multivar ERROR: common_tvp_effects is not yet supported with subgroups.")
   }
 
   initcoefs <- list()
@@ -208,11 +243,13 @@ constructModel <- function( data = NULL,
   # build block structure for A
   #-------------------------------------------------
   for(ii in 1:k){
-    
-    # "group" / common block
-    is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A) - 1L, ncol(dat[[ii]]$A)))
-    js <- c(js, getj(dat[[ii]]$A))
-    xs <- c(xs, dat[[ii]]$A@x)
+
+    # "group" / common block (skip if common_effects = FALSE and tvp = TRUE)
+    if (!(tvp && !common_effects)){
+      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A) - 1L, ncol(dat[[ii]]$A)))
+      js <- c(js, getj(dat[[ii]]$A))
+      xs <- c(xs, dat[[ii]]$A@x)
+    }
     
     if (subgroup){
       # subgroup block
@@ -228,7 +265,12 @@ constructModel <- function( data = NULL,
     } else {
       # individual-specific block (no subgroup layer)
       is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A) - 1L, ncol(dat[[ii]]$A)))
-      js <- c(js, getj(dat[[ii]]$A) + p * ii)
+      # Adjust offset: if no common block, shift indices down by p
+      if (tvp && !common_effects){
+        js <- c(js, getj(dat[[ii]]$A) + p * (ii - 1))
+      } else {
+        js <- c(js, getj(dat[[ii]]$A) + p * ii)
+      }
       xs <- c(xs, dat[[ii]]$A@x)
     }
   }
@@ -240,7 +282,12 @@ constructModel <- function( data = NULL,
   if (subgroup){
     dims_a <- c(nz, p * ((k + 1) + length(unique(subgroup_membership))))
   } else {
-    dims_a <- c(nz, p * (k + 1))
+    # Reduce dimensions by p if skipping common effects
+    if (tvp && !common_effects){
+      dims_a <- c(nz, p * k)
+    } else {
+      dims_a <- c(nz, p * (k + 1))
+    }
   }
   
   if (k == 1){
@@ -390,30 +437,91 @@ constructModel <- function( data = NULL,
       }
     }
 
-    # add block-diagonal time-varying columns to A
-    A <- Matrix(
-      cbind(
-        A,
-        Matrix::bdiag(
-          lapply(seq_along(Ak), function(i){
-            
-            # for subject i, build block-diagonal "tvp" regressors
-            tvp_i <- do.call(
+    # Add time-varying columns to A
+    if (k > 1 && common_tvp_effects){
+      # k>1 with common TVP: add both common TVP (shared) and unique TVP (block-diagonal)
+
+      # 1. Build common TVP columns (shared across all subjects)
+      # Each period gets one set of columns, used by all subjects in that period
+      num_periods <- length(breaks[[1]])  # assume same structure for all
+
+      # Create sparse matrix for common TVP
+      # We'll build this by stacking each subject's connection to common TVP periods
+      common_tvp_parts <- lapply(seq_along(Ak), function(i){
+        # For subject i, create columns for each period
+        do.call(
+          cbind,
+          lapply(1:num_periods, function(p){
+            # For period p, create columns for each variable
+            do.call(
               cbind,
               lapply(1:ncol(Ak[[i]]), function(j){
-                Matrix::bdiag(
-                  lapply(breaks[[i]], function(window){
-                    Ak[[i]][window, j, drop = FALSE]
-                  })
-                )
+                # Get rows for subject i in period p
+                window <- breaks[[i]][[p]]
+                # Create sparse column: 1s in period p rows, 0s elsewhere
+                col_data <- numeric(ntk[i])
+                col_data[window] <- Ak[[i]][window, j]
+                Matrix(col_data, nrow = ntk[i], ncol = 1, sparse = TRUE)
               })
             )
-            tvp_i
           })
         )
-      ),
-      sparse = TRUE
-    )
+      })
+
+      # Stack all subjects vertically (all use the same common TVP columns)
+      common_tvp_block <- do.call(rbind, common_tvp_parts)
+
+      # 2. Build unique TVP columns (block-diagonal, subject-specific)
+      unique_tvp_block <- Matrix::bdiag(
+        lapply(seq_along(Ak), function(i){
+          # for subject i, build block-diagonal "tvp" regressors
+          tvp_i <- do.call(
+            cbind,
+            lapply(1:ncol(Ak[[i]]), function(j){
+              Matrix::bdiag(
+                lapply(breaks[[i]], function(window){
+                  Ak[[i]][window, j, drop = FALSE]
+                })
+              )
+            })
+          )
+          tvp_i
+        })
+      )
+
+      # 3. Combine: A + common TVP + unique TVP
+      A <- Matrix(
+        cbind(A, common_tvp_block, unique_tvp_block),
+        sparse = TRUE
+      )
+
+    } else {
+      # k=1 or common_tvp_effects=FALSE: only unique TVP (block-diagonal)
+      # This is the current behavior
+      A <- Matrix(
+        cbind(
+          A,
+          Matrix::bdiag(
+            lapply(seq_along(Ak), function(i){
+
+              # for subject i, build block-diagonal "tvp" regressors
+              tvp_i <- do.call(
+                cbind,
+                lapply(1:ncol(Ak[[i]]), function(j){
+                  Matrix::bdiag(
+                    lapply(breaks[[i]], function(window){
+                      Ak[[i]][window, j, drop = FALSE]
+                    })
+                  )
+                })
+              )
+              tvp_i
+            })
+          )
+        ),
+        sparse = TRUE
+      )
+    }
   }
   
   #------------------------------------------------------------------
@@ -441,13 +549,13 @@ constructModel <- function( data = NULL,
       ratiostau <- rep(1, ntau)
     }
     
-    # ratiosalpha: scaling for tvp penalty (depends on ntk[i])
+    # ratiosalpha: scaling for tvp penalty (uses k instead of ntk)
     if (tvp){
       nalpha <- nlambda1
       ratiosalpha <- rev(round(
         exp(seq(
-          log((max(ntk))/depth),
-          log((max(ntk))),
+          log(k/depth),
+          log(k),
           length.out = nalpha
         )),
         digits = 10
@@ -456,7 +564,23 @@ constructModel <- function( data = NULL,
       nalpha <- nlambda1
       ratiosalpha <- rep(1, nalpha)
     }
-    
+
+    # ratiosbeta: scaling for common TVP penalty
+    if (tvp && common_tvp_effects){
+      nbeta <- nlambda1
+      ratiosbeta <- rev(round(
+        exp(seq(
+          log(k/depth),
+          log(k),
+          length.out = nbeta
+        )),
+        digits = 10
+      ))
+    } else {
+      nbeta <- nlambda1
+      ratiosbeta <- rep(1, nbeta)
+    }
+
     lambda1 <- matrix(0, nlambda1, length(ratios))
     lambda2 <- matrix(0, nlambda2, length(ratios))
     tau     <- matrix(0, ntau,     length(ratiostau))
@@ -550,10 +674,10 @@ constructModel <- function( data = NULL,
   
   
   if (tvp){
-    
+
     # this is not tested intercept coverage
-    
-    
+
+
     # overwrite B to include tvp columns.
     # additional predictors for subject i:
     #   ncol(Ak[[i]]) * length(breaks[[i]])
@@ -561,12 +685,60 @@ constructModel <- function( data = NULL,
     extra_cols <- sum(sapply(seq_along(Ak), function(i){
       ncol(Ak[[i]]) * length(breaks[[i]])
     }))
+
+    # For k=1, no separate common/unique effects needed
+    # For k>1, use standard (k+1) structure for common + unique
+    if (k == 1){
+      base_cols <- ndk[1]
+      # k=1: no ratios needed (no common/unique distinction)
+      # For TVP k=1, no common_tvp_effects (no multi-subject decomposition)
+      grid_size <- nlambda1 * length(ratiosalpha)
+      common_tvp_cols <- 0  # k=1 has no common/unique TVP distinction
+      unique_tvp_cols <- extra_cols
+    } else {
+      # k>1: need to account for common_tvp_effects
+      # Base columns (common + unique base effects)
+      if (common_effects){
+        base_cols <- ndk[1] * (k + 1)
+      } else {
+        base_cols <- ndk[1] * k
+      }
+
+      # TVP columns
+      if (common_tvp_effects){
+        # Common TVP: one set of columns per period (shared across subjects)
+        num_periods <- length(breaks[[1]])  # assume same structure for all subjects
+        common_tvp_cols <- num_periods * ndk[1]
+        # Unique TVP: per-subject, per-period (block-diagonal)
+        unique_tvp_cols <- extra_cols
+      } else {
+        # No common TVP: all TVP is unique (current behavior)
+        common_tvp_cols <- 0
+        unique_tvp_cols <- extra_cols
+      }
+
+      # Grid size calculation
+      if (common_effects && common_tvp_effects){
+        # 4-layer: common base, unique base, common TVP, unique TVP
+        grid_size <- nlambda1 * length(ratios) * length(ratiosalpha) * length(ratiosbeta)
+      } else if (common_effects && !common_tvp_effects){
+        # 3-layer: common base, unique base, unique TVP (current default)
+        grid_size <- nlambda1 * length(ratios) * length(ratiosalpha)
+      } else if (!common_effects && common_tvp_effects){
+        # 3-layer: unique base, common TVP, unique TVP
+        grid_size <- nlambda1 * length(ratiosalpha) * length(ratiosbeta)
+      } else {
+        # 2-layer: unique base, unique TVP (current common_effects=FALSE)
+        grid_size <- nlambda1 * length(ratiosalpha)
+      }
+    }
+
     B <- array(
       0,
       dim = c(
         ndk[1],
-        ndk[1] * (k + 1) + extra_cols + 1,
-        nlambda1 * length(ratios) * length(ratiosalpha)
+        base_cols + common_tvp_cols + unique_tvp_cols + if(intercept) 1 else 0,
+        grid_size
       )
     )
   }
@@ -611,6 +783,7 @@ constructModel <- function( data = NULL,
              ratios = ratios,
              ratiostau = ratiostau,
              ratiosalpha = ratiosalpha,
+             ratiosbeta = ratiosbeta,
              cv = cv,
              nfolds = nfolds,
              thresh = thresh,
@@ -623,7 +796,9 @@ constructModel <- function( data = NULL,
              tvp = tvp,
              inittvpcoefs = inittvpcoefs,
              breaks = breaks,
-             lambda_choice = lambda_choice
+             lambda_choice = lambda_choice,
+             common_effects = common_effects,
+             common_tvp_effects = common_tvp_effects
   )
 
   return(obj)

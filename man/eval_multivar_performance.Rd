@@ -10,7 +10,8 @@ eval_multivar_performance(
   eps = 1e-08,
   reduced.output = TRUE,
   averages.only = TRUE,
-  label = NULL
+  label = NULL,
+  intercept = FALSE
 )
 }
 \arguments{
@@ -27,6 +28,8 @@ and the single 'common' row (if present)}
 
 \item{label}{Optional label for the fitted model; by default, uses the
 deparsed name of `fit_obj`}
+
+\item{intercept}{Logical; if TRUE, evaluates intercepts separately from dynamics}
 }
 \description{
 Compare estimated transition matrices to simulation truth, but only for

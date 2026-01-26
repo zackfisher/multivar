@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimate_initial_coefs.R
 \name{estimate_initial_coefs}
 \alias{estimate_initial_coefs}
-\title{Estimate consistent first-stage coefficients}
+\title{Estimate initial coefficients for adaptive weights}
 \usage{
 estimate_initial_coefs(
   Ak,
@@ -18,10 +18,49 @@ estimate_initial_coefs(
   tvp,
   breaks,
   intercept,
-  nfolds
+  nfolds,
+  lambda_choice = "lambda.min",
+  common_effects = TRUE,
+  common_tvp_effects = TRUE
 )
 }
+\arguments{
+\item{Ak}{List. A list (length = k) of lagged (T-lag-horizon) by d multivariate time series matrices.}
+
+\item{bk}{List. A list (length = k) of (T-lag-horizon) by d multivariate time series matrices.}
+
+\item{d}{Numeric vector. The number of variables for each dataset.}
+
+\item{k}{Numeric. The number of subjects.}
+
+\item{lassotype}{Character. Type of LASSO penalty: "standard" or "adaptive".}
+
+\item{weightest}{Character. How to estimate initial coefficients for adaptive weights: "lasso", "ridge", or "ols". Only used when lassotype = "adaptive" (ignored for standard LASSO).}
+
+\item{subgroup_membership}{Numeric vector. Vector of subgroup assignments for each subject.}
+
+\item{subgroup}{Logical. Whether to run subgrouping algorithm.}
+
+\item{nlambda1}{Numeric. Number of lambda1 values for the main estimation grid. Not used when developing adaptive weights.}
+
+\item{nlambda2}{Numeric. Number of lambda2 values for the main estimation grid. Not used when developing adaptive weights.}
+
+\item{tvp}{Logical. Whether to estimate time-varying parameters.}
+
+\item{breaks}{List. A list of length k indicating structural breaks in the time series.}
+
+\item{intercept}{Logical. Whether to include intercepts in the model.}
+
+\item{nfolds}{Numeric. The number of folds for cross-validation.}
+
+\item{lambda_choice}{Character. Which lambda to use from cv.glmnet: "lambda.min"
+or "lambda.1se". Passed from constructModel; see constructModel documentation
+for usage guidance.}
+
+\item{common_effects}{Logical. Whether to include common effects in TVP models.
+Passed from constructModel.}
+}
 \description{
-`estimate_initial_coefs` returns consistent first-stage estimates to be used
-for calculating adaptive weights used in regularization.
+`estimate_initial_coefs` returns consistent initial estimates to be used
+for calculating adaptive weights in adaptive LASSO regularization.
 }

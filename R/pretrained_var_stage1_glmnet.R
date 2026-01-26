@@ -1,4 +1,3 @@
-#' @export
 #' Stage 1 (glmnet): common block only, with optional per-equation intercepts
 #'
 #' Fits the common block using cv.glmnet on a block-diagonal design.

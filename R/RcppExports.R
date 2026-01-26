@@ -2,38 +2,38 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 fista_sparse <- function(A, b, lambda, x_true, niter, backtrack, w = NULL, conv = 1e-10) {
-    .Call(`_multivar_fista_sparse`, A, b, lambda, x_true, niter, backtrack, w, conv)
+    .Call('_multivar_fista_sparse', PACKAGE = 'multivar', A, b, lambda, x_true, niter, backtrack, w, conv)
 }
 
 showValue <- function(x) {
-    invisible(.Call(`_multivar_showValue`, x))
+    invisible(.Call('_multivar_showValue', PACKAGE = 'multivar', x))
 }
 
 norm2 <- function(x) {
-    .Call(`_multivar_norm2`, x)
+    .Call('_multivar_norm2', PACKAGE = 'multivar', x)
 }
 
 ST1a <- function(z, gam) {
-    .Call(`_multivar_ST1a`, z, gam)
+    .Call('_multivar_ST1a', PACKAGE = 'multivar', z, gam)
 }
 
 ST3a <- function(z, gam) {
-    .Call(`_multivar_ST3a`, z, gam)
+    .Call('_multivar_ST3a', PACKAGE = 'multivar', z, gam)
 }
 
 ind <- function(n2, m) {
-    .Call(`_multivar_ind`, n2, m)
+    .Call('_multivar_ind', PACKAGE = 'multivar', n2, m)
 }
 
 FISTA <- function(Y, Z, B, W, lambda1, eps, step) {
-    .Call(`_multivar_FISTA`, Y, Z, B, W, lambda1, eps, step)
+    .Call('_multivar_FISTA', PACKAGE = 'multivar', Y, Z, B, W, lambda1, eps, step)
 }
 
 lamloopFISTA <- function(beta_, Y, Z, W_, lambda1, eps, B1, step) {
-    .Call(`_multivar_lamloopFISTA`, beta_, Y, Z, W_, lambda1, eps, B1, step)
+    .Call('_multivar_lamloopFISTA', PACKAGE = 'multivar', beta_, Y, Z, W_, lambda1, eps, B1, step)
 }
 
 lamloopFISTA_offset <- function(beta_, Y, Z, W_, lambda1, eps, ZMean2, B1, step, offset) {
-    .Call(`_multivar_lamloopFISTA_offset`, beta_, Y, Z, W_, lambda1, eps, ZMean2, B1, step, offset)
+    .Call('_multivar_lamloopFISTA_offset', PACKAGE = 'multivar', beta_, Y, Z, W_, lambda1, eps, ZMean2, B1, step, offset)
 }
 

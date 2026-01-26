@@ -1,3 +1,4 @@
+#' @importFrom Matrix Matrix
 #' @export
 setup_data <- function (data, standardize, lag, horizon, intercept) {
   

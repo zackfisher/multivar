@@ -1,0 +1,424 @@
+---
+title: "Summary and Visualization Functions in multivar"
+author: "Zachary F. Fisher"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: pdflatex
+    keep_tex: false
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{tabu}
+  - \usepackage{threeparttable}
+  - \usepackage{xcolor}
+  - \usepackage{fancyhdr}
+  - \pagestyle{fancy}
+  - \fancyhead[L]{Summary Functions}
+  - \fancyhead[R]{\texttt{multivar} Package}
+  - \usepackage{geometry}
+  - \geometry{margin=1in}
+geometry: margin=1in
+fontsize: 11pt
+vignette: >
+  %\VignetteIndexEntry{Summary and Visualization Functions (PDF)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5,
+  fig.align = "center",
+  out.width = "85%"
+)
+```
+
+\newpage
+
+# Introduction
+
+The `multivar` package provides three main functions for summarizing and visualizing fitted models:
+
+1. **`summary_multivar()`** -- Comprehensive model summary with dataset information, model specifications, and dynamics overview
+2. **`print_dynamics()`** -- Visualize dynamics matrices with clear formatting and time subscripts
+3. **`print_edge_prevalence()`** -- Display edge prevalence across subjects for multi-subject models ($K>1$)
+
+This vignette demonstrates how to use these functions to explore and interpret multivar model results effectively.
+
+\medskip
+
+**Key Features:**
+
+- Automatic detection of model types (TVP vs. non-TVP, $K=1$ vs. $K>1$)
+- Clean, publication-ready formatting
+- Flexible customization options
+- Seamless integration with fitted model objects
+
+---
+
+# Getting Started
+
+First, load the package and fit a simple model to demonstrate the summary functions.
+
+## Loading the Package
+
+```{r load-package}
+library(multivar)
+```
+
+## Simulating and Fitting a Model
+
+We'll simulate data with $K=2$ subjects, $d=4$ variables, and $n=100$ timepoints:
+
+```{r fit-simple-model, results='hide', message=FALSE}
+# Simulate data with K=2 subjects
+set.seed(123)
+sim <- multivar_sim(
+  k = 2,
+  d = 4,
+  n = 100,
+  prop_fill_com = 0.3,
+  prop_fill_ind = 0.15,
+  sigma = diag(4),
+  lb = 0.1,
+  ub = 0.9
+)
+
+# Fit the model
+object <- constructModel(sim$data, intercept = FALSE)
+fit <- cv.multivar(object)
+```
+
+\newpage
+
+# Model Summary: `summary_multivar()`
+
+The `summary_multivar()` function provides a comprehensive overview of your fitted model, including dataset characteristics, model specifications, and an overview of the estimated dynamics.
+
+## Basic Usage
+
+```{r summary-basic}
+summary_multivar(fit)
+```
+
+## Information Displayed
+
+The summary includes four main sections:
+
+### Dataset Information
+
+- **Number of datasets (subjects)**: The $K$ value
+- **Number of timepoints**: Handles both equal and varying lengths across subjects
+- **Number of variables**: The $d$ value (dimension of the VAR system)
+
+### Model Specification
+
+- **Time-varying parameters (TVP)**: Whether the model includes time-varying dynamics
+- **Period ranges**: For TVP models, shows time ranges for each period
+- **Intercepts**: Whether intercepts are included and how they are penalized
+
+### Adaptive Weights
+
+- **Method**: LASSO, RIDGE, or other penalization methods
+- **Type**: Adaptive or Standard weighting
+- **Lambda selection**: Minimum CV error (`lambda.min`) or 1 SE rule (`lambda.1se`)
+- **Cross-validation**: Type (blocked or rolling) and number of folds
+
+### Overview of Dynamics
+
+- **Edge counts**: Number of non-zero entries in transition matrices
+- **Sparsity**: Percentage of zero entries
+- **Value ranges**: Range of non-zero coefficient values
+- **Per-subject breakdown**: For $K>1$ models, shows both common and subject-specific statistics
+
+\newpage
+
+# Visualizing Dynamics: `print_dynamics()`
+
+The `print_dynamics()` function displays dynamics matrices with clear formatting, time subscripts, and summary statistics. A key feature is that you can pass fit objects directly.
+
+## Direct Use with Fit Objects
+
+```{r print-dynamics-fit}
+print_dynamics(fit, digits = 3)
+```
+
+## Key Features
+
+- **Time subscripts**: Rows labeled as $V_i(t)$, columns as $V_j(t-1)$
+- **Dots for zeros**: Uses `.` to display zero entries for better readability
+- **Alignment**: Positive values include leading space to align with negative values
+- **Summary statistics**: Shows sparsity and value ranges
+- **Automatic routing**: Detects TVP models and formats accordingly
+
+## Customization Options
+
+```{r print-dynamics-custom, eval=FALSE}
+# More decimal places
+print_dynamics(fit, digits = 4)
+
+# Show zeros as "0" instead of "."
+print_dynamics(fit, zero_char = "0")
+
+# Without time subscripts
+print_dynamics(fit, time_labels = FALSE)
+```
+
+\newpage
+
+# Time-Varying Parameter (TVP) Models
+
+The summary functions automatically detect and handle time-varying parameter models. Let's demonstrate with a TVP example.
+
+## Fitting a TVP Model
+
+```{r fit-tvp-model, results='hide', message=FALSE}
+# Create time-varying dynamics
+phi_period1 <- matrix(c(
+  0.3,  0.4,  0.0,  0.0,
+  0.0,  0.5,  0.3,  0.0,
+  0.4,  0.0,  0.2,  0.0,
+  0.0,  0.3,  0.0,  0.4
+), nrow = 4, byrow = TRUE)
+
+phi_period2 <- matrix(c(
+  0.4,  0.3,  0.0,  0.2,
+  0.0,  0.6,  0.4,  0.0,
+  0.3,  0.0,  0.3,  0.0,
+  0.0,  0.4,  0.0,  0.5
+), nrow = 4, byrow = TRUE)
+
+phi_period3 <- matrix(c(
+  0.5,  0.2,  0.0,  0.0,
+  0.0,  0.4,  0.5,  0.0,
+  0.5,  0.0,  0.4,  0.2,
+  0.0,  0.5,  0.0,  0.3
+), nrow = 4, byrow = TRUE)
+
+# Generate data
+phi_list <- c(
+  rep(list(phi_period1), 80),
+  rep(list(phi_period2), 80),
+  rep(list(phi_period3), 80)
+)
+
+data1 <- multivar:::var_sim_growth(
+  n = 240,
+  phi = phi_list,
+  sigma = diag(4),
+  intercept = rep(0, 4)
+)
+
+# Fit TVP model
+object_tvp <- constructModel(
+  list(data1),
+  intercept = FALSE,
+  tvp = TRUE,
+  breaks = list(c(80, 160)),
+  cv = "blocked",
+  nfolds = 5
+)
+
+fit_tvp <- cv.multivar(object_tvp)
+```
+
+## TVP Model Summary
+
+```{r summary-tvp}
+summary_multivar(fit_tvp)
+```
+
+Notice how the summary automatically detects the TVP structure and displays:
+
+- Number of periods (3 in this case)
+- Period ranges: $t=1$--79, $t=80$--159, $t=160$--239
+- Per-period edge statistics showing how network structure evolves over time
+
+## TVP Dynamics with Custom Labels
+
+```{r print-dynamics-tvp}
+print_dynamics(
+  fit_tvp,
+  period_labels = c("Early", "Middle", "Late"),
+  digits = 3
+)
+```
+
+The period labels provide interpretable names for each time window, making it easier to communicate results.
+
+\newpage
+
+# Edge Prevalence Across Subjects
+
+For models with multiple subjects ($K>1$), `print_edge_prevalence()` shows which edges are present across subjects. This helps identify universal dynamics versus subject-specific patterns.
+
+## Proportion Display
+
+Shows what proportion of subjects have each edge:
+
+```{r edge-prevalence-proportion}
+print_edge_prevalence(fit, type = "proportion", digits = 2)
+```
+
+## Count Display
+
+Shows the actual count of subjects with each edge:
+
+```{r edge-prevalence-count}
+print_edge_prevalence(fit, type = "count")
+```
+
+## Interpreting the Output
+
+The summary statistics identify:
+
+- **Universal edges (100\%)**: Present in all subjects -- these represent shared dynamics
+- **Common edges ($>50\%$)**: Present in more than half of subjects
+- **Rare edges ($<50\%$)**: Present in less than half of subjects -- potentially subject-specific
+- **Absent edges (0\%)**: Not present in any subject
+
+This breakdown helps researchers understand:
+
+1. **Shared network structure**: Universal and common edges
+2. **Individual variation**: Rare edges showing subject-specific patterns
+3. **Network sparsity**: Absent edges indicate where no relationships exist
+
+\newpage
+
+# Comparison with $K=3$ Model
+
+Edge prevalence patterns become more nuanced with additional subjects:
+
+```{r fit-k3-model, results='hide', message=FALSE}
+# Simulate K=3 model
+sim3 <- multivar_sim(
+  k = 3,
+  d = 4,
+  n = 100,
+  prop_fill_com = 0.3,
+  prop_fill_ind = 0.15,
+  sigma = diag(4),
+  lb = 0.1,
+  ub = 0.9
+)
+
+object3 <- constructModel(sim3$data, intercept = FALSE)
+fit3 <- cv.multivar(object3)
+```
+
+```{r edge-prevalence-k3}
+print_edge_prevalence(fit3, type = "proportion", digits = 2)
+```
+
+With more subjects, you can observe more granular patterns of edge prevalence, helping to distinguish between highly consistent edges, moderately consistent edges, and idiosyncratic edges.
+
+\newpage
+
+# Complete Workflow Example
+
+A typical workflow combining all three functions:
+
+```{r complete-workflow, eval=FALSE}
+# 1. Fit your model
+fit <- cv.multivar(object)
+
+# 2. Get comprehensive summary
+summary_multivar(fit)
+
+# 3. Visualize dynamics
+print_dynamics(fit)
+
+# 4. For K>1: Check edge prevalence
+print_edge_prevalence(fit, type = "proportion")
+```
+
+---
+
+# Tips and Best Practices
+
+## When to Use Each Function
+
+- **`summary_multivar()`**: Always use this first to understand model structure and get an overview
+- **`print_dynamics()`**: Use to examine specific dynamics matrices with publication-ready formatting
+- **`print_edge_prevalence()`**: Use for $K>1$ models to understand shared vs. unique network structure
+
+## Customization Examples
+
+All functions support flexible customization:
+
+```{r customization-examples, eval=FALSE}
+# Summary (automatic - no customization needed)
+summary_multivar(fit)
+
+# Dynamics with custom formatting
+print_dynamics(
+  fit,
+  digits = 4,              # More precision
+  zero_char = "—",         # Custom zero character
+  period_labels = c(...)   # For TVP models
+)
+
+# Edge prevalence with custom display
+print_edge_prevalence(
+  fit,
+  type = "count",          # Show counts instead of proportions
+  digits = 3,              # Decimal places for proportions
+  zero_char = "—"          # Custom zero character
+)
+```
+
+## Working with Different Model Types
+
+### $K=1$ Models (Single Subject)
+
+- `summary_multivar()` shows single-subject statistics
+- `print_dynamics()` displays one matrix
+- `print_edge_prevalence()` returns a message (not applicable for single subject)
+
+### $K>1$ Models (Multiple Subjects)
+
+- `summary_multivar()` shows common + subject-specific statistics
+- `print_dynamics()` displays matrices for all subjects
+- `print_edge_prevalence()` shows edge overlap across subjects
+
+### TVP Models (Time-Varying)
+
+- `summary_multivar()` shows per-period statistics
+- `print_dynamics()` displays time-varying matrices with period labels
+- `print_edge_prevalence()` shows prevalence separately for each period (if $K>1$)
+
+\newpage
+
+# Summary
+
+The multivar summary functions provide:
+
+\begin{itemize}
+\item \textbf{Comprehensive information} about model structure and results
+\item \textbf{Clear visualization} of dynamics with readable, publication-ready formatting
+\item \textbf{Cross-subject comparisons} via edge prevalence analysis
+\item \textbf{Automatic detection} of model types (TVP, $K=1$ vs. $K>1$)
+\item \textbf{Flexible customization} for different display and reporting needs
+\end{itemize}
+
+These tools make it easy to explore, interpret, and communicate multivar model results in both exploratory data analysis and formal research reporting.
+
+---
+
+# References
+
+Fisher, Z. F., Kim, Y., Fredrickson, B. L., & Pipiras, V. (2022). Penalized estimation of multiple-subject Vector Autoregressive models. *Psychometrika*, *87*(1), 1--28.
+

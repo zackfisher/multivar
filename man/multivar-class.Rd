@@ -59,7 +59,7 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{standardize}}{Logical. Default is true. Whether to standardize the individual data.}
 
-\item{\code{weightest}}{Character. How to estimate the first-stage weights. Default is "lasso". Other options include "ridge" and "ols".}
+\item{\code{weightest}}{Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "ridge" and "ols".}
 
 \item{\code{canonical}}{Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.}
 
@@ -69,6 +69,10 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{intercept}}{Logical. Default is FALSE.}
 
+\item{\code{pen_common_intercept}}{Logical. Default is FALSE. Whether to penalize the common intercept.}
+
+\item{\code{pen_unique_intercept}}{Logical. Default is TRUE. Whether to penalize individual-specific intercept deviations.}
+
 \item{\code{W}}{Matrix. Default is NULL.}
 
 \item{\code{ratios}}{Numeric vector. Default is NULL.}
@@ -76,6 +80,8 @@ To construct an object of class multivar, use the function \code{\link{construct
 \item{\code{ratiostau}}{Numeric vector. Default is NULL.}
 
 \item{\code{ratiosalpha}}{Numeric vector. Default is NULL.}
+
+\item{\code{ratiosbeta}}{Numeric vector. Penalty ratio for common TVP effects. Default is NULL.}
 
 \item{\code{cv}}{Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.}
 
@@ -100,6 +106,12 @@ To construct an object of class multivar, use the function \code{\link{construct
 \item{\code{inittvpcoefs}}{List. A list of initial tvp estimates.}
 
 \item{\code{breaks}}{List. A list of length K indicating structural breaks in the time series.}
+
+\item{\code{lambda_choice}}{Character. Which lambda to use for initial coefficient estimation ("lambda.min" or "lambda.1se").}
+
+\item{\code{common_effects}}{Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE.}
+
+\item{\code{common_tvp_effects}}{Logical. Whether to include common TVP effects (shared time-varying patterns) in TVP models. Only applies when tvp = TRUE.}
 }}
 
 \seealso{

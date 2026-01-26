@@ -25,6 +25,8 @@ constructModel(
   threshold = FALSE,
   lassotype = "adaptive",
   intercept = FALSE,
+  pen_common_intercept = FALSE,
+  pen_unique_intercept = TRUE,
   W = NULL,
   ratios = NULL,
   ratiostau = NULL,
@@ -39,7 +41,10 @@ constructModel(
   pendiag = TRUE,
   tvp = FALSE,
   inittvpcoefs = list(),
-  breaks = list()
+  breaks = list(),
+  lambda_choice = "lambda.1se",
+  common_effects = TRUE,
+  common_tvp_effects = NULL
 )
 }
 \arguments{
@@ -73,7 +78,7 @@ constructModel(
 
 \item{standardize}{Logical. Default is true. Whether to standardize the individual data. Note, if intercept = TRUE and standardize = TRUE, the data is scaled but not de-meaned.}
 
-\item{weightest}{Character. How to estimate the first-stage weights. Default is "lasso". Other options include "ridge" and "ols".}
+\item{weightest}{Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "ridge" and "ols". Only used when lassotype = "adaptive" (ignored for standard LASSO).}
 
 \item{canonical}{Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.}
 
@@ -82,6 +87,10 @@ constructModel(
 \item{lassotype}{Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.}
 
 \item{intercept}{Logical. Default is FALSE.}
+
+\item{pen_common_intercept}{Logical. Default is FALSE. Whether to penalize the common intercept.}
+
+\item{pen_unique_intercept}{Logical. Default is TRUE. Whether to penalize individual-specific intercept deviations.}
 
 \item{W}{Matrix. Default is NULL.}
 
@@ -112,6 +121,12 @@ constructModel(
 \item{inittvpcoefs}{List.}
 
 \item{breaks}{List. A list of length K indicating structural breaks in the time series.}
+
+\item{lambda_choice}{Character. Which lambda to use for initial coefficient estimation: "lambda.1se" (default) or "lambda.min". lambda.1se is recommended for sparser, more stable solutions; lambda.min may overfit.}
+
+\item{common_effects}{Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE. Default is TRUE (include common effects). When FALSE, the model becomes Total = Unique + TVP instead of Total = Common + Unique + TVP. This can be useful when you expect no shared dynamics across subjects.}
+
+\item{common_tvp_effects}{Logical. Whether to include time-varying common effects in TVP models. Default is NULL, which automatically sets to TRUE when tvp = TRUE and FALSE when tvp = FALSE. Only meaningful when tvp = TRUE.}
 }
 \description{
 Construct an object of class multivar

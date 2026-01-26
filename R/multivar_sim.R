@@ -5,8 +5,8 @@
 #' @param n Integer. The time series length. 
 #' @param prop_fill_com Numeric. The proportion of nonzero paths in the common transition matrix.
 #' @param prop_fill_ind Numeric. The proportion of nonzero unique (not in the common transition matrix or transition matrix of other individuals) paths in each individual transition matrix.
-#' @param ub Numeric. The lower bound for individual elements of the transition matrices.
-#' @param lb Numeric. The upper bound for individual elements of the transition matrices.
+#' @param lb Numeric. The lower bound for individual elements of the transition matrices.
+#' @param ub Numeric. The upper bound for individual elements of the transition matrices.
 #' @param sigma Matrix. The (population) innovation covariance matrix.
 #' @param unique_overlap Logical. Default is FALSE. Whether the unique portion should be completely unique (no overlap) or randomly chosen.
 #' @param mat_common Matrix. A common effects transition matrix (if known).
@@ -14,6 +14,7 @@
 #' @param mat_total List. A list of total effects transition matrix (if known).
 #' @param diag Logical. Default is FALSE. Should diagonal elements be filled first for common elements.
 #' @param intercept List. Default is NULL. A list of length K containing numeric vectors of length d representing the intercept values.
+#' @param standardize_output Logical. Default is FALSE. If TRUE, scales each subject's data to have sample variance of 1 for each variable, and returns the transformed transition matrices and innovation covariances in standardized space.
 #' @keywords var multivar simulate
 #' @examples
 #' k <- 3
@@ -27,20 +28,21 @@
 #' data <- multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub,sigma)$data
 #' @export
 multivar_sim <- function(
-    k, 
-    d, 
-    n, 
-    prop_fill_com, 
-    prop_fill_ind, 
-    lb, 
+    k,
+    d,
+    n,
+    prop_fill_com,
+    prop_fill_ind,
+    lb,
     ub,
-    sigma, 
-    unique_overlap = FALSE, 
-    mat_common = NULL, 
-    mat_unique = NULL, 
-    mat_total = NULL, 
+    sigma,
+    unique_overlap = FALSE,
+    mat_common = NULL,
+    mat_unique = NULL,
+    mat_total = NULL,
     diag = FALSE,
-    intercept = NULL){
+    intercept = NULL,
+    standardize_output = FALSE){
   
   if(is.null(intercept)){
     intercept <- replicate(k ,rep(0, d), simplify = FALSE)
@@ -209,12 +211,13 @@ multivar_sim <- function(
     # Assign default column names V1, V2, ..., Vd for each subject’s dataset.
     data <- lapply(data, function(df){colnames(df) <- paste0("V",1:ncol(df)); df})
     
-    # Package outputs: common matrix, unique (subject - common), total (subject) matrices, and data.
+    # Package outputs: common matrix, unique (subject - common), total (subject) matrices, data, and intercepts.
     mat_list <- list(
       mat_com        = mats[[1]],
       mat_ind_unique = lapply(1:k, function(i){mats[[i+1]] - mats[[1]]}),
       mat_ind_final  = mats[-1],
-      data = data
+      data = data,
+      intercept = intercept
     )
     
     
@@ -237,15 +240,76 @@ multivar_sim <- function(
       mat_com        = mat_common,
       mat_ind_unique = mat_unique,
       mat_ind_final  = mat_total,
-      data = data
+      data = data,
+      intercept = intercept
     )
     
-    
+
   }
-  
+
+  # If standardize_output is TRUE, scale data to have variance=1 and transform matrices
+  if (standardize_output) {
+
+    # For each subject, compute sample SD for each variable
+    data_std <- lapply(data, function(df) {
+      # Standardize each column (variable) to have mean=0, SD=1
+      as.data.frame(scale(df))
+    })
+
+    # Extract scaling factors (SD) for each subject
+    scaling_sds <- lapply(data, function(df) {
+      apply(df, 2, sd)
+    })
+
+    # Create diagonal scaling matrices D for each subject
+    D_matrices <- lapply(scaling_sds, function(sds) {
+      diag(sds, nrow = length(sds))
+    })
+
+    # Create inverse scaling matrices D^{-1}
+    D_inv_matrices <- lapply(scaling_sds, function(sds) {
+      diag(1/sds, nrow = length(sds))
+    })
+
+    # Transform transition matrices: Φ* = D^{-1} * Φ * D
+    mat_ind_final_std <- lapply(seq_along(mat_list$mat_ind_final), function(i) {
+      D_inv_matrices[[i]] %*% mat_list$mat_ind_final[[i]] %*% D_matrices[[i]]
+    })
+
+    # Transform innovation covariance: Σ*_ε = D^{-1} * Σ_ε * D^{-1}
+    sigma_std <- lapply(D_inv_matrices, function(D_inv) {
+      D_inv %*% sigma %*% t(D_inv)
+    })
+
+    # For common matrix: compute as median of standardized total matrices
+    # (analogous to how estimate_initial_coefs computes common effects)
+    if (k > 1) {
+      mat_ind_final_std_array <- array(unlist(mat_ind_final_std),
+                                        c(d, d, k))
+      mat_com_std <- apply(mat_ind_final_std_array, 1:2, median)
+    } else {
+      # If k=1, common is just the single matrix
+      mat_com_std <- mat_ind_final_std[[1]]
+    }
+
+    # Compute unique matrices in standardized space: unique = total - common
+    mat_ind_unique_std <- lapply(mat_ind_final_std, function(mat_total) {
+      mat_total - mat_com_std
+    })
+
+    # Add standardized versions to output
+    mat_list$data_std <- data_std
+    mat_list$mat_com_std <- mat_com_std
+    mat_list$mat_ind_unique_std <- mat_ind_unique_std
+    mat_list$mat_ind_final_std <- mat_ind_final_std
+    mat_list$sigma_std <- sigma_std
+    mat_list$scaling_sds <- scaling_sds
+
+  }
+
   # Return the list containing matrices + simulated datasets.
   return(mat_list)
-  
+
 }
 
 
@@ -259,8 +323,8 @@ multivar_sim <- function(
 #' @param n Integer. The time series length. 
 #' @param prop_fill_com Numeric. The proportion of nonzero paths in the common transition matrix.
 #' @param prop_fill_ind Numeric. The proportion of nonzero unique (not in the common transition matrix or transition matrix of other individuals) paths in each individual transition matrix.
-#' @param ub Numeric. The lower bound for individual elements of the transition matrices.
-#' @param lb Numeric. The upper bound for individual elements of the transition matrices.
+#' @param lb Numeric. The lower bound for individual elements of the transition matrices.
+#' @param ub Numeric. The upper bound for individual elements of the transition matrices.
 #' @param sigma Matrix. The (population) innovation covariance matrix.
 #' @param unique_overlap Logical. Default is FALSE. Whether the unique portion should be completely unique (no overlap) or randomly chosen.
 #' @param mat_common Matrix. A common effects transition matrix (if known).

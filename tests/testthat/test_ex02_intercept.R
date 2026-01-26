@@ -111,7 +111,7 @@ test_that("common matrix excludes intercept when intercept=FALSE", {
 context("test02: intercept recovery quality")
 #-------------------------------------------------------#
 
-test_that("recovered intercepts are reasonable", {
+test_that("recovered intercepts have strong positive correlation with true values", {
   object <- multivar::constructModel(
     sim$data,
     intercept = TRUE,
@@ -122,19 +122,81 @@ test_that("recovered intercepts are reasonable", {
   # Extract intercept column from each total matrix
   recovered_intercepts <- lapply(fit$mats$total, function(mat) mat[, 1])
 
-  # Check that intercepts are non-zero (model is estimating them)
-  for (i in seq_along(recovered_intercepts)) {
-    # At least some intercepts should be non-zero
-    expect_true(any(recovered_intercepts[[i]] != 0))
-  }
-
-  # Compare to true intercepts - should be correlated
+  # Compare to true intercepts - should be highly correlated
   true_vec <- unlist(true_intercepts)
   recovered_vec <- unlist(recovered_intercepts)
 
-  # Correlation should be positive (recovered intercepts track true values)
   cor_val <- cor(true_vec, recovered_vec)
-  expect_gt(cor_val, 0)
+
+  # Expect strong positive correlation (> 0.7)
+  expect_gt(cor_val, 0.7)
+})
+
+test_that("mean squared error of recovered intercepts is small", {
+  object <- multivar::constructModel(
+    sim$data,
+    intercept = TRUE,
+    weightest = "ols"
+  )
+  fit <- multivar::cv.multivar(object)
+
+  # Extract intercept column from each total matrix
+  recovered_intercepts <- lapply(fit$mats$total, function(mat) mat[, 1])
+
+  # Calculate MSE for each subject
+  mse_per_subject <- sapply(seq_along(true_intercepts), function(i) {
+    mean((true_intercepts[[i]] - recovered_intercepts[[i]])^2)
+  })
+
+  # Overall MSE across all subjects and variables
+  overall_mse <- mean(mse_per_subject)
+
+  # MSE should be reasonably small (< 0.1 for intercepts in range [-0.5, 0.5])
+  expect_lt(overall_mse, 0.1)
+})
+
+test_that("recovered intercepts have correct sign for most entries", {
+  object <- multivar::constructModel(
+    sim$data,
+    intercept = TRUE,
+    weightest = "ols"
+  )
+  fit <- multivar::cv.multivar(object)
+
+  # Extract intercept column from each total matrix
+  recovered_intercepts <- lapply(fit$mats$total, function(mat) mat[, 1])
+
+  # Check sign agreement
+  sign_matches <- sapply(seq_along(true_intercepts), function(i) {
+    true_signs <- sign(true_intercepts[[i]])
+    recovered_signs <- sign(recovered_intercepts[[i]])
+    mean(true_signs == recovered_signs)
+  })
+
+  # At least 70% of signs should match on average
+  expect_gt(mean(sign_matches), 0.7)
+})
+
+test_that("individual subject intercept recovery is reasonable", {
+  object <- multivar::constructModel(
+    sim$data,
+    intercept = TRUE,
+    weightest = "ols"
+  )
+  fit <- multivar::cv.multivar(object)
+
+  # Extract intercept column from each total matrix
+  recovered_intercepts <- lapply(fit$mats$total, function(mat) mat[, 1])
+
+  # Check each subject individually
+  for (i in seq_along(true_intercepts)) {
+    true_i <- true_intercepts[[i]]
+    recovered_i <- recovered_intercepts[[i]]
+
+    # Max absolute error should be reasonable (< 0.5 for intercepts in range [-0.5, 0.5])
+    max_abs_error <- max(abs(true_i - recovered_i))
+    expect_lt(max_abs_error, 0.5)
+  }
 })
 
 #-------------------------------------------------------#
@@ -203,4 +265,21 @@ test_that("model runs with different intercept penalty settings", {
   )
   fit2 <- multivar::cv.multivar(object2)
   expect_true(!is.null(fit2$mats$common))
+})
+
+#-------------------------------------------------------#
+context("test02: intercept results are deterministic")
+#-------------------------------------------------------#
+
+test_that("results are identical to saved snapshots", {
+  object <- multivar::constructModel(
+    sim$data,
+    intercept = TRUE,
+    weightest = "ols"
+  )
+  fit <- multivar::cv.multivar(object)
+
+  expect_identical(fit$mats$common, readRDS("rds/test02_intercept_common.rds"))
+  expect_identical(fit$mats$unique, readRDS("rds/test02_intercept_unique.rds"))
+  expect_identical(fit$mats$total, readRDS("rds/test02_intercept_total.rds"))
 })

@@ -5,7 +5,6 @@
 #' @param mat_total Matrix. Transition matrix. 
 #' @param mat_tvp A logical matrix indicating which parameters are time-varying.
 #' @keywords var time-varying simulate
-#' @examples
 #' @export
 tvp_sim <- function(
   n, 
