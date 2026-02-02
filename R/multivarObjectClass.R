@@ -26,6 +26,7 @@ check.multivar <- function(object){
 #' @slot A  Matrix. A matrix containing the lagged ((T-lag-horizon)k) by (d+dk) multivariate time series.
 #' @slot b  Matrix. A matrix containing the non-lagged ((T-lag-horizon)k) by (d) multivariate time series.
 #' @slot H  Matrix. A matrix containing the non-lagged (horizon k) by d multivariate time series.
+#' @slot data_means List. A list (length = k) of column means for each group's data, used for intercept recovery when intercept=TRUE.
 #' @slot lag Numeric. The VAR order. Currently only lag 1 is supported.
 #' @slot horizon Numeric. Forecast horizon.
 #' @slot t1 Numeric vector. Index of time series in which to start cross validation for individual k. 
@@ -45,8 +46,6 @@ check.multivar <- function(object){
 #' @slot threshold Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.
 #' @slot lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
 #' @slot intercept Logical. Default is FALSE.
-#' @slot pen_common_intercept Logical. Default is FALSE. Whether to penalize the common intercept.
-#' @slot pen_unique_intercept Logical. Default is TRUE. Whether to penalize individual-specific intercept deviations.
 #' @slot W Matrix. Default is NULL. 
 #' @slot ratios Numeric vector. Default is NULL.
 #' @slot ratiostau Numeric vector. Default is NULL.
@@ -54,7 +53,6 @@ check.multivar <- function(object){
 #' @slot ratiosbeta Numeric vector. Penalty ratio for common TVP effects. Default is NULL. 
 #' @slot cv Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.
 #' @slot nfolds Numeric. The number of folds for use with "blocked" cross-validation.
-#' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @slot lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
 #' @slot subgroup_membership Numeric. Vector of subgroup assignments.
 #' @slot subgroup Logical. Argument whether to run subgrouping algorithm.
@@ -78,10 +76,13 @@ setClass(
         d  = "numeric",
         Ak = "list",
         bk = "list",
+        Ak_orig = "list",
+        bk_orig = "list",
         Hk = "list",
         A  = "matrix",
         b  = "matrix",
         H  = "matrix",
+        data_means = "list",
         lag="numeric",
         horizon="numeric",
         t1 = "numeric",
@@ -106,8 +107,6 @@ setClass(
         threshold = "logical",
         lassotype = "character",
         intercept = "logical",
-        pen_common_intercept = "logical",
-        pen_unique_intercept = "logical",
         W = "array",
         ratios = "numeric",
         ratiostau = "numeric",
@@ -115,7 +114,6 @@ setClass(
         ratiosbeta = "numeric",
         cv = "character",
         nfolds = "numeric",
-        thresh = "numeric",
         lamadapt = "logical",
         subgroup_membership = "numeric",
         subgroup = "logical",
@@ -228,8 +226,6 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@ratiosalpha,
     object@ratiosbeta,
     object@intercept,
-    object@pen_common_intercept,
-    object@pen_unique_intercept,
     object@common_effects,
     object@common_tvp_effects
   )
@@ -250,18 +246,22 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
   #   object@nlambda2
   # )
   
-  object@lambda1 <- lambda_grid(
-    #object@B, 
-    object@depth, 
-    object@nlambda1, 
-    t(as.matrix(object@b)), 
-    t(as.matrix(object@A)), 
-    object@W, 
-    object@k,
-    object@tol,
-    object@intercept,
-    object@lamadapt
-  )
+  # Only construct lambda grid if user didn't provide fixed lambda values
+  # User-provided lambdas have non-zero values; default is all zeros
+  if (all(object@lambda1 == 0)) {
+    object@lambda1 <- lambda_grid(
+      #object@B,
+      object@depth,
+      object@nlambda1,
+      t(as.matrix(object@b)),
+      t(as.matrix(object@A)),
+      object@W,
+      object@k,
+      object@tol,
+      object@intercept,
+      object@lamadapt
+    )
+  }
 
   fit <- cv_multivar(
     object@B,
@@ -278,22 +278,49 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     eps = 1e-3,
     object@intercept,
     object@cv,
-    object@nfolds
+    object@nfolds,
+    object@tvp,
+    object@breaks
   )
   
 
   hyp <- extract_multivar_hyperparams(
-    object, 
+    object,
     fit
   )
 
+  # Check if selected hyperparameters are at grid boundaries
+  best_idx <- which.min(hyp$MSFE)
+  best_lambda_idx <- hyp$lambda1_index[best_idx]
+  best_ratio_idx <- hyp$ratio_index[best_idx]
+  n_lambda <- nrow(object@lambda1)
+  n_ratios <- ncol(object@lambda1)
+
+  # Check lambda1 boundaries
+  if (best_lambda_idx == 1) {
+    warning("lambda1 selected at upper boundary (maximum regularization). ",
+            "Consider increasing depth or checking if model is overpenalized.")
+  } else if (best_lambda_idx == n_lambda) {
+    warning("lambda1 selected at lower boundary (minimum regularization). ",
+            "Consider increasing depth for wider lambda range.")
+  }
+
+  # Check ratio boundaries (only warn if more than 1 ratio value)
+  if (n_ratios > 1) {
+    if (best_ratio_idx == 1) {
+      warning("ratio selected at upper boundary. ",
+              "Consider expanding the ratios grid.")
+    } else if (best_ratio_idx == n_ratios) {
+      warning("ratio selected at lower boundary. ",
+              "Consider expanding the ratios grid.")
+    }
+  }
 
   mats <- breakup_transition(
     fit[[1]][,,which.min(colMeans(fit[[2]]))],
     object@Ak,
     object@ndk,
     object@intercept,
-    object@thresh,
     object@subgroup_membership,
     object@subgroup,
     object@tvp,
@@ -302,7 +329,22 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@common_effects,
     object@common_tvp_effects
   )
-  
+
+  # Recover intercepts if intercept=TRUE
+  # Intercepts are computed post-hoc using: c = mean(b) - Phi * mean(A)
+  if (object@intercept && length(object@data_means) > 0) {
+    mats$intercepts <- recover_intercepts(
+      mats = mats,
+      data_means = object@data_means,
+      k = object@k,
+      d = object@d,
+      subgroup = object@subgroup,
+      subgroup_membership = object@subgroup_membership,
+      tvp = object@tvp,
+      breaks = object@breaks
+    )
+  }
+
   results <- list(
     mats = mats,
     beta = fit[[1]],
@@ -350,12 +392,16 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
 setGeneric(name = "canonical.multivar",def=function(object){standardGeneric("canonical.multivar")})
 setMethod(f = "canonical.multivar", signature = "multivar",definition = function(object){
 
-  can_var <- lapply(seq_along(object@bk), function(i){
+  can_var <- lapply(seq_along(object@bk_orig), function(i){
+    # Use original (unscaled) data for canonical VAR fitting
+    # Reconstruct the time series by prepending one lag observation
     df <- as.matrix(rbind(
-      object@Ak[[i]][1,],
-      object@bk[[i]]
+      object@Ak_orig[[i]][1,],
+      object@bk_orig[[i]]
      ))
-     fit_canonical_var(df, p = 1, type = "none")
+     # Use type="const" if intercept=TRUE, otherwise type="none"
+     var_type <- if(object@intercept) "const" else "none"
+     fit_canonical_var(df, p = 1, type = var_type)
   })
 
 
@@ -365,6 +411,35 @@ setMethod(f = "canonical.multivar", signature = "multivar",definition = function
     total  = lapply(can_var,"[[","transition_mat"),
     total_sigonly  = lapply(can_var,"[[","transition_mat_sigonly")
   )
+
+  # Handle intercepts
+  if (object@intercept) {
+    # Extract intercepts directly from canonical VAR fit (vars with type="const")
+    intercepts_total <- lapply(can_var, "[[", "intercepts")
+
+    # For k=1, no decomposition
+    if (object@k == 1) {
+      res$intercepts <- list(
+        intercepts_total = intercepts_total,
+        intercept_common = NULL,
+        intercepts_unique = NULL
+      )
+    } else {
+      # For k>1, decompose into common and group-specific
+      intercept_common <- Reduce("+", intercepts_total) / object@k
+      intercepts_unique <- lapply(intercepts_total, function(c_total) {
+        c_total - intercept_common
+      })
+
+      res$intercepts <- list(
+        intercepts_total = intercepts_total,
+        intercept_common = intercept_common,
+        intercepts_unique = intercepts_unique
+      )
+    }
+  } else {
+    res$intercepts <- NULL
+  }
 
   return(list(mats = res))
 })

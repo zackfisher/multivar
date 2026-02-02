@@ -162,7 +162,7 @@ test_that("print_edge_prevalence works with unequal lengths", {
 context("test07: unequal time series lengths results are deterministic")
 
 test_that("results are identical to saved snapshots", {
-  object <- constructModel(data_list, intercept = FALSE)
+  object <- constructModel(data_list, intercept = FALSE, nfolds = 10)
   fit <- suppressMessages(cv.multivar(object))
 
   expect_identical(fit$mats$common, readRDS("rds/test07_unequal_common.rds"))

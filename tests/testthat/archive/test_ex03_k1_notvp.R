@@ -20,7 +20,7 @@ sim <- multivar::multivar_sim(
 )
 
 # Fit the model
-object <- multivar::constructModel(sim$data)
+object <- multivar::constructModel(sim$data, nfolds = 10)
 fit <- multivar::cv.multivar(object)
 
 #-------------------------------------------------------#

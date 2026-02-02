@@ -115,14 +115,6 @@ summary_multivar <- function(fit) {
   # Intercept information
   if (intercept) {
     cat("  Intercepts:                    YES\n")
-    if (!is.null(obj@pen_common_intercept)) {
-      cat(sprintf("    - Common intercept penalized: %s\n",
-                  ifelse(obj@pen_common_intercept, "YES", "NO")))
-    }
-    if (!is.null(obj@pen_unique_intercept)) {
-      cat(sprintf("    - Unique intercept penalized: %s\n",
-                  ifelse(obj@pen_unique_intercept, "YES", "NO")))
-    }
   } else {
     cat("  Intercepts:                    NO\n")
   }

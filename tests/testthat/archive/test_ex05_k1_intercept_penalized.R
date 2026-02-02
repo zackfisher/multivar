@@ -33,20 +33,20 @@ sim_with_intercept <- sim
 sim_with_intercept$data <- list(data_with_intercept)
 sim_with_intercept$intercept <- list(true_intercept)
 
-# Fit the model with PENALIZED intercept
+# Fit the model with intercept
 object <- multivar::constructModel(
   sim_with_intercept$data,
   intercept = TRUE,
-  pen_common_intercept = TRUE,
-  weightest = "ols"
+  weightest = "ols",
+  nfolds = 10
 )
 fit <- multivar::cv.multivar(object)
 
 #-------------------------------------------------------#
-context("test05: K=1 intercept penalized runs without error")
+context("test05: K=1 intercept model runs without error")
 #-------------------------------------------------------#
 
-test_that("K=1 intercept penalized model runs successfully", {
+test_that("K=1 intercept model runs successfully", {
   expect_false(is.null(fit))
   expect_false(is.null(fit$mats))
 })
@@ -77,32 +77,33 @@ test_that("common equals unique for K=1", {
 context("test05: K=1 matrix dimensions with intercept")
 #-------------------------------------------------------#
 
-test_that("common matrix has correct dimensions (d rows, d+1 cols for intercept)", {
-  expect_equal(dim(fit$mats$common), c(d, d+1))
+test_that("common matrix has correct dimensions (d x d, no intercept column)", {
+  expect_equal(dim(fit$mats$common), c(d, d))
 })
 
 test_that("unique matrix has correct dimensions", {
   expect_equal(length(fit$mats$unique), 1)
-  expect_equal(dim(fit$mats$unique[[1]]), c(d, d+1))
+  expect_equal(dim(fit$mats$unique[[1]]), c(d, d))
 })
 
 test_that("total matrix has correct dimensions", {
   expect_equal(length(fit$mats$total), 1)
-  expect_equal(dim(fit$mats$total[[1]]), c(d, d+1))
+  expect_equal(dim(fit$mats$total[[1]]), c(d, d))
 })
 
 #-------------------------------------------------------#
-context("test05: K=1 intercept column present")
+context("test05: K=1 intercepts stored separately")
 #-------------------------------------------------------#
 
-test_that("intercept column is first column", {
-  expect_equal(colnames(fit$mats$total[[1]])[1], "Intercept")
+test_that("intercepts are in separate list", {
+  expect_true(!is.null(fit$mats$intercepts))
+  expect_true(!is.null(fit$mats$intercepts$intercepts_total))
 })
 
-test_that("intercept values are sparse (penalized)", {
-  intercept_col <- fit$mats$total[[1]][, 1]
-  # When penalized, some intercepts should be shrunk to zero
-  expect_true(sum(abs(intercept_col) == 0) >= 1)
+test_that("intercept values are present", {
+  intercepts_total <- fit$mats$intercepts$intercepts_total[[1]]
+  # Intercepts should be recovered
+  expect_equal(length(intercepts_total), d)
 })
 
 #-------------------------------------------------------#

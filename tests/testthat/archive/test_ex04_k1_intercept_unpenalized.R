@@ -37,8 +37,8 @@ sim_with_intercept$intercept <- list(true_intercept)
 object <- multivar::constructModel(
   sim_with_intercept$data,
   intercept = TRUE,
-  pen_common_intercept = FALSE,
-  weightest = "ols"
+  weightest = "ols",
+  nfolds = 10
 )
 fit <- multivar::cv.multivar(object)
 
@@ -77,32 +77,33 @@ test_that("common equals unique for K=1", {
 context("test04: K=1 matrix dimensions with intercept")
 #-------------------------------------------------------#
 
-test_that("common matrix has correct dimensions (d rows, d+1 cols for intercept)", {
-  expect_equal(dim(fit$mats$common), c(d, d+1))
+test_that("common matrix has correct dimensions (d x d, no intercept column)", {
+  expect_equal(dim(fit$mats$common), c(d, d))
 })
 
 test_that("unique matrix has correct dimensions", {
   expect_equal(length(fit$mats$unique), 1)
-  expect_equal(dim(fit$mats$unique[[1]]), c(d, d+1))
+  expect_equal(dim(fit$mats$unique[[1]]), c(d, d))
 })
 
 test_that("total matrix has correct dimensions", {
   expect_equal(length(fit$mats$total), 1)
-  expect_equal(dim(fit$mats$total[[1]]), c(d, d+1))
+  expect_equal(dim(fit$mats$total[[1]]), c(d, d))
 })
 
 #-------------------------------------------------------#
-context("test04: K=1 intercept column present")
+context("test04: K=1 intercepts stored separately")
 #-------------------------------------------------------#
 
-test_that("intercept column is first column", {
-  expect_equal(colnames(fit$mats$total[[1]])[1], "Intercept")
+test_that("intercepts are in separate list", {
+  expect_true(!is.null(fit$mats$intercepts))
+  expect_true(!is.null(fit$mats$intercepts$intercepts_total))
 })
 
 test_that("intercept values are non-zero (unpenalized)", {
-  intercept_col <- fit$mats$total[[1]][, 1]
+  intercepts_total <- fit$mats$intercepts$intercepts_total[[1]]
   # At least some intercepts should be non-zero when unpenalized
-  expect_true(sum(abs(intercept_col) > 0) >= 1)
+  expect_true(sum(abs(intercepts_total) > 0) >= 1)
 })
 
 #-------------------------------------------------------#

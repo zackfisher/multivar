@@ -6,9 +6,10 @@
 \usage{
 plot_results(
   x,
-  plot_type = c("common", "unique", "total", "subgrp"),
+  plot_type = c("common", "unique", "total", "subgrp", "tvp", "common_tvp", "tvp_total"),
   facet_ncol = 3,
   subjects = "all",
+  periods = "all",
   ub = 1,
   lb = -1,
   palette = "default",
@@ -25,12 +26,18 @@ plot_results(
   \item "unique" - Subject-specific unique effects
   \item "total" - Total effects (common + unique for each subject)
   \item "subgrp" - Subgroup effects (if model includes subgroups)
+  \item "tvp" - Time-varying parameter effects (unique TVP deviations)
+  \item "common_tvp" - Common time-varying effects across subjects
+  \item "tvp_total" - Total effects for TVP models by period
 }}
 
 \item{facet_ncol}{Numeric. Number of columns when faceting multiple matrices}
 
 \item{subjects}{Character "all" or numeric vector. Which subjects to plot for
-"unique" or "total" types. Default is "all"}
+"unique", "total", or "tvp" types. Default is "all"}
+
+\item{periods}{Character "all" or numeric vector. Which time periods to plot for
+TVP models. Default is "all"}
 
 \item{ub}{Numeric. Upper bound for color scale. Default is 1}
 
@@ -48,7 +55,7 @@ A ggplot2 object that can be further customized
 \description{
 Creates heatmap visualizations of transition matrices from fitted multivar models.
 Supports plotting common effects, unique (subject-specific) effects, total effects,
-and subgroup effects.
+subgroup effects, and time-varying parameter (TVP) effects.
 }
 \examples{
 \dontrun{
@@ -62,6 +69,11 @@ plot_results(fit, plot_type = "common")
 
 # Plot unique effects for first 2 subjects
 plot_results(fit, plot_type = "unique", subjects = 1:2)
+
+# For TVP models
+fit_tvp <- cv.multivar(constructModel(data, tvp = TRUE, breaks = list(c(50, 100))))
+plot_results(fit_tvp, plot_type = "tvp")  # TVP deviations by period
+plot_results(fit_tvp, plot_type = "tvp_total")  # Total effects by period
 
 # Customize the plot
 p <- plot_results(fit, plot_type = "total")

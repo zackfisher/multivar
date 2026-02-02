@@ -1,5 +1,5 @@
 #' @export
-cv_multivar <- function(B, Z, Y, W, Ak, bk, k, d, lambda1, t1, t2, eps, intercept=FALSE, cv, nfolds){
+cv_multivar <- function(B, Z, Y, W, Ak, bk, k, d, lambda1, t1, t2, eps, intercept=FALSE, cv, nfolds, tvp=FALSE, breaks=NULL){
 
   if(cv == "rolling"){
 
@@ -7,13 +7,13 @@ cv_multivar <- function(B, Z, Y, W, Ak, bk, k, d, lambda1, t1, t2, eps, intercep
 
   } else if (cv == "blocked"){
 
-    res <- cv_blocked(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps, intercept, cv, nfolds)
-  
+    res <- cv_blocked(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps, intercept, cv, nfolds, tvp, breaks)
+
   } else {
-    
+
     stop(paste0("multivar ERROR: ", cv, " is not a supported cross-validation method."))
   }
-  
+
   return(res)
-  
+
 }

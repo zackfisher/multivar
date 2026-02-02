@@ -1,4 +1,4 @@
-breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup_membership, subgroup, tvp, ntk, breaks, common_effects = TRUE, common_tvp_effects = TRUE){
+breakup_transition <- function(B, Ak, ndk, intercept, subgroup_membership, subgroup, tvp, ntk, breaks, common_effects = TRUE, common_tvp_effects = TRUE){
 
   # Save parameter value before potential variable reuse
   include_common_effects <- common_effects
@@ -7,29 +7,26 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup_membershi
   # Ak <- object@Ak
   # ndk <- object@ndk
   # intercept <- object@intercept
-  # thresh <- object@thresh
   # subgroup <- object@subgroup
   # subgroupflag <- object@subgroupflag
   # tvp <- object@tvp
   # ntk <- object@ntk
   # breaks <- object@breaks
 
-  #if(!intercept){ B <- B[,-1] }
-  if(intercept){
-   ndk <- vapply(Ak, function(x) { ncol(x) }, numeric(1))
-  }
-  
+  # n_responses = number of response equations (always d, derived from nrow(B))
+  # n_predictors = number of predictors per equation
+  # (These are equal now, but kept separate for future extensibility
+  # if additional predictors are added to the model)
+  n_responses <- nrow(B)
+  n_predictors <- ndk[1]
+
   if(length(Ak) == 1){
 
     if(!tvp){
       # Non-TVP k=1 case
       # Set column and row names properly (especially for intercept handling)
       colnames(B) <- colnames(Ak[[1]])
-      if(intercept){
-        rownames(B) <- colnames(Ak[[1]])[-1]  # exclude Intercept from rownames
-      } else {
-        rownames(B) <- colnames(Ak[[1]])
-      }
+      rownames(B) <- colnames(Ak[[1]])
 
       common_mat  <- B
       unique_mats <- list(B)
@@ -40,46 +37,83 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup_membershi
 
     } else {
       # TVP k=1 case
-      # Base effects (columns 1:ndk[1])
-      base_mat <- B[, 1:ndk[1], drop=FALSE]
-      colnames(base_mat) <- colnames(Ak[[1]])
-      if(intercept){
-        rownames(base_mat) <- colnames(Ak[[1]])[-1]
-      } else {
-        rownames(base_mat) <- colnames(Ak[[1]])
-      }
-
-      common_mat  <- base_mat
-      unique_mats <- list(base_mat)
-
-      # TVP effects (columns (ndk[1]+1):ncol(B))
-      # Extract TVP coefficients for each period
-      tvp_start <- ndk[1] + 1
       num_periods <- length(breaks[[1]])
 
-      tvp_mats <- list(
-        lapply(1:num_periods, function(p){
+      # Helper function to expand period-level matrices to time-point level
+      expand_to_timepoints <- function(period_mats) {
+        # period_mats is a list of num_periods matrices
+        # Returns a list of ntk[1] matrices (one per time point)
+        lapply(1:ntk[1], function(t) {
+          # Find which period time point t belongs to
+          period_idx <- which(sapply(breaks[[1]], function(b) t %in% b))
+          period_mats[[period_idx]]
+        })
+      }
+
+      if (!include_common_effects) {
+        # No base columns, only TVP columns
+        # B has only TVP columns: ncol(B) = num_periods * n_predictors
+        common_mat <- NULL
+        unique_mats <- list(matrix(0, n_responses, n_predictors))
+        colnames(unique_mats[[1]]) <- colnames(Ak[[1]])
+        rownames(unique_mats[[1]]) <- colnames(Ak[[1]])
+
+        # TVP effects start at column 1
+        tvp_start <- 1
+
+        # Extract per-period TVP matrices
+        tvp_period_mats <- lapply(1:num_periods, function(p){
           # For period p, extract columns for all variables
           period_cols <- seq(tvp_start + (p-1), by=num_periods, length.out=ndk[1])
           mat <- B[, period_cols, drop=FALSE]
           colnames(mat) <- colnames(Ak[[1]])
-          if(intercept){
-            rownames(mat) <- colnames(Ak[[1]])[-1]
-          } else {
-            rownames(mat) <- colnames(Ak[[1]])
-          }
+          rownames(mat) <- colnames(Ak[[1]])
           mat
         })
-      )
 
-      # Total effects for each period = base + tvp
-      total_mats <- list(
-        lapply(1:num_periods, function(p){
-          g <- base_mat + tvp_mats[[1]][[p]]
-          g[abs(g) < thresh] <- 0
-          g
+        # Expand to time-point level
+        tvp_mats <- list(expand_to_timepoints(tvp_period_mats))
+
+        # Total effects = TVP effects (no base to add)
+        total_mats <- tvp_mats
+
+      } else {
+        # Standard k=1 TVP: base + TVP columns
+        # Base effects (columns 1:ndk[1])
+        base_mat <- B[, 1:ndk[1], drop=FALSE]
+        colnames(base_mat) <- colnames(Ak[[1]])
+        rownames(base_mat) <- colnames(Ak[[1]])
+
+        common_mat  <- base_mat
+        # For k=1, unique should be zero (no subject-specific deviation)
+        unique_zero <- matrix(0, nrow(base_mat), ncol(base_mat))
+        colnames(unique_zero) <- colnames(base_mat)
+        rownames(unique_zero) <- rownames(base_mat)
+        unique_mats <- list(unique_zero)
+
+        # TVP effects (columns (ndk[1]+1):ncol(B))
+        tvp_start <- ndk[1] + 1
+
+        # Extract per-period TVP matrices
+        tvp_period_mats <- lapply(1:num_periods, function(p){
+          # For period p, extract columns for all variables
+          period_cols <- seq(tvp_start + (p-1), by=num_periods, length.out=ndk[1])
+          mat <- B[, period_cols, drop=FALSE]
+          colnames(mat) <- colnames(Ak[[1]])
+          rownames(mat) <- colnames(Ak[[1]])
+          mat
         })
-      )
+
+        # Expand to time-point level
+        tvp_mats <- list(expand_to_timepoints(tvp_period_mats))
+
+        # Total effects for each time point = base + tvp
+        total_mats <- list(
+          lapply(1:ntk[1], function(t){
+            base_mat + tvp_mats[[1]][[t]]
+          })
+        )
+      }
 
       diff_mats   <- NULL
       subgrp_mats <- NULL
@@ -97,11 +131,7 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup_membershi
       # colnames = predictors (includes Intercept if present)
       # rownames = outcomes (d variables, no intercept)
       colnames(common_mat) <- colnames(Ak[[1]])
-      if(intercept){
-        rownames(common_mat) <- colnames(Ak[[1]])[-1]  # exclude Intercept from rownames
-      } else {
-        rownames(common_mat) <- colnames(Ak[[1]])
-      }
+      rownames(common_mat) <- colnames(Ak[[1]])
     } else {
       # No common effects
       common_mat <- NULL
@@ -118,19 +148,13 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup_membershi
         unique_mats <- lapply(seq_along(ndk), function(i){
           mat <- B[,first_ind_col_indices[i]:final_ind_col_indices[i]]
           colnames(mat) <- colnames(Ak[[i]])
-          if(intercept){
-            rownames(mat) <- colnames(Ak[[i]])[-1]
-          } else {
-            rownames(mat) <- colnames(Ak[[i]])
-          }
+          rownames(mat) <- colnames(Ak[[i]])
           mat
         })
 
         # total mats
         total_mats <- lapply(unique_mats, function(mat){
-          g <- mat + common_mat;
-          g[abs(g) < thresh] <- 0
-          g
+          mat + common_mat
         })
 
       } else {
@@ -143,20 +167,12 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup_membershi
         unique_mats <- lapply(seq_along(ndk), function(i){
           mat <- B[,first_ind_col_indices[i]:final_ind_col_indices[i]]
           colnames(mat) <- colnames(Ak[[i]])
-          if(intercept){
-            rownames(mat) <- colnames(Ak[[i]])[-1]
-          } else {
-            rownames(mat) <- colnames(Ak[[i]])
-          }
+          rownames(mat) <- colnames(Ak[[i]])
           mat
         })
 
         # total mats = unique mats (no common to add)
-        total_mats <- lapply(unique_mats, function(mat){
-          g <- mat
-          g[abs(g) < thresh] <- 0
-          g
-        })
+        total_mats <- unique_mats
       }
 
       subgrp_mats <- NULL
@@ -174,11 +190,7 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup_membershi
       subgrp_mats <- lapply(seq_along(ndk), function(i){
         mat <- B[,first_sub_col_indices[subgroup_membership[i]]:final_sub_col_indices[subgroup_membership[i]]]
         colnames(mat) <- colnames(Ak[[i]])
-        if(intercept){
-          rownames(mat) <- colnames(Ak[[i]])[-1]
-        } else {
-          rownames(mat) <- colnames(Ak[[i]])
-        }
+        rownames(mat) <- colnames(Ak[[i]])
         mat
       })
 
@@ -186,75 +198,79 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup_membershi
       unique_mats <- lapply(seq_along(ndk), function(i){
         mat <- B[,first_ind_col_indices[i]:final_ind_col_indices[i]]
         colnames(mat) <- colnames(Ak[[i]])
-        if(intercept){
-          rownames(mat) <- colnames(Ak[[i]])[-1]
-        } else {
-          rownames(mat) <- colnames(Ak[[i]])
-        }
+        rownames(mat) <- colnames(Ak[[i]])
         mat
       })
       
       # total mats
       total_mats <- lapply(seq_along(unique_mats), function(i){
-        g <- unique_mats[[i]] + subgrp_mats[[i]] + common_mat;
-        g[abs(g) < thresh] <- 0
-        g
+        unique_mats[[i]] + subgrp_mats[[i]] + common_mat
       })
       
       tvp_mats    <- NULL
       
     } else if (tvp){
 
-      if (include_common_effects){
-        # Standard: common + unique + tvp columns
-        first_ind_col_indices <- cumsum(ndk) + 1
-        final_ind_col_indices <- first_ind_col_indices + ndk - 1
+      k <- length(Ak)
+
+      # Special case: k=1 TVP with common_effects=FALSE
+      # Only TVP columns exist (no common, no unique base columns)
+      if (k == 1 && !include_common_effects) {
+
+        # unique_mats is zero for k=1
+        unique_mats <- list(matrix(0, n_responses, n_predictors))
+        colnames(unique_mats[[1]]) <- colnames(Ak[[1]])
+        rownames(unique_mats[[1]]) <- colnames(Ak[[1]])
+
+        common_tvp_mats <- NULL
+        unique_tvp_start <- 1  # TVP columns start at column 1
+
       } else {
-        # No common: unique + tvp columns (shift indices)
-        first_ind_col_indices <- c(1, cumsum(ndk)[-length(ndk)] + 1)
-        final_ind_col_indices <- cumsum(ndk)
-      }
+        # Standard case: common and/or unique columns exist
 
-      # unique mats
-      unique_mats <- lapply(seq_along(ndk), function(i){
-        mat <- B[,first_ind_col_indices[i]:final_ind_col_indices[i]]
-        colnames(mat) <- colnames(Ak[[i]])
-        if(intercept){
-          rownames(mat) <- colnames(Ak[[i]])[-1]
+        if (include_common_effects){
+          # Standard: common + unique + tvp columns
+          first_ind_col_indices <- cumsum(ndk) + 1
+          final_ind_col_indices <- first_ind_col_indices + ndk - 1
         } else {
-          rownames(mat) <- colnames(Ak[[i]])
+          # No common: unique + tvp columns (shift indices)
+          first_ind_col_indices <- c(1, cumsum(ndk)[-length(ndk)] + 1)
+          final_ind_col_indices <- cumsum(ndk)
         }
-        mat
-      })
 
-      # Extract common TVP effects (if enabled)
-      if (common_tvp_effects) {
-
-        num_periods <- length(breaks[[1]])
-        common_tvp_start <- max(final_ind_col_indices) + 1
-        common_tvp_ncols <- num_periods * ndk[1]
-        common_tvp_end <- common_tvp_start + common_tvp_ncols - 1
-
-        common_tvp_B <- B[, common_tvp_start:common_tvp_end, drop=FALSE]
-
-        # Extract per-period common TVP matrices
-        common_tvp_mats <- lapply(1:num_periods, function(p){
-          period_cols <- seq((p-1)*ndk[1] + 1, p*ndk[1])
-          mat <- common_tvp_B[, period_cols, drop=FALSE]
-          colnames(mat) <- colnames(Ak[[1]])
-          if(intercept){
-            rownames(mat) <- colnames(Ak[[1]])[-1]
-          } else {
-            rownames(mat) <- colnames(Ak[[1]])
-          }
+        # unique mats
+        unique_mats <- lapply(seq_along(ndk), function(i){
+          mat <- B[,first_ind_col_indices[i]:final_ind_col_indices[i]]
+          colnames(mat) <- colnames(Ak[[i]])
+          rownames(mat) <- colnames(Ak[[i]])
           mat
         })
 
-        unique_tvp_start <- common_tvp_end + 1
+        # Extract common TVP effects (if enabled)
+        if (common_tvp_effects) {
 
-      } else {
-        common_tvp_mats <- NULL
-        unique_tvp_start <- max(final_ind_col_indices) + 1
+          num_periods <- length(breaks[[1]])
+          common_tvp_start <- max(final_ind_col_indices) + 1
+          common_tvp_ncols <- num_periods * ndk[1]
+          common_tvp_end <- common_tvp_start + common_tvp_ncols - 1
+
+          common_tvp_B <- B[, common_tvp_start:common_tvp_end, drop=FALSE]
+
+          # Extract per-period common TVP matrices
+          common_tvp_mats <- lapply(1:num_periods, function(p){
+            period_cols <- seq((p-1)*ndk[1] + 1, p*ndk[1])
+            mat <- common_tvp_B[, period_cols, drop=FALSE]
+            colnames(mat) <- colnames(Ak[[1]])
+            rownames(mat) <- colnames(Ak[[1]])
+            mat
+          })
+
+          unique_tvp_start <- common_tvp_end + 1
+
+        } else {
+          common_tvp_mats <- NULL
+          unique_tvp_start <- max(final_ind_col_indices) + 1
+        }
       }
 
       # unique TVP mats
@@ -280,7 +296,7 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup_membershi
         })
 
         lapply(1:ntk[1], function(j){
-          eq_d <- lapply(1:ndk[1], function(eq){
+          eq_d <- lapply(1:n_responses, function(eq){
             tvp_mats_inner[[eq]][,j]
           })
           do.call(rbind, eq_d)
@@ -308,11 +324,7 @@ breakup_transition <- function(B, Ak, ndk, intercept, thresh, subgroup_membershi
           }
 
           # Add unique TVP
-          total <- total + unique_tvp_mats[[i]][[t]]
-
-          # Threshold
-          total[abs(total) < thresh] <- 0
-          total
+          total + unique_tvp_mats[[i]][[t]]
         })
       })
 

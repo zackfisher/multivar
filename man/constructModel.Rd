@@ -16,7 +16,7 @@ constructModel(
   nlambda1 = 30,
   nlambda2 = 30,
   ntau = 30,
-  depth = 1000,
+  depth = NULL,
   tol = 1e-04,
   window = 1,
   standardize = TRUE,
@@ -25,15 +25,12 @@ constructModel(
   threshold = FALSE,
   lassotype = "adaptive",
   intercept = FALSE,
-  pen_common_intercept = FALSE,
-  pen_unique_intercept = TRUE,
   W = NULL,
   ratios = NULL,
   ratiostau = NULL,
   ratiosalpha = NULL,
   cv = "blocked",
   nfolds = 10,
-  thresh = 0,
   lamadapt = FALSE,
   subgroup_membership = NULL,
   subgroup = FALSE,
@@ -42,7 +39,7 @@ constructModel(
   tvp = FALSE,
   inittvpcoefs = list(),
   breaks = list(),
-  lambda_choice = "lambda.1se",
+  lambda_choice = "lambda.min",
   common_effects = TRUE,
   common_tvp_effects = NULL
 )
@@ -70,7 +67,7 @@ constructModel(
 
 \item{ntau}{Numeric. Number of tau values to search over. Default is 30.}
 
-\item{depth}{Numeric. Depth of grid construction. Default is 1000.}
+\item{depth}{Numeric. Depth of lambda1 grid construction (lambda_min = lambda_max / depth). Default is 10000 for non-TVP models. For TVP models, depth is determined by nlambda1 as 10^(nlambda1/5) to maintain consistent lambda step ratio (~1.6x per step), giving depth ≈ 1e6 for nlambda1=30 and ≈ 100 for nlambda1=10. Note: other hyperparameter grids (ratios, ratiosalpha) are constructed independently of depth.}
 
 \item{tol}{Numeric. Optimization tolerance (default 1e-4).}
 
@@ -78,7 +75,7 @@ constructModel(
 
 \item{standardize}{Logical. Default is true. Whether to standardize the individual data. Note, if intercept = TRUE and standardize = TRUE, the data is scaled but not de-meaned.}
 
-\item{weightest}{Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "ridge" and "ols". Only used when lassotype = "adaptive" (ignored for standard LASSO).}
+\item{weightest}{Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "ridge", "ols", and "multivar". The "multivar" option fits a standard lasso multivar model first to get structured initial estimates. Note: for k=1 TVP models, "multivar" works well with common_effects=TRUE but not with common_effects=FALSE (use "lasso" instead). Only used when lassotype = "adaptive" (ignored for standard LASSO).}
 
 \item{canonical}{Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.}
 
@@ -87,10 +84,6 @@ constructModel(
 \item{lassotype}{Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.}
 
 \item{intercept}{Logical. Default is FALSE.}
-
-\item{pen_common_intercept}{Logical. Default is FALSE. Whether to penalize the common intercept.}
-
-\item{pen_unique_intercept}{Logical. Default is TRUE. Whether to penalize individual-specific intercept deviations.}
 
 \item{W}{Matrix. Default is NULL.}
 
@@ -103,8 +96,6 @@ constructModel(
 \item{cv}{Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.}
 
 \item{nfolds}{Numeric. The number of folds for use with "blocked" cross-validation.}
-
-\item{thresh}{Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.}
 
 \item{lamadapt}{Logical. Should the lambdas be calculated adaptively. Default is FALSE.}
 
@@ -122,7 +113,7 @@ constructModel(
 
 \item{breaks}{List. A list of length K indicating structural breaks in the time series.}
 
-\item{lambda_choice}{Character. Which lambda to use for initial coefficient estimation: "lambda.1se" (default) or "lambda.min". lambda.1se is recommended for sparser, more stable solutions; lambda.min may overfit.}
+\item{lambda_choice}{Character. Which lambda to use for initial coefficient estimation: "lambda.min" (default) or "lambda.1se". lambda.min provides better coefficient recovery, especially for small samples and TVP models; lambda.1se may be too conservative, causing all-zero initial estimates.}
 
 \item{common_effects}{Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE. Default is TRUE (include common effects). When FALSE, the model becomes Total = Unique + TVP instead of Total = Common + Unique + TVP. This can be useful when you expect no shared dynamics across subjects.}
 

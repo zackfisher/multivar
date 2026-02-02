@@ -18,7 +18,7 @@ library("multivar")
     ub =.9
   )
   
-  object <- multivar::constructModel(sim$data, lambda_choice = "lambda.1se")
+  object <- multivar::constructModel(sim$data, lambda_choice = "lambda.1se", nfolds = 10,depth=1000)
   fit <- multivar::cv.multivar(object)
   
   #saveRDS(fit$mats$common, file = "tests/testthat/rds/test00_common_effects.rds")

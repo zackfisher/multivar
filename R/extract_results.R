@@ -24,7 +24,6 @@ extract_results <- function(x){
     x$obj@Ak,
     x$obj@ndk,
     x$obj@intercept,
-    x$obj@thresh,
     x$obj@subgroup_membership,
     x$obj@subgroup,
     x$obj@tvp,

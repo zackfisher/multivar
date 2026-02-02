@@ -6,16 +6,19 @@
 \usage{
 .extract_matrices_from_fit(
   fit,
-  type = c("common", "unique", "total", "subgrp", "intercept"),
-  subjects = "all"
+  type = c("common", "unique", "total", "subgrp", "intercept", "tvp", "common_tvp"),
+  subjects = "all",
+  periods = "all"
 )
 }
 \arguments{
 \item{fit}{Result from cv.multivar() or similar}
 
-\item{type}{Type of matrices to extract ("common", "unique", "total", "subgrp", "intercept")}
+\item{type}{Type of matrices to extract ("common", "unique", "total", "subgrp", "intercept", "tvp", "common_tvp")}
 
 \item{subjects}{Which subjects to include ("all" or numeric vector)}
+
+\item{periods}{Which periods to include for TVP models ("all" or numeric vector)}
 }
 \value{
 List of matrices with appropriate names

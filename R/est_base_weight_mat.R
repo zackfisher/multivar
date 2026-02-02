@@ -16,8 +16,6 @@ est_base_weight_mat <- function(
   ratiosalpha,
   ratiosbeta = NULL,
   intercept,
-  pen_common_intercept = FALSE,
-  pen_unique_intercept = TRUE,
   common_effects = TRUE,
   common_tvp_effects = TRUE){
 
@@ -43,9 +41,16 @@ est_base_weight_mat <- function(
   # ratiosalpha <- object@ratiosalpha
   
   dk <- vapply(Ak, function(x) { ncol(x) }, numeric(1))
-  
+
+  # n_responses = number of response equations (always d)
+  # n_predictors = number of predictors per equation
+  # (These are equal now, but kept separate for future extensibility
+  # if additional predictors are added to the model)
+  n_responses <- d
+  n_predictors <- dk[1]
+
   adapower <- 1
-  
+
   if (lassotype == "standard"){
    
     w_mat <- W
@@ -59,42 +64,53 @@ est_base_weight_mat <- function(
         w_mat <- 1/abs(initcoefs$total_effects[[1]])^adapower
         w_mat[is.infinite(w_mat)] <- 1e10
 
-        if(intercept){
-          if(!pen_common_intercept){ w_mat[,1] <- 1e-10 }
-          if(!pendiag){ diag(w_mat[,-1]) <- 1e-10 }
-        } else {
-          if(!pendiag){ diag(w_mat) <- 1e-10 }
-        }
+        if(!pendiag){ diag(w_mat) <- 1e-10 }
 
       } else {
         # TVP k=1 case
-        # Base weights from total effects
-        base_weights <- 1/abs(initcoefs$total_effects[[1]])^adapower
-        base_weights[is.infinite(base_weights)] <- 1e10
 
-        if(intercept){
-          if(!pen_common_intercept){ base_weights[,1] <- 1e-10 }
-          if(!pendiag){ diag(base_weights[,-1]) <- 1e-10 }
+        if (!common_effects || is.null(initcoefs$common_effects)) {
+          # No time-invariant component: weights from per-period estimates directly
+          # tvp_effects[[1]] contains the per-period estimates (not deviations)
+          tvp_list <- lapply(seq_along(initcoefs$tvp_effects[[1]]), function(j){
+            v <- 1/abs(initcoefs$tvp_effects[[1]][[j]])^adapower
+            v[is.infinite(v)] <- 1e10
+            if(!pendiag){ diag(v) <- 1e-10 }
+            v
+          })
+
+          # Reformat tvp weights to match A matrix structure
+          w_mat <- do.call(rbind, lapply(1:n_responses, function(j){
+            c(do.call(rbind, lapply(seq_along(tvp_list), function(m){
+              tvp_list[[m]][j,]
+            })))
+          }))
+
         } else {
-          if(!pendiag){ diag(base_weights) <- 1e-10 }
+          # Time-invariant (common) weights from common_effects
+          # (For k=1 TVP, common_effects = median of per-period estimates)
+          common_weights <- 1/abs(initcoefs$common_effects)^adapower
+          common_weights[is.infinite(common_weights)] <- 1e10
+
+          if(!pendiag){ diag(common_weights) <- 1e-10 }
+
+          # TVP weights from tvp_effects (period-specific deviations from common)
+          tvp_list <- lapply(seq_along(initcoefs$tvp_effects[[1]]), function(j){
+            v <- 1/abs(initcoefs$tvp_effects[[1]][[j]])^adapower
+            v[is.infinite(v)] <- 1e10
+            v
+          })
+
+          # Reformat tvp weights to match A matrix structure
+          phi_weights <- do.call(rbind, lapply(1:n_responses, function(j){
+            c(do.call(rbind, lapply(seq_along(tvp_list), function(m){
+              tvp_list[[m]][j,]
+            })))
+          }))
+
+          # Combine common and TVP weights
+          w_mat <- cbind(common_weights, phi_weights)
         }
-
-        # TVP weights from tvp_effects
-        tvp_list <- lapply(seq_along(1:length(initcoefs$tvp_effects[[1]])), function(j){
-          v <- 1/abs(initcoefs$tvp_effects[[1]][[j]])^adapower
-          v[is.infinite(v)] <- 1e10
-          v
-        })
-
-        # Reformat tvp weights to match A matrix structure
-        phi_weights <- do.call(rbind, lapply(c(1:dk[1]), function(j){
-          c(do.call(rbind, lapply(seq_along(tvp_list), function(m){
-            tvp_list[[m]][j,]
-          })))
-        }))
-
-        # Combine base and TVP weights
-        w_mat <- cbind(base_weights, phi_weights)
       }
 
     } else {
@@ -104,9 +120,6 @@ est_base_weight_mat <- function(
         v_list <- lapply(seq_along(Ak), function(i){
           v <- 1/abs(initcoefs$unique_effects[[i]])^adapower
           v[is.infinite(v)] <- 1e10
-          if(intercept){
-            if(!pen_unique_intercept){ v[,1] <- 1e-10 }
-          }
           v
         })
 
@@ -115,12 +128,7 @@ est_base_weight_mat <- function(
           b_med <- 1/abs(initcoefs$common_effects)^1
           b_med[is.infinite(b_med)] <- 1e10
 
-          if(intercept){
-            if(!pen_common_intercept){ b_med[,1] <- 1e-10 }
-            if(!pendiag){ diag(b_med[,-1]) <- 1e-10 }
-          } else {
-            if(!pendiag){ diag(b_med) <- 1e-10 }
-          }
+          if(!pendiag){ diag(b_med) <- 1e-10 }
 
           w_mat <- cbind(b_med, do.call("cbind", v_list))
         } else {
@@ -133,30 +141,19 @@ est_base_weight_mat <- function(
         s_list <- lapply(seq_along(1:length(initcoefs$subgroup_effects)), function(i){
           v <- 1/abs(initcoefs$subgroup_effects[[i]])^adapower
           v[is.infinite(v)] <- 1e10
-          if(intercept){
-            if(!pen_unique_intercept){ v[,1] <- 1e-10 }
-          }
           v
         })
 
         v_list <- lapply(seq_along(Ak), function(i){
           v <- 1/abs(initcoefs$unique_effects[[i]])^adapower
           v[is.infinite(v)] <- 1e10
-          if(intercept){
-            if(!pen_unique_intercept){ v[,1] <- 1e-10 }
-          }
           v
         })
 
         b_med <- 1/abs(initcoefs$common_effects)^1
         b_med[is.infinite(b_med)] <- 1e10
 
-        if(intercept){
-          if(!pen_common_intercept){ b_med[,1] <- 1e-10 }
-          if(!pendiag){ diag(b_med[,-1]) <- 1e-10 }
-        } else {
-          if(!pendiag){ diag(b_med) <- 1e-10 }
-        }
+        if(!pendiag){ diag(b_med) <- 1e-10 }
 
         w_mat <- cbind(b_med, do.call("cbind", s_list), do.call("cbind", v_list))
 
@@ -178,9 +175,6 @@ est_base_weight_mat <- function(
         v_list <- lapply(seq_along(Ak), function(i){
           v <- 1/abs(initcoefs$unique_effects[[i]])^adapower
           v[is.infinite(v)] <- 1e10
-          if(intercept){
-            if(!pen_unique_intercept){ v[,1] <- 1e-10 }
-          }
           v
         })
 
@@ -196,7 +190,7 @@ est_base_weight_mat <- function(
 
           # Reformat common TVP weights to match A matrix column structure
           # For each outcome variable (row), stack all periods' weights
-          phi_common_weights <- do.call(rbind, lapply(1:dk[1], function(j){
+          phi_common_weights <- do.call(rbind, lapply(1:n_responses, function(j){
             c(do.call(rbind, lapply(seq_along(common_tvp_list), function(p){
               common_tvp_list[[p]][j, ]
             })))
@@ -215,7 +209,7 @@ est_base_weight_mat <- function(
 
         phi_unique_weights <- do.call(cbind,lapply(seq_along(tvp_list), function(i){
           # first pull out each equation and stack the rows of phi
-          do.call(rbind,lapply(c(1:dk[1]), function(j){
+          do.call(rbind,lapply(1:n_responses, function(j){
             c(do.call(rbind,lapply(seq_along(tvp_list[[i]]), function(m){
               tvp_list[[i]][[m]][j,]
             })))
@@ -228,12 +222,7 @@ est_base_weight_mat <- function(
           b_med <- 1/abs(initcoefs$common_effects)^1
           b_med[is.infinite(b_med)] <- 1e10
 
-          if(intercept){
-            if(!pen_common_intercept){ b_med[,1] <- 1e-10 }
-            if(!pendiag){ diag(b_med[,-1]) <- 1e-10 }
-          } else {
-            if(!pendiag){ diag(b_med) <- 1e-10 }
-          }
+          if(!pendiag){ diag(b_med) <- 1e-10 }
 
           w_mat <- cbind(b_med, do.call("cbind", v_list), phi_common_weights, phi_unique_weights)
 
@@ -242,12 +231,7 @@ est_base_weight_mat <- function(
           b_med <- 1/abs(initcoefs$common_effects)^1
           b_med[is.infinite(b_med)] <- 1e10
 
-          if(intercept){
-            if(!pen_common_intercept){ b_med[,1] <- 1e-10 }
-            if(!pendiag){ diag(b_med[,-1]) <- 1e-10 }
-          } else {
-            if(!pendiag){ diag(b_med) <- 1e-10 }
-          }
+          if(!pendiag){ diag(b_med) <- 1e-10 }
 
           w_mat <- cbind(b_med, do.call("cbind", v_list), phi_unique_weights)
 
@@ -315,10 +299,13 @@ est_base_weight_mat <- function(
         W[,,r] <- W[,,r] * ratios[r]
       }
     } else {
-      # TVP k=1: don't scale weights by ratiosalpha
-      # For k=1, ratiosalpha is used in lambda grid construction instead
-      # W is already replicated over ratiosalpha, but weights stay constant
-      # (no scaling needed since there's no common/unique distinction)
+      # TVP k=1 with common_effects: scale common weights by ratiosalpha
+      # This mirrors standard multivar where common weights are scaled by ratios
+      if (include_common_effects) {
+        for(a in 1:length(ratiosalpha)){
+          W[,1:(dk[1]),a] <- W[,1:(dk[1]),a] * ratiosalpha[a]
+        }
+      }
     }
 
   } else {

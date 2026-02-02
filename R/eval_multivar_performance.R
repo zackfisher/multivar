@@ -275,25 +275,35 @@ eval_multivar_performance <- function(sim_obj,
     }
 
     # Extract intercept vectors from estimates
-    if (!is.null(est_common) && has_intercept(est_common)) {
-      est_intercepts$common <- extract_intercept(est_common)
-    }
-    if (length(est_uniqueL) > 0 && has_intercept(est_uniqueL[[1]])) {
-      est_intercepts$unique <- lapply(est_uniqueL, extract_intercept)
-    }
-    if (length(est_totalL) > 0 && has_intercept(est_totalL[[1]])) {
-      est_intercepts$total <- lapply(est_totalL, extract_intercept)
-    }
+    # Check for new structure (intercepts stored separately in fit_obj$mats$intercepts)
+    if (!is.null(fit_obj$mats$intercepts)) {
+      # New structure: intercepts are in a separate list
+      est_intercepts$common <- fit_obj$mats$intercepts$intercept_common
+      est_intercepts$unique <- fit_obj$mats$intercepts$intercepts_unique
+      est_intercepts$total <- fit_obj$mats$intercepts$intercepts_total
+      # Dynamics are already separate (no intercept column to remove)
+    } else {
+      # Old structure: intercepts are stored as first column of matrices
+      if (!is.null(est_common) && has_intercept(est_common)) {
+        est_intercepts$common <- extract_intercept(est_common)
+      }
+      if (length(est_uniqueL) > 0 && has_intercept(est_uniqueL[[1]])) {
+        est_intercepts$unique <- lapply(est_uniqueL, extract_intercept)
+      }
+      if (length(est_totalL) > 0 && has_intercept(est_totalL[[1]])) {
+        est_intercepts$total <- lapply(est_totalL, extract_intercept)
+      }
 
-    # Extract dynamics (without intercept column) for evaluation
-    if (!is.null(est_common) && has_intercept(est_common)) {
-      est_common <- extract_dynamics(est_common)
-    }
-    if (length(est_uniqueL) > 0 && has_intercept(est_uniqueL[[1]])) {
-      est_uniqueL <- lapply(est_uniqueL, extract_dynamics)
-    }
-    if (length(est_totalL) > 0 && has_intercept(est_totalL[[1]])) {
-      est_totalL <- lapply(est_totalL, extract_dynamics)
+      # Extract dynamics (without intercept column) for evaluation
+      if (!is.null(est_common) && has_intercept(est_common)) {
+        est_common <- extract_dynamics(est_common)
+      }
+      if (length(est_uniqueL) > 0 && has_intercept(est_uniqueL[[1]])) {
+        est_uniqueL <- lapply(est_uniqueL, extract_dynamics)
+      }
+      if (length(est_totalL) > 0 && has_intercept(est_totalL[[1]])) {
+        est_totalL <- lapply(est_totalL, extract_dynamics)
+      }
     }
 
     # Truth doesn't have intercept column in matrices (it's separate)
@@ -352,12 +362,32 @@ eval_multivar_performance <- function(sim_obj,
 
         # Only proceed if both are lists
         if (is.list(truth_tvp_list) && is.list(est_tvp_list)) {
-          n_t <- min(length(truth_tvp_list), length(est_tvp_list))
+          n_periods_est <- length(est_tvp_list)
+          n_truth <- length(truth_tvp_list)
+
+          # Handle mismatch: truth may be per-timepoint while estimate is per-period
+          # If truth has many more matrices than estimate, extract one per period
+          if (n_truth > n_periods_est && n_periods_est > 0) {
+            # Truth is per-timepoint, estimate is per-period
+            # Extract one representative matrix per period (first matrix of each segment)
+            timepoints_per_period <- n_truth / n_periods_est
+            period_indices <- sapply(1:n_periods_est, function(p) {
+              round((p - 1) * timepoints_per_period + 1)
+            })
+            truth_mats <- lapply(period_indices, function(idx) truth_tvp_list[[idx]])
+            truth_mats <- Filter(is_mat, truth_mats)
+          } else {
+            # Truth is already per-period (or same length as estimate)
+            truth_mats <- Filter(is_mat, truth_tvp_list[1:n_periods_est])
+          }
+
+          est_mats <- Filter(is_mat, est_tvp_list)
+          n_t <- min(length(truth_mats), length(est_mats))
 
           if (n_t > 0) {
-            # Stack all time-varying matrices into 3D arrays for comparison
-            truth_mats <- Filter(is_mat, truth_tvp_list[1:n_t])
-            est_mats   <- Filter(is_mat, est_tvp_list[1:n_t])
+            # Ensure we only compare matching number of periods
+            truth_mats <- truth_mats[1:n_t]
+            est_mats <- est_mats[1:n_t]
 
             if (length(truth_mats) > 0 && length(est_mats) > 0) {
               # Flatten across time to get overall metrics
@@ -459,10 +489,23 @@ eval_multivar_performance <- function(sim_obj,
   if (is_tvp && length(truth_common_tvp) > 0 && length(est_common_tvp) > 0) {
     # Common TVP: list of matrices (one per period)
     # Flatten across periods and evaluate
-    n_periods <- min(length(truth_common_tvp), length(est_common_tvp))
+    n_periods_est <- length(est_common_tvp)
+    n_truth <- length(truth_common_tvp)
 
-    truth_mats_tvp <- Filter(is_mat, truth_common_tvp[1:n_periods])
-    est_mats_tvp   <- Filter(is_mat, est_common_tvp[1:n_periods])
+    # Handle mismatch: truth may be per-timepoint while estimate is per-period
+    if (n_truth > n_periods_est && n_periods_est > 0) {
+      # Truth is per-timepoint, estimate is per-period
+      timepoints_per_period <- n_truth / n_periods_est
+      period_indices <- sapply(1:n_periods_est, function(p) {
+        round((p - 1) * timepoints_per_period + 1)
+      })
+      truth_mats_tvp <- lapply(period_indices, function(idx) truth_common_tvp[[idx]])
+      truth_mats_tvp <- Filter(is_mat, truth_mats_tvp)
+    } else {
+      truth_mats_tvp <- Filter(is_mat, truth_common_tvp[1:n_periods_est])
+    }
+
+    est_mats_tvp <- Filter(is_mat, est_common_tvp)
 
     if (length(truth_mats_tvp) > 0 && length(est_mats_tvp) > 0) {
       # Flatten across periods
@@ -541,11 +584,28 @@ eval_multivar_performance <- function(sim_obj,
 
       # Only proceed if both are lists
       if (is.list(truth_tvp_list) && is.list(est_tvp_list)) {
-        n_t <- min(length(truth_tvp_list), length(est_tvp_list))
+        n_periods_est <- length(est_tvp_list)
+        n_truth <- length(truth_tvp_list)
+
+        # Handle mismatch: truth may be per-timepoint while estimate is per-period
+        if (n_truth > n_periods_est && n_periods_est > 0) {
+          # Truth is per-timepoint, estimate is per-period
+          timepoints_per_period <- n_truth / n_periods_est
+          period_indices <- sapply(1:n_periods_est, function(p) {
+            round((p - 1) * timepoints_per_period + 1)
+          })
+          truth_mats <- lapply(period_indices, function(idx) truth_tvp_list[[idx]])
+          truth_mats <- Filter(is_mat, truth_mats)
+        } else {
+          truth_mats <- Filter(is_mat, truth_tvp_list[1:n_periods_est])
+        }
+
+        est_mats <- Filter(is_mat, est_tvp_list)
+        n_t <- min(length(truth_mats), length(est_mats))
 
         if (n_t > 0) {
-          truth_mats <- Filter(is_mat, truth_tvp_list[1:n_t])
-          est_mats   <- Filter(is_mat, est_tvp_list[1:n_t])
+          truth_mats <- truth_mats[1:n_t]
+          est_mats <- est_mats[1:n_t]
 
           if (length(truth_mats) > 0 && length(est_mats) > 0) {
             # Flatten across time

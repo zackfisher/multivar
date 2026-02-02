@@ -1,6 +1,6 @@
 #' @export
-cv_blocked <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALSE, cv, nfolds){
-  
+cv_blocked <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps, intercept=FALSE, cv, nfolds, tvp=FALSE, breaks=NULL){
+
   # B  <- object@B
   # Z  <- t(as.matrix(object@A))
   # Y  <- t(as.matrix(object@b))
@@ -15,16 +15,55 @@ cv_blocked <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALS
   # intercept  <- object@intercept
   # cv  <- object@cv
   # nfolds  <- object@nfolds
+  # tvp <- object@tvp
+  # breaks <- object@breaks
   # B = B_com
   # Z = t(Z_com)
   # Y = t(object@b)
   # W = W_com
-  
+
   make_folds  <- function(x,nfolds) split(x, cut(seq_along(x), nfolds, labels = FALSE))
   final_tmpt <- cumsum(unlist(lapply(Ak,function(x){nrow(x)})))
   first_tmpt <- c(1,(final_tmpt[-length(final_tmpt)]+1))
-  subj_indx_list <- lapply(seq_along(first_tmpt), function(g){first_tmpt[g]:final_tmpt[g]})
-  cv_list <- lapply(subj_indx_list,function(g){make_folds(g,nfolds)})
+
+  # If TVP, create folds within each period separately to respect period boundaries
+  if(tvp && !is.null(breaks)) {
+    cv_list <- lapply(seq_len(k), function(g) {
+      # Get period indices for this subject
+      period_breaks <- breaks[[g]]
+      n_periods <- length(period_breaks)
+
+      # Create folds within each period
+      period_folds <- lapply(seq_len(n_periods), function(p) {
+        # Get row indices for this period (relative to subject's data)
+        period_rows <- period_breaks[[p]]
+        # Convert to global indices
+        global_indices <- period_rows + first_tmpt[g] - 1
+        # Create folds for this period
+        make_folds(global_indices, nfolds)
+      })
+
+      # Combine folds across periods
+      # For each fold_id, concatenate indices from the same fold across all periods
+      combined_folds <- lapply(seq_len(nfolds), function(fold_id) {
+        # Get fold_id from each period (may not exist if period is shorter than nfolds)
+        fold_indices <- lapply(period_folds, function(pf) {
+          if(fold_id <= length(pf)) {
+            pf[[fold_id]]
+          } else {
+            integer(0)  # Empty if this fold doesn't exist for this period
+          }
+        })
+        unlist(fold_indices)
+      })
+
+      combined_folds
+    })
+  } else {
+    # Original behavior: create folds across entire time series
+    subj_indx_list <- lapply(seq_along(first_tmpt), function(g){first_tmpt[g]:final_tmpt[g]})
+    cv_list <- lapply(subj_indx_list,function(g){make_folds(g,nfolds)})
+  }
   #MSFE <- matrix(NA, nrow = nfolds, ncol = nrow(lambda1)*length(ratios))
   MSFE <- matrix(NA, nrow = nfolds, ncol = nrow(lambda1)*dim(W)[3])
   pb   <- txtProgressBar(1, nfolds, style=3)

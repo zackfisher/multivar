@@ -31,6 +31,8 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{H}}{Matrix. A matrix containing the non-lagged (horizon k) by d multivariate time series.}
 
+\item{\code{data_means}}{List. A list (length = k) of column means for each group's data, used for intercept recovery when intercept=TRUE.}
+
 \item{\code{lag}}{Numeric. The VAR order. Currently only lag 1 is supported.}
 
 \item{\code{horizon}}{Numeric. Forecast horizon.}
@@ -69,10 +71,6 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{intercept}}{Logical. Default is FALSE.}
 
-\item{\code{pen_common_intercept}}{Logical. Default is FALSE. Whether to penalize the common intercept.}
-
-\item{\code{pen_unique_intercept}}{Logical. Default is TRUE. Whether to penalize individual-specific intercept deviations.}
-
 \item{\code{W}}{Matrix. Default is NULL.}
 
 \item{\code{ratios}}{Numeric vector. Default is NULL.}
@@ -86,8 +84,6 @@ To construct an object of class multivar, use the function \code{\link{construct
 \item{\code{cv}}{Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.}
 
 \item{\code{nfolds}}{Numeric. The number of folds for use with "blocked" cross-validation.}
-
-\item{\code{thresh}}{Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.}
 
 \item{\code{lamadapt}}{Logical. Should the lambdas be calculated adaptively. Default is FALSE.}
 

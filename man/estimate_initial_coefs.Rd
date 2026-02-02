@@ -35,7 +35,7 @@ estimate_initial_coefs(
 
 \item{lassotype}{Character. Type of LASSO penalty: "standard" or "adaptive".}
 
-\item{weightest}{Character. How to estimate initial coefficients for adaptive weights: "lasso", "ridge", or "ols". Only used when lassotype = "adaptive" (ignored for standard LASSO).}
+\item{weightest}{Character. How to estimate initial coefficients for adaptive weights: "lasso", "ridge", "ols", or "multivar". The "multivar" option fits a standard lasso multivar model first to get structured initial estimates. Note: for k=1 TVP models, use "lasso" (not "multivar") for best results. Only used when lassotype = "adaptive" (ignored for standard LASSO).}
 
 \item{subgroup_membership}{Numeric vector. Vector of subgroup assignments for each subject.}
 

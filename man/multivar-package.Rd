@@ -12,6 +12,11 @@ Functions for simulating, estimating and forecasting stationary Vector Autoregre
 \author{
 \strong{Maintainer}: Zachary Fisher \email{fish.zachary@gmail.com}
 
+Authors:
+\itemize{
+  \item Christopher Crawford
+}
+
 Other contributors:
 \itemize{
   \item Younghoon Kim [contributor]

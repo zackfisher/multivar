@@ -40,7 +40,7 @@ k <- length(combined_data)
 # Subgroup membership: subjects 1-3 in group 1, subjects 4-6 in group 2
 subgroup_membership <- c(rep(1, k_per_group), rep(2, k_per_group))
 
-object <- multivar::constructModel(combined_data, subgroup_membership = subgroup_membership)
+object <- multivar::constructModel(combined_data, subgroup_membership = subgroup_membership, nfolds = 10)
 fit <- multivar::cv.multivar(object)
 
 #-------------------------------------------------------#

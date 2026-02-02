@@ -167,7 +167,7 @@ context("test08: results are deterministic")
 #-------------------------------------------------------#
 
 test_that("results are identical to saved snapshots", {
-  object <- multivar::constructModel(sim$data, subgroup_membership = sim$subgroup)
+  object <- multivar::constructModel(sim$data, subgroup_membership = sim$subgroup, nfolds = 10)
   fit <- suppressMessages(multivar::cv.multivar(object))
 
   expect_identical(fit$mats$common, readRDS("rds/test08_subgroup_eval_common.rds"))

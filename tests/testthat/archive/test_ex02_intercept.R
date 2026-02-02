@@ -59,7 +59,7 @@ test_that("cv.multivar runs with intercept=TRUE", {
 context("test02: intercept column present in output")
 #-------------------------------------------------------#
 
-test_that("common matrix includes intercept column when intercept=TRUE", {
+test_that("intercepts are stored separately when intercept=TRUE", {
   object <- multivar::constructModel(
     sim$data,
     intercept = TRUE,
@@ -67,15 +67,17 @@ test_that("common matrix includes intercept column when intercept=TRUE", {
   )
   fit <- multivar::cv.multivar(object)
 
-  # Common matrix should have d+1 columns (intercept + d slopes)
-  expect_equal(ncol(fit$mats$common), d + 1)
+  # Common matrix should be d x d (no intercept column)
+  expect_equal(ncol(fit$mats$common), d)
   expect_equal(nrow(fit$mats$common), d)
 
-  # First column should be named "Intercept"
-  expect_equal(colnames(fit$mats$common)[1], "Intercept")
+  # Intercepts should be in separate list
+  expect_true(!is.null(fit$mats$intercepts))
+  expect_true(!is.null(fit$mats$intercepts$intercept_common))
+  expect_equal(length(fit$mats$intercepts$intercept_common), d)
 })
 
-test_that("individual total matrices include intercept column", {
+test_that("individual total matrices and intercepts are separate", {
   object <- multivar::constructModel(
     sim$data,
     intercept = TRUE,
@@ -84,9 +86,12 @@ test_that("individual total matrices include intercept column", {
   fit <- multivar::cv.multivar(object)
 
   for (i in seq_along(fit$mats$total)) {
-    expect_equal(ncol(fit$mats$total[[i]]), d + 1)
+    # Total matrices should be d x d (no intercept column)
+    expect_equal(ncol(fit$mats$total[[i]]), d)
     expect_equal(nrow(fit$mats$total[[i]]), d)
-    expect_equal(colnames(fit$mats$total[[i]])[1], "Intercept")
+
+    # Individual intercepts should be in intercepts list
+    expect_equal(length(fit$mats$intercepts$intercepts_total[[i]]), d)
   }
 })
 
@@ -119,8 +124,8 @@ test_that("recovered intercepts have strong positive correlation with true value
   )
   fit <- multivar::cv.multivar(object)
 
-  # Extract intercept column from each total matrix
-  recovered_intercepts <- lapply(fit$mats$total, function(mat) mat[, 1])
+  # Extract intercepts from intercepts list
+  recovered_intercepts <- fit$mats$intercepts$intercepts_total
 
   # Compare to true intercepts - should be highly correlated
   true_vec <- unlist(true_intercepts)
@@ -140,8 +145,8 @@ test_that("mean squared error of recovered intercepts is small", {
   )
   fit <- multivar::cv.multivar(object)
 
-  # Extract intercept column from each total matrix
-  recovered_intercepts <- lapply(fit$mats$total, function(mat) mat[, 1])
+  # Extract intercepts from intercepts list
+  recovered_intercepts <- fit$mats$intercepts$intercepts_total
 
   # Calculate MSE for each subject
   mse_per_subject <- sapply(seq_along(true_intercepts), function(i) {
@@ -163,8 +168,8 @@ test_that("recovered intercepts have correct sign for most entries", {
   )
   fit <- multivar::cv.multivar(object)
 
-  # Extract intercept column from each total matrix
-  recovered_intercepts <- lapply(fit$mats$total, function(mat) mat[, 1])
+  # Extract intercepts from intercepts list
+  recovered_intercepts <- fit$mats$intercepts$intercepts_total
 
   # Check sign agreement
   sign_matches <- sapply(seq_along(true_intercepts), function(i) {
@@ -185,8 +190,8 @@ test_that("individual subject intercept recovery is reasonable", {
   )
   fit <- multivar::cv.multivar(object)
 
-  # Extract intercept column from each total matrix
-  recovered_intercepts <- lapply(fit$mats$total, function(mat) mat[, 1])
+  # Extract intercepts from intercepts list
+  recovered_intercepts <- fit$mats$intercepts$intercepts_total
 
   # Check each subject individually
   for (i in seq_along(true_intercepts)) {
@@ -211,8 +216,8 @@ test_that("dynamics are still recovered when intercept=TRUE", {
   )
   fit <- multivar::cv.multivar(object)
 
-  # Extract slopes (columns 2:(d+1)) from total matrices
-  recovered_dynamics <- lapply(fit$mats$total, function(mat) mat[, -1])
+  # Total matrices now contain only dynamics (d x d), no intercept column
+  recovered_dynamics <- fit$mats$total
 
   # Compare to true dynamics
   for (i in seq_along(recovered_dynamics)) {
@@ -230,43 +235,6 @@ test_that("dynamics are still recovered when intercept=TRUE", {
 })
 
 #-------------------------------------------------------#
-context("test02: pen_common_intercept and pen_unique_intercept")
-#-------------------------------------------------------#
-
-test_that("pen_common_intercept parameter is accepted", {
-  object <- multivar::constructModel(
-    sim$data,
-    intercept = TRUE,
-    pen_common_intercept = FALSE,
-    pen_unique_intercept = TRUE,
-    weightest = "ols"
-  )
-  expect_false(object@pen_common_intercept)
-  expect_true(object@pen_unique_intercept)
-})
-
-test_that("model runs with different intercept penalty settings", {
-  # Default: pen_common_intercept=FALSE, pen_unique_intercept=TRUE
-  object1 <- multivar::constructModel(
-    sim$data,
-    intercept = TRUE,
-    weightest = "ols"
-  )
-  fit1 <- multivar::cv.multivar(object1)
-  expect_true(!is.null(fit1$mats$common))
-
-  # Both unpenalized
-  object2 <- multivar::constructModel(
-    sim$data,
-    intercept = TRUE,
-    pen_common_intercept = FALSE,
-    pen_unique_intercept = FALSE,
-    weightest = "ols"
-  )
-  fit2 <- multivar::cv.multivar(object2)
-  expect_true(!is.null(fit2$mats$common))
-})
-
 #-------------------------------------------------------#
 context("test02: intercept results are deterministic")
 #-------------------------------------------------------#
@@ -275,7 +243,8 @@ test_that("results are identical to saved snapshots", {
   object <- multivar::constructModel(
     sim$data,
     intercept = TRUE,
-    weightest = "ols"
+    weightest = "ols",
+    nfolds = 10
   )
   fit <- multivar::cv.multivar(object)
 

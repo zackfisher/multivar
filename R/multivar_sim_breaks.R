@@ -185,7 +185,7 @@ multivar_sim_breaks <- function(
     # unique effects (time-invariant)
     #------------------------------------------------------------------------#
     if(props[3] != 0){
-      
+
       path_idx <- list()
       for(i in 1:k){
         poss_paths <- c(do.call(rbind,lapply(1:nrow(A),function(r){setdiff(sample(A[r,]),diag(A)[r])})))
@@ -194,10 +194,10 @@ multivar_sim_breaks <- function(
         #path_idx[[i]]  <- sample(setdiff(permuted_elements,bad_paths[[i]]),round(props[3]*d^2))
         #bad_paths[[i]] <- c(bad_paths[[i]],path_idx[[i]])
       }
-      
+
       m_idx <- do.call(rbind,lapply(seq_along(path_idx),function(kk){cbind(path_idx[[kk]],kk)}))
-      m_idx <- cbind(m_idx, runif(nrow(m_idx), lb,ub)) 
-      
+      m_idx <- cbind(m_idx, runif(nrow(m_idx), lb,ub))
+
       for(i in 1:dim(M)[3]){
         M0 <- M[,,i]
         M0[as.matrix(m_idx[,1:2])] <- m_idx[,3]
@@ -207,6 +207,8 @@ multivar_sim_breaks <- function(
       m_3 <- cbind("ind",cbind(m_idx,matrix(m_idx[,3],nrow(m_idx),n)))
       colnames(m_3) <- c("type","elem","subj","int",paste0("t",1:n))
       m_3 <- rbind(m_2,m_3)
+    } else {
+      m_3 <- m_2
     }
     
     #------------------------------------------------------------------------#
