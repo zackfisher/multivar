@@ -8,6 +8,6 @@ build_scenario_table(object)
 }
 \description{
 This matches the logic in est_base_weight_mat(): we expand
-ratios, and (optionally) ratiostau and ratiosalpha into a list
+ratios_unique, and (optionally) ratios_subgroup and ratios_unique_tvp into a list
 of S scenarios, where S = dim(W)[3].
 }

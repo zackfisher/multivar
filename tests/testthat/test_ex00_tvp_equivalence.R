@@ -44,8 +44,7 @@ object_p1 <- constructModel(
   tvp = FALSE,
   standardize = FALSE,
   lassotype = "standard",
-  lambda1 = fixed_lambda,
-  lambda2 = fixed_lambda
+  lambda1 = fixed_lambda
 )
 fit_p1 <- cv.multivar(object_p1)
 
@@ -54,8 +53,7 @@ object_p2 <- constructModel(
   tvp = FALSE,
   standardize = FALSE,
   lassotype = "standard",
-  lambda1 = fixed_lambda,
-  lambda2 = fixed_lambda
+  lambda1 = fixed_lambda
 )
 fit_p2 <- cv.multivar(object_p2)
 
@@ -67,8 +65,7 @@ object_tvp <- constructModel(
   common_effects = FALSE,
   standardize = FALSE,
   lassotype = "standard",
-  lambda1 = fixed_lambda,
-  lambda2 = fixed_lambda
+  lambda1 = fixed_lambda
 )
 fit_tvp <- cv.multivar(object_tvp)
 

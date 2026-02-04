@@ -9,20 +9,27 @@
 #' @param d Numeric vector. The number of variables for each dataset.
 #' @param k Numeric. The number of subjects.
 #' @param lassotype Character. Type of LASSO penalty: "standard" or "adaptive".
-#' @param weightest Character. How to estimate initial coefficients for adaptive weights: "lasso", "ridge", "ols", or "multivar". The "multivar" option fits a standard lasso multivar model first to get structured initial estimates. Note: for k=1 TVP models, use "lasso" (not "multivar") for best results. Only used when lassotype = "adaptive" (ignored for standard LASSO).
+#' @param weightest Character. How to estimate initial coefficients: "lasso", "ridge", or "ols".
 #' @param subgroup_membership Numeric vector. Vector of subgroup assignments for each subject.
 #' @param subgroup Logical. Whether to run subgrouping algorithm.
-#' @param nlambda1 Numeric. Number of lambda1 values for the main estimation grid. Not used when developing adaptive weights.
-#' @param nlambda2 Numeric. Number of lambda2 values for the main estimation grid. Not used when developing adaptive weights.
+#' @param nlambda1 Numeric. Not used (kept for API compatibility).
 #' @param tvp Logical. Whether to estimate time-varying parameters.
 #' @param breaks List. A list of length k indicating structural breaks in the time series.
 #' @param intercept Logical. Whether to include intercepts in the model.
 #' @param nfolds Numeric. The number of folds for cross-validation.
-#' @param lambda_choice Character. Which lambda to use from cv.glmnet: "lambda.min"
-#'   or "lambda.1se". Passed from constructModel; see constructModel documentation
-#'   for usage guidance.
+#' @param lambda_choice Character. Which lambda to use from cv.glmnet: "lambda.min" or "lambda.1se".
 #' @param common_effects Logical. Whether to include common effects in TVP models.
-#'   Passed from constructModel.
+#' @param common_tvp_effects Logical. Whether to include common TVP effects (k>1 only).
+#'
+#' @return A list containing:
+#'   \itemize{
+#'     \item{common_effects: d x d matrix of common effects}
+#'     \item{subgroup_effects: list of d x d matrices per subgroup (if subgroup=TRUE)}
+#'     \item{unique_effects: list of d x d matrices per subject}
+#'     \item{tvp_effects: list of lists of d x d matrices per subject per period (if tvp=TRUE)}
+#'     \item{common_tvp_effects: list of d x d matrices per period (if tvp=TRUE and k>1)}
+#'     \item{total_effects: list of d x d matrices per subject}
+#'   }
 #'
 #' @export
 estimate_initial_coefs <- function(
@@ -35,588 +42,390 @@ estimate_initial_coefs <- function(
     subgroup_membership,
     subgroup,
     nlambda1,
-    nlambda2,
     tvp,
     breaks,
     intercept,
     nfolds,
     lambda_choice = "lambda.min",
     common_effects = TRUE,
-    common_tvp_effects = TRUE){
-  
-  # Ak<-object@Ak
-  # bk<- object@bk
-  # ratios<-object@ratios
-  # d<-object@d
-  # k<-object@k
-  # lassotype<-object@lassotype
-  # weightest<-object@weightest
-  # subgroup <- object@subgroup
-  # subgroupflag <- object@subgroup
-  # nlambda1 <- object@nlambda1
-  # nlambda2 <- object@nlambda2
-  # tvp <- object@tvp
-  # breaks <- object@breaks
-  # intercept <- object@intercept
-  # nfolds <- object@nfolds
+    common_tvp_effects = TRUE) {
 
-  if (lassotype == "standard"){
-    
-    if(!subgroup){
-      res <- list(
-        common_effects = matrix(1, d, d),
-        subgroup_effects = NULL,
-        unique_effects = replicate(k,  matrix(1, d, d)),
-        total_effects = replicate(k,  matrix(1, d, d)),
-        tvp_effects = NULL
-      )
-    } else {
-      res <- list(
-        common_effects = matrix(1, d, d),
-        subgroup_effects = replicate(max(subgroup_membership),  matrix(1, d, d)),
-        unique_effects = replicate(k,  matrix(1, d, d)),
-        total_effects = replicate(k,  matrix(1, d, d)),
-        tvp_effects = NULL
-      )
-    }
-    
-    if(tvp){
-      res <- list(
-        common_effects = matrix(1, d, d),
-        subgroup_effects = NULL,
-        unique_effects = replicate(k,  matrix(1, d, d)),
-        total_effects = replicate(k,  matrix(1, d, d)),
-        tvp_effects = replicate(k,  matrix(1, nrow(Ak[[1]]), d))
-      )
-    }
-    
-    
-  } else {
-    
-    #---------------------------------------------#
-    # 1. estimate total effects
-    #---------------------------------------------#
-    if (weightest == "lasso" | weightest == "ridge") {
-      
-      make_folds  <- function(x,nfolds) split(x, cut(seq_along(x), nfolds, labels = FALSE))
-      final_tmpt <- cumsum(unlist(lapply(Ak,function(x){nrow(x)})))
-      first_tmpt <- c(1,(final_tmpt[-length(final_tmpt)]+1))
-      subj_indx_list <- lapply(seq_along(first_tmpt), function(g){first_tmpt[g]:final_tmpt[g]})
-      cv_list <- lapply(subj_indx_list,function(g){make_folds(g,nfolds)})
-      
-      glmnet_folds <- lapply(seq_along(cv_list), function(jj){
-        lapply(seq_along(cv_list[[jj]]), function(kk){
-          rep(kk, length(cv_list[[jj]][[kk]]))
-          })
-      })
-      
-    }
-    
-    if (weightest == "ols") {
-        
-      total_effects <- lapply(seq_along(Ak),function(g){
-        if(intercept){
-          
-          fit<- vars::VAR(as.matrix(bk[[g]]), p=1, type="const")$varresult
-          m <- as.matrix(do.call("rbind",lapply(seq_along(colnames(bk[[g]])), function(x) {
-            fit[[x]]$coefficients
-          })))
-          m <- cbind(m[,ncol(m),drop =F],m[,-ncol(m),drop =F])
-          m
-          
-        } else {
-          
-          fit<- vars::VAR(as.matrix(Ak[[g]]), p=1, type="none")$varresult
-          m <- as.matrix(do.call("rbind",lapply(seq_along(colnames(Ak[[g]])), function(x) {
-            fit[[x]]$coefficients
-          })))
-          m
-          
-        }
-      })
-        
-    } else if (weightest == "lasso") {
-      
-      total_effects <- lapply(seq_along(Ak),function(g){
-        
-        lasso.fit <- glmnet::cv.glmnet(
-          diag(d[1]) %x% Ak[[g]], 
-          as.vector(bk[[g]]), 
-          family = "gaussian", 
-          alpha = 1, 
-          standardize = FALSE, 
-          nfolds = nfolds,
-          intercept = FALSE,
-          foldid = rep(unlist(glmnet_folds[[g]]), d[1])
-        )
 
-        # Use specified lambda (default: lambda.min for better parameter recovery)
-        g_coefs <- coef(lasso.fit, s = lambda_choice)[-1]
-        
-        mat <- matrix(g_coefs, ncol(bk[[g]]), ncol(Ak[[g]]), byrow=TRUE)
-        
-        mat
-        
-      })
-      
-      
-      # TVP initial coefficient estimation
-      # n_responses = number of response equations (d)
-      # n_predictors = number of predictors (d without intercept, d+1 with intercept)
-      if(tvp){
-
-        inittvpcoefs <- lapply(seq_along(Ak),function(g){
-
-          n_responses <- ncol(bk[[g]])
-          n_predictors <- ncol(Ak[[g]])
-
-          lapply(seq_along(breaks[[g]]), function(q){
-
-            # Create blocked folds for this period
-            period_length <- length(breaks[[g]][[q]])
-            period_indices <- seq_len(period_length)
-
-            # Use blocked folds for time series data
-            period_folds <- make_folds(period_indices, nfolds)
-
-            # Convert to fold IDs for glmnet
-            period_foldid <- unlist(lapply(seq_along(period_folds), function(fold_num){
-              rep(fold_num, length(period_folds[[fold_num]]))
-            }))
-
-            # Replicate fold IDs for each outcome variable (Kronecker structure)
-            foldid_glmnet <- rep(period_foldid, n_responses)
-
-            lasso.fit <- glmnet::cv.glmnet(
-              diag(n_responses) %x% Ak[[g]][breaks[[g]][[q]],],
-              as.vector(bk[[g]][breaks[[g]][[q]],]),
-              family = "gaussian",
-              alpha = 1,
-              standardize = FALSE,
-              foldid = foldid_glmnet
-            )
-            matrix(as.vector(predict(
-              lasso.fit,
-              diag(n_responses) %x% Ak[[g]][breaks[[g]][[q]],],
-              type="coefficients",
-              s=lambda_choice
-            ))[-1], n_responses, n_predictors, byrow=TRUE)
-          })
-        })
-
-      }
-      
-    } else if (weightest == "ridge") {
-
-      total_effects <- lapply(seq_along(Ak),function(g){
-
-        ridge.fit <- glmnet::cv.glmnet(
-          diag(d[1]) %x% Ak[[g]],
-          as.vector(bk[[g]]),
-          family = "gaussian",
-          alpha = 0,
-          standardize = FALSE,
-          nfolds = nfolds,
-          intercept = FALSE,
-          foldid =  rep(unlist(glmnet_folds[[g]]), d[1])
-        )
-
-        g_coefs <- coef(ridge.fit, s = lambda_choice)[-1]
-
-        mat <- matrix(g_coefs, ncol(bk[[g]]), ncol(Ak[[g]]), byrow=TRUE)
-
-        mat
-
-      })
-
-      # TVP initial estimates with ridge
-      # n_responses = number of response equations (d)
-      # n_predictors = number of predictors (d without intercept, d+1 with intercept)
-      if(tvp){
-
-        inittvpcoefs <- lapply(seq_along(Ak),function(g){
-
-          n_responses <- ncol(bk[[g]])
-          n_predictors <- ncol(Ak[[g]])
-
-          lapply(seq_along(breaks[[g]]), function(q){
-
-            # Create blocked folds for this period
-            period_length <- length(breaks[[g]][[q]])
-            period_indices <- seq_len(period_length)
-
-            # Use blocked folds for time series data
-            period_folds <- make_folds(period_indices, nfolds)
-
-            # Convert to fold IDs for glmnet
-            period_foldid <- unlist(lapply(seq_along(period_folds), function(fold_num){
-              rep(fold_num, length(period_folds[[fold_num]]))
-            }))
-
-            # Replicate fold IDs for each outcome variable (Kronecker structure)
-            foldid_glmnet <- rep(period_foldid, n_responses)
-
-            ridge.fit <- glmnet::cv.glmnet(
-              diag(n_responses) %x% Ak[[g]][breaks[[g]][[q]],],
-              as.vector(bk[[g]][breaks[[g]][[q]],]),
-              family = "gaussian",
-              alpha = 0,
-              standardize = FALSE,
-              foldid = foldid_glmnet
-            )
-            matrix(as.vector(predict(
-              ridge.fit,
-              diag(n_responses) %x% Ak[[g]][breaks[[g]][[q]],],
-              type="coefficients",
-              s=lambda_choice
-            ))[-1], n_responses, n_predictors, byrow=TRUE)
-          })
-        })
-
-      }
-
-    } else if (weightest == "multivar") {
-
-      # Fit a standard lasso multivar model to get structured initial estimates
-      # This is particularly useful for k=1 TVP where it properly separates
-      # common from time-varying effects through joint structured estimation
-
-      # Check if breaks are suitable for multivar weightest
-      # Default breaks (single-timepoint periods) are not suitable
-      if (tvp && length(breaks) > 0) {
-        # Check if breaks appear to be the default (too many small periods)
-        min_period_len <- min(sapply(breaks, function(b) min(sapply(b, length))))
-        num_periods <- length(breaks[[1]])
-
-        if (min_period_len < 10 || num_periods > 100) {
-          stop(paste0(
-            "weightest = 'multivar' requires explicit breaks with reasonable period sizes ",
-            "for TVP models. Current breaks have ", num_periods, " periods with minimum ",
-            "period length of ", min_period_len, ". Please provide explicit breaks via the ",
-            "'breaks' argument, or use weightest = 'lasso' instead."
-          ))
-        }
-      }
-
-      # Build data list from Ak/bk
-      # Reconstruct original time series: Ak[1,] is Y_1, bk is Y_2 to Y_T
-      data_list <- lapply(seq_along(bk), function(i) {
-        rbind(Ak[[i]][1, , drop=FALSE], bk[[i]])
-      })
-
-      # Convert breaks from window format back to break point format for constructModel
-      # breaks[[i]] is a list of windows (index vectors), constructModel expects break points
-      # Note: +1 adjustment because we prepended Ak[1,] to reconstruct the original data
-      break_points_list <- lapply(seq_along(breaks), function(i) {
-        windows <- breaks[[i]]
-        if (length(windows) <= 1) {
-          numeric(0)  # No breaks for single period
-        } else {
-          # Break points are at the end of each window except the last
-          # Add 1 to account for the prepended row in reconstructed data
-          sapply(windows[-length(windows)], function(w) max(w) + 1)
-        }
-      })
-
-      # Construct a temporary model with standard lasso
-      temp_model <- constructModel(
-        data = data_list,
-        tvp = tvp,
-        breaks = break_points_list,
-        lassotype = "standard",  # Standard lasso for initial estimates
-        nlambda1 = 30,
-        nfolds = nfolds,
-        intercept = intercept,
-        common_effects = common_effects,
-        common_tvp_effects = common_tvp_effects
-      )
-
-      # Fit the model
-      temp_fit <- cv.multivar(temp_model)
-
-      # Extract the structured estimates
-      total_effects <- temp_fit$mats$total
-
-      # For TVP models, we get properly structured common and tvp estimates
-      if (tvp) {
-        common_effects_est <- temp_fit$mats$common
-        unique_effects_est <- temp_fit$mats$unique
-        tvp_effects_est <- temp_fit$mats$tvp
-        common_tvp_effects_est <- temp_fit$mats$common_tvp
-
-        # tvp_effects from breakup_transition is indexed by timepoint, not period
-        # We need to extract period-level matrices for inittvpcoefs
-        num_periods <- length(breaks[[1]])
-
-        # Create inittvpcoefs: period-level total effects
-        # This should be the FULL per-period estimate, not just TVP deviations
-        inittvpcoefs <- lapply(seq_along(data_list), function(i) {
-          lapply(1:num_periods, function(p) {
-            # Get the first timepoint of period p to extract the period's TVP matrix
-            first_t_in_period <- breaks[[i]][[p]][1]
-            # Total per-period estimate = common + unique + tvp
-            common_effects_est + unique_effects_est[[i]] + tvp_effects_est[[i]][[first_t_in_period]]
-          })
-        })
-
-        # Compute tvp_effects as deviation from common
-        # This ensures: common + tvp_effects[[i]][[p]] = inittvpcoefs[[i]][[p]]
-        tvp_effects_computed <- lapply(seq_along(data_list), function(i) {
-          lapply(1:num_periods, function(p) {
-            inittvpcoefs[[i]][[p]] - common_effects_est
-          })
-        })
-
-        # Return early for TVP case - skip the standard decomposition
-        res <- list(
-          common_effects = common_effects_est,
-          subgroup_effects = NULL,
-          unique_effects = unique_effects_est,
-          tvp_effects = tvp_effects_computed,
-          common_tvp_effects = common_tvp_effects_est,
-          total_effects = total_effects,
-          inittvpcoefs = inittvpcoefs
-        )
-        return(res)
-
-      } else {
-        # Non-TVP case: extract common and unique directly
-        common_effects_est <- temp_fit$mats$common
-        unique_effects_est <- temp_fit$mats$unique
-
-        # Return early - skip the standard decomposition
-        res <- list(
-          common_effects = common_effects_est,
-          subgroup_effects = NULL,
-          unique_effects = unique_effects_est,
-          tvp_effects = NULL,
-          common_tvp_effects = NULL,
-          total_effects = total_effects
-        )
-        return(res)
-      }
-
-    }
-
-    # else if (weightest == "var") {
-    # 
-    #   if(tvp){
-    #     
-    #     inittvpcoefs <- lapply(seq_along(object@Ak),function(g){
-    #       lapply(seq_along(breaks[[g]]), function(q){
-    #         fit<- vars::VAR(as.matrix(object@Ak[[g]][breaks[[g]][[q]],]), p=1, type="none")$varresult
-    #         as.matrix(do.call("rbind",lapply(seq_along(colnames(object@Ak[[g]])), function(x) {
-    #           fit[[x]]$coefficients
-    #         })))
-    #       })
-    #     })
-    #     
-    #   }
-    #   
-    # } 
-    
-    #---------------------------------------------#
-    # 2. estimate common, unique, subgroup effects
-    #---------------------------------------------#
-    
-    # if(weightest == "multivar2"){
-    #   
-    #   common_effects <- fit$mats$common
-    #   unique_effects <- fit$mats$unique
-    #   
-    #   if(subgroup){
-    #     
-    #     subgroup_effects <- fit$mats$subgrp
-    #     
-    #   } else {
-    #     
-    #     subgroup_effects <- NULL
-    #     
-    #   }
-    #   
-    # } else {
-    
-      # create array of total effect matrices
-      total_effects_array <- array(unlist(total_effects),
-        c(dim(total_effects[[1]]), length(total_effects))
-      )
-
-      # Save the parameter value before overwriting
-      include_common_effects <- common_effects
-
-      if (tvp && !include_common_effects){
-        # No common effects: skip median calculation
-        common_effects <- NULL
-      } else {
-        # elementwise median of list of total effect matrices
-        common_effects <- apply(total_effects_array, 1:2, median)
-      }
-      
-      if(subgroup){
-        
-         subgroup_effects <- lapply(seq_along(1:max(subgroup_membership)), function(i){
-           apply(total_effects_array[,,which(subgroup_membership==i)], 1:2, median)
-         })
-        
-        # subgroup effects are deviation from common
-        subgroup_effects <- lapply(seq_along(1:length(subgroup_effects)), function(i){
-          subgroup_effects[[i]] <- subgroup_effects[[i]] - common_effects
-        })
-
-        # unique = total - common - subgroup ensures: total = common + subgroup + unique
-        unique_effects <- lapply(seq_along(Ak), function(i){
-          total_effects[[i]] - common_effects - subgroup_effects[[subgroup_membership[i]]]
-        })
-        
-        tvp_effects <- NULL
-        
-      } else {
-        
-        subgroup_effects <- tvp_effects <-  NULL
-        
-        unique_effects <- lapply(seq_along(Ak), function(i){
-          total_effects[[i]] - common_effects
-        })
-        
-      }
-
-      if (tvp) {
-
-        subgroup_effects <- NULL
-
-        # Special case: k=1 TVP
-        # For k=1, there's no "common across subjects" - only periods
-        if (k == 1) {
-
-          num_periods <- length(inittvpcoefs[[1]])
-
-          if (!include_common_effects) {
-            # No time-invariant component: use per-period estimates directly
-            common_effects <- NULL
-
-            # unique_effects is zero for k=1
-            unique_effects <- list(matrix(0, d, d))
-
-            # TVP effects = per-period estimates directly (no common to subtract)
-            tvp_effects <- list(inittvpcoefs[[1]])
-
-          } else {
-            # Derive common as median of per-period estimates
-            # This selects edges that are consistently present across periods
-            period_array <- array(unlist(inittvpcoefs[[1]]),
-                                 c(dim(inittvpcoefs[[1]][[1]]), num_periods))
-            common_effects <- apply(period_array, 1:2, median)
-
-            # unique_effects is zero for k=1 (no subject-specific deviation)
-            unique_effects <- list(matrix(0, nrow(common_effects), ncol(common_effects)))
-
-            # TVP effects = period estimate - common
-            # This ensures: common + tvp_effects[[p]] = inittvpcoefs[[p]]
-            tvp_effects <- list(
-              lapply(seq_along(inittvpcoefs[[1]]), function(p) {
-                inittvpcoefs[[1]][[p]] - common_effects
-              })
-            )
-          }
-
-          common_tvp_effects_est <- NULL
-
-        } else {
-          # k > 1: original logic
-
-          # Step 1: Compute common TVP effects (if enabled and k>1)
-          if (common_tvp_effects && k > 1) {
-
-            num_periods <- length(inittvpcoefs[[1]])
-
-            # Pool estimates across subjects for each period
-            common_tvp_effects_est <- lapply(1:num_periods, function(p) {
-              # Collect period p estimates from all subjects
-              period_estimates <- lapply(1:k, function(i) {
-                inittvpcoefs[[i]][[p]]
-              })
-
-              # Take element-wise median across subjects
-              period_array <- array(unlist(period_estimates),
-                                   c(dim(period_estimates[[1]]), k))
-              apply(period_array, 1:2, median)
-            })
-
-          } else {
-            common_tvp_effects_est <- NULL
-          }
-
-          # Step 2: Compute base effects decomposition
-          if (!include_common_effects){
-            # No common effects: unique plays role of "base" (like common for k=1)
-            # Keep unique = total for weights
-            unique_effects <- total_effects
-
-            # But for TVP, we want deviations from zero (like k=1)
-            # Create a "pseudo-common" that's the average, to compute TVP correctly
-            pseudo_common <- apply(total_effects_array, 1:2, median)
-            pseudo_unique <- lapply(seq_along(Ak), function(i){
-              total_effects[[i]] - pseudo_common
-            })
-
-          } else {
-            # Standard logic: unique = total - common
-            unique_effects <- lapply(seq_along(Ak), function(i){
-              total_effects[[i]] - common_effects
-            })
-            pseudo_unique <- unique_effects  # For consistency below
-          }
-
-          # Step 3: Compute TVP effects decomposition
-          if (common_tvp_effects && k > 1) {
-            # Unique TVP = per-period estimate - common TVP
-            tvp_effects <- lapply(seq_along(1:length(inittvpcoefs)), function(i){
-              lapply(seq_along(1:length(inittvpcoefs[[i]])), function(j){
-                inittvpcoefs[[i]][[j]] - common_tvp_effects_est[[j]]
-              })
-            })
-          } else {
-            # No common TVP: TVP = unique base - period estimate
-            # (This is the current behavior)
-            tvp_effects <- lapply(seq_along(1:length(inittvpcoefs)), function(i){
-              lapply(seq_along(1:length(inittvpcoefs[[i]])), function(j){
-                pseudo_unique[[i]] - inittvpcoefs[[i]][[j]]
-              })
-            })
-          }
-
-        }
-
-      }
-    
-    #}
-    
-    # Add inittvpcoefs and common_tvp_effects to return list if tvp is TRUE
-    if (tvp && exists("inittvpcoefs")) {
-      res <- list(
-        common_effects = common_effects,
-        subgroup_effects = subgroup_effects,
-        unique_effects = unique_effects,
-        tvp_effects = tvp_effects,
-        common_tvp_effects = if(exists("common_tvp_effects_est")) common_tvp_effects_est else NULL,
-        total_effects = total_effects,
-        inittvpcoefs = inittvpcoefs
-      )
-    } else {
-      res <- list(
-        common_effects = common_effects,
-        subgroup_effects = subgroup_effects,
-        unique_effects = unique_effects,
-        tvp_effects = tvp_effects,
-        common_tvp_effects = NULL,
-        total_effects = total_effects
-      )
-    }
-    
+  # Standard lasso: return all-ones matrices (no adaptive weighting)
+  if (lassotype == "standard") {
+    return(make_unit_weights(d, k, subgroup, subgroup_membership, tvp, Ak, breaks))
   }
-  
-  return(res)
-  
+
+  # Step 1: Estimate raw effects (per-subject, and per-period if TVP)
+  raw_estimates <- estimate_raw_effects(
+    Ak, bk, weightest, tvp, breaks, nfolds, lambda_choice
+  )
+
+  # Step 2: Decompose into common/unique/subgroup/tvp structure
+  decompose_effects(
+    raw_estimates, k, d, subgroup, subgroup_membership,
+    tvp, common_effects, common_tvp_effects
+  )
 }
 
 
+#' Create unit weight matrices for standard (non-adaptive) LASSO
+#'
+#' @keywords internal
+make_unit_weights <- function(d, k, subgroup, subgroup_membership, tvp, Ak, breaks) {
+
+  if (tvp) {
+    list(
+      common_effects = matrix(1, d, d),
+      subgroup_effects = NULL,
+      unique_effects = replicate(k, matrix(1, d, d), simplify = FALSE),
+      total_effects = replicate(k, matrix(1, d, d), simplify = FALSE),
+      tvp_effects = lapply(seq_len(k), function(i) {
+        replicate(length(breaks[[i]]), matrix(1, d, d), simplify = FALSE)
+      }),
+      common_tvp_effects = NULL
+    )
+  } else if (subgroup) {
+    list(
+      common_effects = matrix(1, d, d),
+      subgroup_effects = replicate(max(subgroup_membership), matrix(1, d, d), simplify = FALSE),
+      unique_effects = replicate(k, matrix(1, d, d), simplify = FALSE),
+      total_effects = replicate(k, matrix(1, d, d), simplify = FALSE),
+      tvp_effects = NULL,
+      common_tvp_effects = NULL
+    )
+  } else {
+    list(
+      common_effects = matrix(1, d, d),
+      subgroup_effects = NULL,
+      unique_effects = replicate(k, matrix(1, d, d), simplify = FALSE),
+      total_effects = replicate(k, matrix(1, d, d), simplify = FALSE),
+      tvp_effects = NULL,
+      common_tvp_effects = NULL
+    )
+  }
+}
+
+
+#' Estimate raw total effects per subject (and per period if TVP)
+#'
+#' @param Ak List of design matrices per subject
+#' @param bk List of response matrices per subject
+#' @param weightest Character. Estimation method: "lasso", "ridge", or "ols"
+#' @param tvp Logical. Whether to estimate time-varying parameters
+#' @param breaks List of period indices per subject
+#' @param nfolds Numeric. Number of CV folds
+#' @param lambda_choice Character. Which lambda to use
+#'
+#' @return List with total_effects and period_effects (if TVP)
+#' @keywords internal
+estimate_raw_effects <- function(Ak, bk, weightest, tvp, breaks, nfolds, lambda_choice) {
+
+  # Set alpha for glmnet: 1 = lasso, 0 = ridge
+  alpha <- switch(weightest,
+    "lasso" = 1,
+    "ridge" = 0,
+    "ols" = NA
+  )
+
+  # Build fold structure for CV (only needed for lasso/ridge)
+  if (weightest %in% c("lasso", "ridge")) {
+    fold_structure <- build_cv_folds(Ak, nfolds)
+  } else {
+    fold_structure <- NULL
+  }
+
+  # Estimate total effects per subject
+  total_effects <- lapply(seq_along(Ak), function(g) {
+    if (weightest == "ols") {
+      estimate_ols(Ak[[g]], bk[[g]])
+    } else {
+      estimate_glmnet(Ak[[g]], bk[[g]], alpha, fold_structure[[g]], lambda_choice)
+    }
+  })
+
+  # Estimate per-period effects if TVP
+  period_effects <- NULL
+  if (tvp) {
+    period_effects <- lapply(seq_along(Ak), function(g) {
+      lapply(seq_along(breaks[[g]]), function(p) {
+        idx <- breaks[[g]][[p]]
+        if (weightest == "ols") {
+          estimate_ols(Ak[[g]][idx, , drop = FALSE], bk[[g]][idx, , drop = FALSE])
+        } else {
+          period_folds <- build_period_folds(idx, nfolds)
+          # TODO: Change glmnet_intercept to FALSE for consistency with total_effects
+          # estimation. Both settings produce equivalent results empirically, but
+          # FALSE is more principled (glmnet's intercept is not the right kind for
+          # VAR models). Requires regenerating RDS test fixtures.
+          # Currently using TRUE to match legacy behavior.
+          estimate_glmnet(
+            Ak[[g]][idx, , drop = FALSE],
+            bk[[g]][idx, , drop = FALSE],
+            alpha, period_folds, lambda_choice,
+            glmnet_intercept = TRUE
+          )
+        }
+      })
+    })
+  }
+
+  list(total_effects = total_effects, period_effects = period_effects)
+}
+
+
+#' Build CV fold structure for blocked time series cross-validation
+#'
+#' @param Ak List of design matrices per subject
+#' @param nfolds Number of folds
+#'
+#' @return List of fold ID vectors per subject
+#' @keywords internal
+build_cv_folds <- function(Ak, nfolds) {
+  make_folds <- function(x, nfolds) {
+    split(x, cut(seq_along(x), nfolds, labels = FALSE))
+  }
+
+  lapply(Ak, function(A) {
+    n <- nrow(A)
+    indices <- seq_len(n)
+    folds <- make_folds(indices, nfolds)
+    # Convert to fold IDs
+    unlist(lapply(seq_along(folds), function(fold_num) {
+      rep(fold_num, length(folds[[fold_num]]))
+    }))
+  })
+}
+
+
+#' Build CV folds for a single period
+#'
+#' @param idx Indices within the period
+#' @param nfolds Number of folds
+#'
+#' @return Fold ID vector
+#' @keywords internal
+build_period_folds <- function(idx, nfolds) {
+  period_length <- length(idx)
+  period_indices <- seq_len(period_length)
+
+  make_folds <- function(x, nfolds) {
+    split(x, cut(seq_along(x), nfolds, labels = FALSE))
+  }
+
+  folds <- make_folds(period_indices, nfolds)
+  unlist(lapply(seq_along(folds), function(fold_num) {
+    rep(fold_num, length(folds[[fold_num]]))
+  }))
+}
+
+
+#' Estimate coefficients using OLS
+#'
+#' @param A Design matrix (n x d)
+#' @param b Response matrix (n x d)
+#'
+#' @return Coefficient matrix (d x d)
+#' @keywords internal
+estimate_ols <- function(A, b) {
+  # β = (A'A)^{-1} A'b
+  # Each column of b is a separate response
+  t(solve(t(A) %*% A) %*% t(A) %*% b)
+}
+
+
+#' Estimate coefficients using glmnet (lasso or ridge)
+#'
+#' @param A Design matrix (n x d)
+#' @param b Response matrix (n x d)
+#' @param alpha Elastic net mixing parameter (1 = lasso, 0 = ridge)
+#' @param folds Fold ID vector for CV
+#' @param lambda_choice Which lambda to use ("lambda.min" or "lambda.1se")
+#' @param glmnet_intercept Logical. Whether glmnet should fit an intercept (default FALSE)
+#'
+#' @return Coefficient matrix (d x d)
+#' @keywords internal
+estimate_glmnet <- function(A, b, alpha, folds, lambda_choice, glmnet_intercept = FALSE) {
+  n_responses <- ncol(b)
+  n_predictors <- ncol(A)
+
+  fit <- glmnet::cv.glmnet(
+    x = diag(n_responses) %x% A,
+    y = as.vector(b),
+    family = "gaussian",
+    alpha = alpha,
+    standardize = FALSE,
+    intercept = glmnet_intercept,
+    foldid = rep(folds, n_responses)
+  )
+
+  coefs <- coef(fit, s = lambda_choice)[-1]
+  matrix(coefs, n_responses, n_predictors, byrow = TRUE)
+}
+
+
+#' Decompose raw effects into common/unique/subgroup/tvp structure
+#'
+#' @param raw List with total_effects and period_effects
+#' @param k Number of subjects
+#' @param d Number of variables
+#' @param subgroup Logical. Whether subgrouping is enabled
+#' @param subgroup_membership Vector of subgroup assignments
+#' @param tvp Logical. Whether TVP is enabled
+#' @param common_effects Logical. Whether to compute common effects
+#' @param common_tvp_effects Logical. Whether to compute common TVP effects
+#'
+#' @return List of decomposed effect matrices
+#' @keywords internal
+decompose_effects <- function(raw, k, d, subgroup, subgroup_membership,
+                               tvp, common_effects, common_tvp_effects) {
+
+  total <- raw$total_effects
+  periods <- raw$period_effects
+
+  # --- Common effects ---
+  common <- compute_common_effects(total, periods, k, d, tvp, common_effects)
+
+  # --- Subgroup effects ---
+  if (subgroup) {
+    subgrp <- compute_subgroup_effects(total, subgroup_membership, common, d)
+    unique <- lapply(seq_along(total), function(i) {
+      total[[i]] - common - subgrp[[subgroup_membership[i]]]
+    })
+  } else {
+    subgrp <- NULL
+    if (k == 1) {
+      # k=1: unique is zero (all variation is in common or TVP)
+      unique <- list(matrix(0, d, d))
+    } else {
+      unique <- lapply(total, function(t) {
+        if (!is.null(common)) t - common else t
+      })
+    }
+  }
+
+  # --- TVP effects ---
+  tvp_eff <- NULL
+  common_tvp <- NULL
+
+  if (tvp) {
+    tvp_decomp <- decompose_tvp_effects(
+      periods, k, d, common, common_effects, common_tvp_effects
+    )
+    tvp_eff <- tvp_decomp$tvp_effects
+    common_tvp <- tvp_decomp$common_tvp_effects
+  }
+
+  list(
+    common_effects = common,
+    subgroup_effects = subgrp,
+    unique_effects = unique,
+    tvp_effects = tvp_eff,
+    common_tvp_effects = common_tvp,
+    total_effects = total
+  )
+}
+
+
+#' Compute common effects as median across subjects (or periods for k=1 TVP)
+#'
+#' @keywords internal
+compute_common_effects <- function(total, periods, k, d, tvp, include_common) {
+
+  if (!include_common) {
+    return(NULL)
+  }
+
+  if (k == 1 && tvp) {
+    # k=1 TVP: common = median across periods
+    num_periods <- length(periods[[1]])
+    period_array <- array(unlist(periods[[1]]), c(d, d, num_periods))
+    apply(period_array, 1:2, median)
+  } else if (k > 1) {
+    # k>1: common = median across subjects
+    total_array <- array(unlist(total), c(d, d, k))
+    apply(total_array, 1:2, median)
+  } else {
+    # k=1 non-TVP: common = total (only one subject)
+    total[[1]]
+  }
+}
+
+
+#' Compute subgroup effects as median within subgroup minus common
+#'
+#' @keywords internal
+compute_subgroup_effects <- function(total, subgroup_membership, common, d) {
+
+  n_subgroups <- max(subgroup_membership)
+  k <- length(total)
+
+  lapply(seq_len(n_subgroups), function(s) {
+    members <- which(subgroup_membership == s)
+    if (length(members) == 1) {
+      # Single member: subgroup effect = total - common
+      total[[members]] - common
+    } else {
+      # Multiple members: median within subgroup, then subtract common
+      subgrp_array <- array(unlist(total[members]), c(d, d, length(members)))
+      apply(subgrp_array, 1:2, median) - common
+    }
+  })
+}
+
+
+#' Decompose TVP effects into common_tvp and unique tvp components
+#'
+#' @keywords internal
+decompose_tvp_effects <- function(periods, k, d, common, include_common, include_common_tvp) {
+
+  num_periods <- length(periods[[1]])
+
+  # --- Common TVP effects (k>1 only) ---
+  common_tvp <- NULL
+  if (include_common_tvp && k > 1) {
+    common_tvp <- lapply(seq_len(num_periods), function(p) {
+      # Collect period p estimates from all subjects
+      period_estimates <- lapply(seq_len(k), function(i) periods[[i]][[p]])
+      period_array <- array(unlist(period_estimates), c(d, d, k))
+      apply(period_array, 1:2, median)
+    })
+  }
+
+  # --- TVP effects (deviations) ---
+  if (k == 1) {
+    # k=1: tvp = period - common
+    if (include_common) {
+      tvp_eff <- list(
+        lapply(periods[[1]], function(p_mat) p_mat - common)
+      )
+    } else {
+      # No common: tvp = period estimates directly
+      tvp_eff <- list(periods[[1]])
+    }
+  } else {
+    # k>1: tvp = period - common_tvp (or period - common if no common_tvp)
+    if (!is.null(common_tvp)) {
+      tvp_eff <- lapply(seq_len(k), function(i) {
+        lapply(seq_len(num_periods), function(p) {
+          periods[[i]][[p]] - common_tvp[[p]]
+        })
+      })
+    } else {
+      # No common TVP: tvp = period - subject's base (unique + common)
+      # This ensures total_t = common + unique + tvp_t
+      tvp_eff <- lapply(seq_len(k), function(i) {
+        # Subject i's base estimate (average across periods)
+        subject_periods <- periods[[i]]
+        subject_array <- array(unlist(subject_periods), c(d, d, num_periods))
+        subject_base <- apply(subject_array, 1:2, median)
+
+        lapply(seq_len(num_periods), function(p) {
+          periods[[i]][[p]] - subject_base
+        })
+      })
+    }
+  }
+
+  list(tvp_effects = tvp_eff, common_tvp_effects = common_tvp)
+}

@@ -15,26 +15,6 @@ wlasso <- function(B, Z, Y, W = NULL, k, d, lambda1,eps,intercept=FALSE){
     Y <- matrix(Y,nrow=1)
   }
 
-  # begin intercept comment out
-  #
-  # if(intercept){
-  #   
-  #   YMean <- c(apply(Y, 1, mean))
-  #   ZMean <- c(apply(Z, 1, mean))
-  #   Y <- Y - YMean %*% t(c(rep(1, ncol(Y))))
-  #   Z <- Z - ZMean %*% t(c(rep(1, ncol(Z))))
-  #   
-  # }else{
-  #   YMean <- rep(0,nrow(Y))
-  #   ZMean <- rep(0,nrow(Z))
-  # }
-  #
-  # nc <- apply(B,3,ncol)[1
-  # BFOO1 <- B[,2:nc,1] 
-  # BFOO  <- B[,2:nc,,drop=F] 
-  #
-  # end
-  
   Y     <- t(Y)
 
   tk <- 1/max(Mod(eigen(Z%*%t(Z),only.values=TRUE)$values))

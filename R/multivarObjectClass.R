@@ -31,12 +31,9 @@ check.multivar <- function(object){
 #' @slot horizon Numeric. Forecast horizon.
 #' @slot t1 Numeric vector. Index of time series in which to start cross validation for individual k. 
 #' @slot t2 Numeric vector. Index of time series in which to end cross validation for individual k.
-#' @slot lambda1 Numeric vector. Regularization parameter 1.
-#' @slot lambda2 Numeric vector. Regularization parameter 2.
-#' @slot tau Numeric vector. Regularization parameter for subgroup effects.
+#' @slot lambda1 Numeric vector. Regularization parameter grid.
 #' @slot nlambda1 Numeric. Number of lambda1 values to search over. Default is 30.
-#' @slot nlambda2 Numeric. Number of lambda2 values to search over. Default is 30.
-#' @slot ntau Numeric. Number of tau values to search over. Default is 30.
+#' @slot n_ratios_subgroup Numeric. Number of ratios_subgroup values to search over. Default is 30.
 #' @slot tol Numeric. Convergence tolerance.
 #' @slot depth Numeric. Depth of grid construction. Default is 1000.
 #' @slot window Numeric. Size of rolling window.
@@ -47,10 +44,10 @@ check.multivar <- function(object){
 #' @slot lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
 #' @slot intercept Logical. Default is FALSE.
 #' @slot W Matrix. Default is NULL. 
-#' @slot ratios Numeric vector. Default is NULL.
-#' @slot ratiostau Numeric vector. Default is NULL.
-#' @slot ratiosalpha Numeric vector. Default is NULL.
-#' @slot ratiosbeta Numeric vector. Penalty ratio for common TVP effects. Default is NULL. 
+#' @slot ratios_unique Numeric vector. Penalty ratio for unique effects. Default is NULL.
+#' @slot ratios_subgroup Numeric vector. Penalty ratio for subgroup effects. Default is NULL.
+#' @slot ratios_unique_tvp Numeric vector. Default is NULL.
+#' @slot ratios_common_tvp Numeric vector. Penalty ratio for common TVP effects. Default is NULL. 
 #' @slot cv Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.
 #' @slot nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @slot lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
@@ -65,6 +62,7 @@ check.multivar <- function(object){
 #' @slot lambda_choice Character. Which lambda to use for initial coefficient estimation ("lambda.min" or "lambda.1se").
 #' @slot common_effects Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE.
 #' @slot common_tvp_effects Logical. Whether to include common TVP effects (shared time-varying patterns) in TVP models. Only applies when tvp = TRUE.
+#' @slot spec List. Design matrix specification object created by \code{\link{build_matrix_spec}}. Single source of truth for column/row indices.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -92,11 +90,8 @@ setClass(
         ntk = "numeric",
         ndk = "numeric",
         lambda1="matrix",
-        lambda2="matrix",
-        tau="matrix",
         nlambda1="numeric",
-        nlambda2="numeric",
-        ntau ="numeric",
+        n_ratios_subgroup ="numeric",
         gamma = "numeric",
         tol="numeric",
         depth="numeric",
@@ -108,10 +103,10 @@ setClass(
         lassotype = "character",
         intercept = "logical",
         W = "array",
-        ratios = "numeric",
-        ratiostau = "numeric",
-        ratiosalpha = "numeric",
-        ratiosbeta = "numeric",
+        ratios_unique = "numeric",
+        ratios_subgroup = "numeric",
+        ratios_unique_tvp = "numeric",
+        ratios_common_tvp = "numeric",
         cv = "character",
         nfolds = "numeric",
         lamadapt = "logical",
@@ -125,7 +120,8 @@ setClass(
         breaks = "list",
         lambda_choice = "character",
         common_effects = "logical",
-        common_tvp_effects = "logical"
+        common_tvp_effects = "logical",
+        spec = "list"
         ),validity=check.multivar
     )
 
@@ -199,7 +195,6 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@subgroup_membership,
     object@subgroup,
     object@nlambda1,
-    object@nlambda2,
     object@tvp,
     object@breaks,
     object@intercept,
@@ -213,53 +208,37 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@W,
     object@Ak,
     object@initcoefs,
-    object@ratios,
+    object@ratios_unique,
     object@d,
     object@k,
     object@lassotype,
     object@weightest,
     object@subgroup_membership,
     object@subgroup,
-    object@ratiostau,
+    object@ratios_subgroup,
     object@pendiag,
     object@tvp,
-    object@ratiosalpha,
-    object@ratiosbeta,
+    object@ratios_unique_tvp,
+    object@ratios_common_tvp,
     object@intercept,
     object@common_effects,
-    object@common_tvp_effects
+    object@common_tvp_effects,
+    object@spec
   )
-
-  # object@W <- est_base_weight_mat(
-  #   object@W,
-  #   object@Ak,
-  #   object@bk,
-  #   object@ratios, 
-  #   object@d, 
-  #   object@k, 
-  #   object@lassotype, 
-  #   object@weightest,
-  #   object@subgroup,
-  #   object@subgroupflag,
-  #   object@ratiostau,
-  #   object@nlambda1,
-  #   object@nlambda2
-  # )
   
   # Only construct lambda grid if user didn't provide fixed lambda values
   # User-provided lambdas have non-zero values; default is all zeros
   if (all(object@lambda1 == 0)) {
     object@lambda1 <- lambda_grid(
-      #object@B,
-      object@depth,
-      object@nlambda1,
-      t(as.matrix(object@b)),
-      t(as.matrix(object@A)),
-      object@W,
-      object@k,
-      object@tol,
-      object@intercept,
-      object@lamadapt
+      depth     = object@depth,
+      nlam      = object@nlambda1,
+      Y         = t(as.matrix(object@b)),
+      Z         = t(as.matrix(object@A)),
+      W         = object@W,
+      tol       = object@tol,
+      intercept = object@intercept,
+      lamadapt  = object@lamadapt,
+      k         = object@k
     )
   }
 
@@ -280,7 +259,8 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@cv,
     object@nfolds,
     object@tvp,
-    object@breaks
+    object@breaks,
+    object@spec
   )
   
 
@@ -309,25 +289,18 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
   if (n_ratios > 1) {
     if (best_ratio_idx == 1) {
       warning("ratio selected at upper boundary. ",
-              "Consider expanding the ratios grid.")
+              "Consider expanding the ratios_unique grid.")
     } else if (best_ratio_idx == n_ratios) {
       warning("ratio selected at lower boundary. ",
-              "Consider expanding the ratios grid.")
+              "Consider expanding the ratios_unique grid.")
     }
   }
 
   mats <- breakup_transition(
-    fit[[1]][,,which.min(colMeans(fit[[2]]))],
-    object@Ak,
-    object@ndk,
-    object@intercept,
-    object@subgroup_membership,
-    object@subgroup,
-    object@tvp,
-    object@ntk,
-    object@breaks,
-    object@common_effects,
-    object@common_tvp_effects
+    B = fit[[1]][,,which.min(colMeans(fit[[2]]))],
+    spec = object@spec,
+    Ak = object@Ak,
+    breaks = object@breaks
   )
 
   # Recover intercepts if intercept=TRUE

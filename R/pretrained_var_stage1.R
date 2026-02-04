@@ -8,12 +8,12 @@
 pretrained_var_stage1 <- function(object, stage1adaptive = FALSE, stage1ratios = FALSE, lambda_best = "1se") {
   
   # notes on dimension:
-  #   - W has length(ratios) slices
-  #   - B has length(ratios)*length(lambda1) slices
+  #   - W has length(ratios_unique) slices
+  #   - B has length(ratios_unique)*length(lambda1) slices
   
   d      <- object@d[1L]
-  #object@ratios <- rep(1, length(object@ratios))  # ignore ratios in stage 1
-  nscen  <- length(object@ratios)
+  #object@ratios_unique <- rep(1, length(object@ratios_unique))  # ignore ratios in stage 1
+  nscen  <- length(object@ratios_unique)
   
   # Common predictors (N x d)
   A_com <- object@A[, seq_len(d), drop = FALSE]
@@ -38,7 +38,6 @@ pretrained_var_stage1 <- function(object, stage1adaptive = FALSE, stage1ratios =
       subgroup_membership = object@subgroup_membership,
       subgroup  = object@subgroup,
       nlambda1  = object@nlambda1,
-      nlambda2  = object@nlambda2,
       tvp       = object@tvp,
       breaks    = object@breaks,
       intercept = object@intercept,
@@ -58,11 +57,11 @@ pretrained_var_stage1 <- function(object, stage1adaptive = FALSE, stage1ratios =
   
   if(stage1ratios){
     
-    for (s in seq_len(nscen)) W[, , s] <- w_mat * object@ratios[s]
+    for (s in seq_len(nscen)) W[, , s] <- w_mat * object@ratios_unique[s]
     
   } else {
     
-    object@ratios <- rep(1, length(object@ratios))
+    object@ratios_unique <- rep(1, length(object@ratios_unique))
     for (s in seq_len(nscen)) W[, , s] <- w_mat * 1
     
   }

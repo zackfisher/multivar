@@ -5,13 +5,10 @@
 #' @param horizon Numeric. Desired forecast horizon. Default is 1. ZF Note: Should probably be zero.
 #' @param t1 Numeric. Index of time series in which to start cross validation. If NULL, default is floor(nrow(n)/3) where nk is the time series length for individual k.
 #' @param t2 Numeric. Index of times series in which to end cross validation. If NULL, default is floor(2*nrow(n)/3) where nk is the time series length for individual k.
-#' @param lambda1 Matrix. Regularization parameter 1. Default is NULL.
-#' @param lambda2 Matrix. Regularization parameter 2. Default is NULL.
-#' @param tau Matrix. Regularization parameter for subgroup effects.
+#' @param lambda1 Matrix. Regularization parameter grid. Default is NULL (auto-generated).
 #' @param nlambda1 Numeric. Number of lambda1 values to search over. Default is 30.
-#' @param nlambda2 Numeric. Number of lambda2 values to search over. Default is 30.
-#' @param ntau Numeric. Number of tau values to search over. Default is 30.
-#' @param depth Numeric. Depth of lambda1 grid construction (lambda_min = lambda_max / depth). Default is 10000 for non-TVP models. For TVP models, depth is determined by nlambda1 as 10^(nlambda1/5) to maintain consistent lambda step ratio (~1.6x per step), giving depth ≈ 1e6 for nlambda1=30 and ≈ 100 for nlambda1=10. Note: other hyperparameter grids (ratios, ratiosalpha) are constructed independently of depth.
+#' @param n_ratios_subgroup Numeric. Number of ratios_subgroup values to search over. Default is 30.
+#' @param depth Numeric. Depth of lambda1 grid construction (lambda_min = lambda_max / depth). Default is 10000 for non-TVP models. For TVP models, depth is determined by nlambda1 as 10^(nlambda1/5) to maintain consistent lambda step ratio (~1.6x per step), giving depth ≈ 1e6 for nlambda1=30 and ≈ 100 for nlambda1=10. Note: other hyperparameter grids (ratios_unique, ratios_unique_tvp) are constructed independently of depth.
 #' @param tol Numeric. Optimization tolerance (default 1e-4).
 #' @param window Numeric. Size of rolling window.   
 #' @param standardize Logical. Default is true. Whether to standardize the individual data. Note, if intercept = TRUE and standardize = TRUE, the data is scaled but not de-meaned.
@@ -21,9 +18,9 @@
 #' @param lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
 #' @param intercept Logical. Default is FALSE.
 #' @param W Matrix. Default is NULL. 
-#' @param ratios Numeric vector. Default is NULL. 
-#' @param ratiostau Numeric vector. Default is NULL. 
-#' @param ratiosalpha Numeric vector. Default is NULL. 
+#' @param ratios_unique Numeric vector. Penalty ratio for unique effects. Default is NULL.
+#' @param ratios_subgroup Numeric vector. Penalty ratio for subgroup effects. Default is NULL. 
+#' @param ratios_unique_tvp Numeric vector. Default is NULL. 
 #' @param cv Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.
 #' @param nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @param lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
@@ -62,11 +59,8 @@ constructModel <- function( data = NULL,
                             t1 = NULL,
                             t2 = NULL,
                             lambda1 = NULL,
-                            lambda2 = NULL,
-                            tau = NULL,
                             nlambda1 = 30,
-                            nlambda2 = 30,
-                            ntau = 30,
+                            n_ratios_subgroup = 30,
                             depth = NULL,
                             tol = 1e-4,
                             window = 1,
@@ -77,9 +71,9 @@ constructModel <- function( data = NULL,
                             lassotype = "adaptive",
                             intercept = FALSE,
                             W = NULL,
-                            ratios = NULL,
-                            ratiostau = NULL,
-                            ratiosalpha = NULL,
+                            ratios_unique = NULL,
+                            ratios_subgroup = NULL,
+                            ratios_unique_tvp = NULL,
                             cv = "blocked",
                             nfolds = 10,
                             lamadapt = FALSE,
@@ -112,7 +106,7 @@ constructModel <- function( data = NULL,
   # Set depth default based on model type
   # TVP models need larger depth because adaptive weights can be extreme (up to 1e10)
   # For TVP, nlambda1 determines depth to maintain consistent lambda1 step ratio (~1.6x)
-  # Note: depth only affects the lambda1 grid; ratios/ratiosalpha grids are independent
+  # Note: depth only affects the lambda1 grid; ratios_unique/ratios_unique_tvp grids are independent
   if (is.null(depth)){
     if (tvp) {
       # depth = 10^(nlambda1/5) gives ~1e6 for nlambda1=30, ~100 for nlambda1=10
@@ -245,6 +239,11 @@ constructModel <- function( data = NULL,
   k   <- length(dat)                # number of individuals
   p   <- ncol(dat[[1]]$A)           # number of variables per system (assumed common across individuals)
 
+  # Override common_tvp_effects for k=1 (doesn't make sense for single subject)
+  if (k == 1 && common_tvp_effects) {
+    common_tvp_effects <- FALSE
+  }
+
   # number of rows per individual's A
   ns  <- vapply(dat, function(item){ nrow(item$A) }, numeric(1))
   cns <- cumsum(ns)
@@ -262,7 +261,6 @@ constructModel <- function( data = NULL,
     subgroup_membership <- get_subgroups(
       data      = data,
       nlambda1  = nlambda1,
-      nlambda2  = nlambda2,
       pendiag   = pendiag
     )
   } else {
@@ -534,22 +532,25 @@ constructModel <- function( data = NULL,
       )
 
     } else {
-      # k=1 or common_tvp_effects=FALSE: only unique TVP (block-diagonal)
-      # This is the current behavior
+      # k=1 or common_tvp_effects=FALSE: only unique TVP (block-diagonal by period)
+      # Structure: [period1_vars | period2_vars | ...] for each subject
+      # Each period block has d columns, with nonzeros only in that period's rows
 
-      # Build TVP block-diagonal columns
+      # Build TVP block-diagonal columns (period-first, then variable)
       tvp_block <- Matrix::bdiag(
         lapply(seq_along(Ak), function(i){
 
           # for subject i, build block-diagonal "tvp" regressors
+          # Iterate: periods first, then variables within each period
           tvp_i <- do.call(
             cbind,
-            lapply(1:ncol(Ak[[i]]), function(j){
-              Matrix::bdiag(
-                lapply(breaks[[i]], function(window){
-                  Ak[[i]][window, j, drop = FALSE]
-                })
-              )
+            lapply(breaks[[i]], function(window){
+              # For this period, create d columns (one per variable)
+              do.call(cbind, lapply(1:ncol(Ak[[i]]), function(j){
+                col_data <- numeric(ntk[i])
+                col_data[window] <- Ak[[i]][window, j]
+                Matrix(col_data, ncol = 1, sparse = TRUE)
+              }))
             })
           )
           tvp_i
@@ -568,9 +569,9 @@ constructModel <- function( data = NULL,
   #------------------------------------------------------------------
   # tuning parameter grids (unchanged; depends on k, ntk, subgroup)
   #------------------------------------------------------------------
-  if (is.null(lambda1) & is.null(lambda2)){
+  if (is.null(lambda1)){
 
-    # ratios: lambda2 / lambda1
+    # ratios_unique: lambda2 / lambda1
     # For k=1 TVP, use number of periods instead of k for ratio computation
     # This makes k=1 TVP behave like k=num_periods non-TVP
     effective_k <- k
@@ -578,33 +579,33 @@ constructModel <- function( data = NULL,
       effective_k <- length(breaks[[1]])
     }
 
-    ratios <- rev(round(
+    ratios_unique <- rev(round(
       exp(seq(log(effective_k/depth), log(effective_k), length.out = nlambda1)),
       digits = 10
     ))
     
-    # ratiostau: tau / lambda1 (subgroup penalty scaling)
+    # ratios_subgroup: tau / lambda1 (subgroup penalty scaling)
     if (subgroup){
-      ratiostau <- rev(round(
+      ratios_subgroup <- rev(round(
         exp(seq(
           log(max(subgroup_membership) / depth),
           log(max(subgroup_membership)),
-          length.out = ntau
+          length.out = n_ratios_subgroup
         )),
         digits = 10
       ))
     } else {
-      ratiostau <- rep(1, ntau)
+      ratios_subgroup <- rep(1, n_ratios_subgroup)
     }
     
-    # ratiosalpha: scaling for tvp penalty (uses k instead of ntk)
+    # ratios_unique_tvp: scaling for tvp penalty (uses k instead of ntk)
     if (tvp){
       if (k == 1) {
         if (common_effects) {
-          # For k=1 TVP with common_effects, ratiosalpha scales common weights
+          # For k=1 TVP with common_effects, ratios_unique_tvp scales common weights
           # Grid from 1/depth to 1: smaller values = less penalization on common
           nalpha <- nlambda1
-          ratiosalpha <- rev(round(
+          ratios_unique_tvp <- rev(round(
             exp(seq(
               log(1/depth),
               log(1),
@@ -615,11 +616,11 @@ constructModel <- function( data = NULL,
         } else {
           # For k=1 TVP without common_effects, no common weights to scale
           nalpha <- 1
-          ratiosalpha <- 1
+          ratios_unique_tvp <- 1
         }
       } else {
         nalpha <- nlambda1
-        ratiosalpha <- rev(round(
+        ratios_unique_tvp <- rev(round(
           exp(seq(
             log(k/depth),
             log(k),
@@ -630,13 +631,13 @@ constructModel <- function( data = NULL,
       }
     } else {
       nalpha <- nlambda1
-      ratiosalpha <- rep(1, nalpha)
+      ratios_unique_tvp <- rep(1, nalpha)
     }
 
-    # ratiosbeta: scaling for common TVP penalty
+    # ratios_common_tvp: scaling for common TVP penalty
     if (tvp && common_tvp_effects){
       nbeta <- nlambda1
-      ratiosbeta <- rev(round(
+      ratios_common_tvp <- rev(round(
         exp(seq(
           log(k/depth),
           log(k),
@@ -646,26 +647,21 @@ constructModel <- function( data = NULL,
       ))
     } else {
       nbeta <- nlambda1
-      ratiosbeta <- rep(1, nbeta)
+      ratios_common_tvp <- rep(1, nbeta)
     }
 
-    lambda1 <- matrix(0, nlambda1, length(ratios))
-    lambda2 <- matrix(0, nlambda2, length(ratios))
-    tau     <- matrix(0, ntau,     length(ratiostau))
-    
+    lambda1 <- matrix(0, nlambda1, length(ratios_unique))
+
   } else {
-    
+    # User provided explicit lambda1 values
     nlambda1 <- length(lambda1)
-    nlambda2 <- length(lambda2)
-    
     lambda1 <- matrix(lambda1, nrow = 1)
-    lambda2 <- matrix(lambda2, nrow = 1)
-    
-    ratios       <- c(0)
-    tau          <- matrix(0, nrow = 1, ncol = 1)
-    ratiosalpha  <- if (is.null(ratiosalpha)) 1 else ratiosalpha
-    ratiostau    <- if (is.null(ratiostau))   1 else ratiostau
-    ratiosbeta   <- 1
+
+    # Use user-provided ratios if specified, otherwise default to 1
+    ratios_unique      <- if (is.null(ratios_unique)) 1 else ratios_unique
+    ratios_unique_tvp  <- if (is.null(ratios_unique_tvp)) 1 else ratios_unique_tvp
+    ratios_subgroup    <- if (is.null(ratios_subgroup)) 1 else ratios_subgroup
+    ratios_common_tvp  <- 1
   }
   
   #------------------------------------------------------------------
@@ -675,40 +671,7 @@ constructModel <- function( data = NULL,
   
   #------------------------------------------------------------------
   # B: container for fitted coefficients across tuning params
-  # (The logic here is unchanged; depends on k, subgroup, tvp)
   #------------------------------------------------------------------
-  # if (!subgroup){
-  #   if (k == 1){
-  #     B <- array(
-  #       0,
-  #       dim = c(
-  #         ndk[1],
-  #         ndk[1]  + 1,
-  #         nlambda1 * length(ratios)
-  #       )
-  #     )
-  #   } else {
-  #     B <- array(
-  #       0,
-  #       dim = c(
-  #         ndk[1],
-  #         ndk[1] * (k + 1) + 1,
-  #         nlambda1 * length(ratios)
-  #       )
-  #     )
-  #   }
-  # } else {
-  #   B <- array(
-  #     0,
-  #     dim = c(
-  #       ndk[1],
-  #       ndk[1] * (k + max(subgroup_membership) + 1) + 1,
-  #       nlambda1 * length(ratios) * length(ratiostau)
-  #     )
-  #   )
-  # }
-  # B dimensions: rows = outcome vars (d), cols = predictor coefficients
-  # p = number of predictors per equation (= d, or could be extended for additional predictors)
   if (!subgroup){
     if (k == 1){
       B <- array(
@@ -716,7 +679,7 @@ constructModel <- function( data = NULL,
         dim = c(
           ndk[1],
           p,
-          nlambda1 * length(ratios)
+          nlambda1 * length(ratios_unique)
         )
       )
     } else {
@@ -725,7 +688,7 @@ constructModel <- function( data = NULL,
         dim = c(
           ndk[1],
           p * (k + 1),
-          nlambda1 * length(ratios)
+          nlambda1 * length(ratios_unique)
         )
       )
     }
@@ -735,7 +698,7 @@ constructModel <- function( data = NULL,
       dim = c(
         ndk[1],
         p * (k + max(subgroup_membership) + 1),
-        nlambda1 * length(ratios) * length(ratiostau)
+        nlambda1 * length(ratios_unique) * length(ratios_subgroup)
       )
     )
   }
@@ -763,9 +726,9 @@ constructModel <- function( data = NULL,
       } else {
         base_cols <- 0  # no time-invariant columns, only TVP
       }
-      # k=1: no ratios needed (no common/unique distinction)
+      # k=1: no ratios_unique needed (no common/unique distinction)
       # For TVP k=1, no common_tvp_effects (no multi-subject decomposition)
-      grid_size <- nlambda1 * length(ratiosalpha)
+      grid_size <- nlambda1 * length(ratios_unique_tvp)
       common_tvp_cols <- 0  # k=1 has no common/unique TVP distinction
       unique_tvp_cols <- extra_cols
     } else {
@@ -793,16 +756,16 @@ constructModel <- function( data = NULL,
       # Grid size calculation
       if (common_effects && common_tvp_effects){
         # 4-layer: common base, unique base, common TVP, unique TVP
-        grid_size <- nlambda1 * length(ratios) * length(ratiosalpha) * length(ratiosbeta)
+        grid_size <- nlambda1 * length(ratios_unique) * length(ratios_unique_tvp) * length(ratios_common_tvp)
       } else if (common_effects && !common_tvp_effects){
         # 3-layer: common base, unique base, unique TVP (current default)
-        grid_size <- nlambda1 * length(ratios) * length(ratiosalpha)
+        grid_size <- nlambda1 * length(ratios_unique) * length(ratios_unique_tvp)
       } else if (!common_effects && common_tvp_effects){
         # 3-layer: unique base, common TVP, unique TVP
-        grid_size <- nlambda1 * length(ratiosalpha) * length(ratiosbeta)
+        grid_size <- nlambda1 * length(ratios_unique_tvp) * length(ratios_common_tvp)
       } else {
         # 2-layer: unique base, unique TVP (current common_effects=FALSE)
-        grid_size <- nlambda1 * length(ratiosalpha)
+        grid_size <- nlambda1 * length(ratios_unique_tvp)
       }
     }
 
@@ -816,6 +779,35 @@ constructModel <- function( data = NULL,
     )
   }
   
+  #------------------------------------------------------------------
+  # Build matrix specification (single source of truth for column indices)
+  #------------------------------------------------------------------
+  spec <- build_matrix_spec(
+    k = k,
+    d = ndk[1],
+    n = ntk,
+    tvp = tvp,
+    common_effects = common_effects,
+    subgroup = subgroup,
+    common_tvp_effects = common_tvp_effects,
+    breaks = if (tvp) breaks else NULL,
+    subgroup_membership = if (subgroup) subgroup_membership else NULL
+  )
+
+  # Verify spec matches actual A matrix dimensions
+  if (spec$cols$total != ncol(A)) {
+    stop(sprintf(
+      "multivar ERROR: matrix spec mismatch. spec$cols$total=%d but ncol(A)=%d",
+      spec$cols$total, ncol(A)
+    ))
+  }
+  if (spec$rows$total != nrow(A)) {
+    stop(sprintf(
+      "multivar ERROR: matrix spec mismatch. spec$rows$total=%d but nrow(A)=%d",
+      spec$rows$total, nrow(A)
+    ))
+  }
+
   #------------------------------------------------------------------
   # build and return S4 multivar object
   #------------------------------------------------------------------
@@ -837,11 +829,8 @@ constructModel <- function( data = NULL,
              ntk = ntk,
              ndk = ndk,
              lambda1 = lambda1,
-             lambda2 = lambda2,
-             tau = tau,
              nlambda1 = nlambda1,
-             nlambda2 = nlambda2,
-             ntau = ntau,
+             n_ratios_subgroup = n_ratios_subgroup,
              depth = depth,
              tol = tol,
              window = window,
@@ -852,10 +841,10 @@ constructModel <- function( data = NULL,
              intercept = intercept,
              data_means = data_means,
              W = W,
-             ratios = ratios,
-             ratiostau = ratiostau,
-             ratiosalpha = ratiosalpha,
-             ratiosbeta = ratiosbeta,
+             ratios_unique = ratios_unique,
+             ratios_subgroup = ratios_subgroup,
+             ratios_unique_tvp = ratios_unique_tvp,
+             ratios_common_tvp = ratios_common_tvp,
              cv = cv,
              nfolds = nfolds,
              lamadapt = lamadapt,
@@ -869,7 +858,8 @@ constructModel <- function( data = NULL,
              breaks = breaks,
              lambda_choice = lambda_choice,
              common_effects = common_effects,
-             common_tvp_effects = common_tvp_effects
+             common_tvp_effects = common_tvp_effects,
+             spec = unclass(spec)
   )
 
   return(obj)

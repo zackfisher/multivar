@@ -1,7 +1,7 @@
-get_subgroups <- function(data, nlambda1, nlambda2, pendiag){
-  
+get_subgroups <- function(data, nlambda1, pendiag){
+
   # Construct and fit no subgrouping model
-  no_sub    <- constructModel(data = data, nlambda1 = nlambda1, nlambda2 = nlambda2, pendiag = pendiag)
+  no_sub    <- constructModel(data = data, nlambda1 = nlambda1, pendiag = pendiag)
   fit_nosub <- cv.multivar(no_sub) 
   
   # Get subgroup membership

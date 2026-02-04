@@ -22,7 +22,7 @@ Construct the sequence (path) of lambda1 values that will be used for cv.
 \details{
 In this package, lambda1 is the main sparsity / regularization strength
 applied to the common effects. Laer, we scaled these into the unique effects
-via ratios. Importantly, we don't just pick a single lambda1 — we build
+via ratios_unique. Importantly, we don't just pick a single lambda1 — we build
 a path of candidate lambda1 values, from very large (forces almost all penalized
 coefficients to zero) down to much smaller (less shrinkage).
 
@@ -33,7 +33,7 @@ default value is 1,000.
 Note: the models have multiple penalty scenarios as alluded to earlier. We
 call these scenarios, where each scenario encodes a different way to penalize 
 the common and unique effects. Those scenarios live along the 3rd dimension of 
-the array W are typically of length length(ratios)*legnth(lambda1), such that
+the array W are typically of length length(ratios_unique)*legnth(lambda1), such that
 
   dim(W) = [ n_outcomes , n_predictors , n_scenarios ]
 
@@ -47,13 +47,13 @@ matrix with:
 - During CV, for each scenario column i and each row r in that column,
   the solver fits the model at that lambda1 and scores prediction error.
 
-- We also have object@ratios, where each ratio says how strong to
+- We also have object@ratios_unique, where each ratio says how strong to
   penalize deviation blocks (individual/subgroup/time-varying) relative to
   the common effects. Conceptually this means lambda2 = ratio * lambda1.
 
 - We use the ingredients:
       * lambda1 grid (here)
-      * ratios       (constructModel)
+      * ratios_unique       (constructModel)
   to construct the lambda2 grid..
 
 Some notes on the arguments:
@@ -124,6 +124,6 @@ lambda1    matrix, dimension [nlam x n_scenarios].
            Later:
            - cv.multivar() stores this in object@lambda1,
              and cross-validates across [row r, column i].
-           - Combined with object@ratios, you can reconstruct lambda2
+           - Combined with object@ratios_unique, you can reconstruct lambda2
              via lambda2 = ratio * lambda1 and plot CV error surfaces.
 }

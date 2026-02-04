@@ -14,7 +14,6 @@ estimate_initial_coefs(
   subgroup_membership,
   subgroup,
   nlambda1,
-  nlambda2,
   tvp,
   breaks,
   intercept,
@@ -35,15 +34,13 @@ estimate_initial_coefs(
 
 \item{lassotype}{Character. Type of LASSO penalty: "standard" or "adaptive".}
 
-\item{weightest}{Character. How to estimate initial coefficients for adaptive weights: "lasso", "ridge", "ols", or "multivar". The "multivar" option fits a standard lasso multivar model first to get structured initial estimates. Note: for k=1 TVP models, use "lasso" (not "multivar") for best results. Only used when lassotype = "adaptive" (ignored for standard LASSO).}
+\item{weightest}{Character. How to estimate initial coefficients: "lasso", "ridge", or "ols".}
 
 \item{subgroup_membership}{Numeric vector. Vector of subgroup assignments for each subject.}
 
 \item{subgroup}{Logical. Whether to run subgrouping algorithm.}
 
-\item{nlambda1}{Numeric. Number of lambda1 values for the main estimation grid. Not used when developing adaptive weights.}
-
-\item{nlambda2}{Numeric. Number of lambda2 values for the main estimation grid. Not used when developing adaptive weights.}
+\item{nlambda1}{Numeric. Not used (kept for API compatibility).}
 
 \item{tvp}{Logical. Whether to estimate time-varying parameters.}
 
@@ -53,12 +50,22 @@ estimate_initial_coefs(
 
 \item{nfolds}{Numeric. The number of folds for cross-validation.}
 
-\item{lambda_choice}{Character. Which lambda to use from cv.glmnet: "lambda.min"
-or "lambda.1se". Passed from constructModel; see constructModel documentation
-for usage guidance.}
+\item{lambda_choice}{Character. Which lambda to use from cv.glmnet: "lambda.min" or "lambda.1se".}
 
-\item{common_effects}{Logical. Whether to include common effects in TVP models.
-Passed from constructModel.}
+\item{common_effects}{Logical. Whether to include common effects in TVP models.}
+
+\item{common_tvp_effects}{Logical. Whether to include common TVP effects (k>1 only).}
+}
+\value{
+A list containing:
+  \itemize{
+    \item{common_effects: d x d matrix of common effects}
+    \item{subgroup_effects: list of d x d matrices per subgroup (if subgroup=TRUE)}
+    \item{unique_effects: list of d x d matrices per subject}
+    \item{tvp_effects: list of lists of d x d matrices per subject per period (if tvp=TRUE)}
+    \item{common_tvp_effects: list of d x d matrices per period (if tvp=TRUE and k>1)}
+    \item{total_effects: list of d x d matrices per subject}
+  }
 }
 \description{
 `estimate_initial_coefs` returns consistent initial estimates to be used

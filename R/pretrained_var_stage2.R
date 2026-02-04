@@ -5,7 +5,7 @@
 pretrained_var_stage2 <- function(object, stage1, alpha = 0, stage2adaptive = FALSE, stage2ratios = FALSE, intercept = FALSE, lambda_best = "1se") {
   
   d      <- object@d[1L]
-  nscen  <- length(object@ratios)
+  nscen  <- length(object@ratios_unique)
   
   ## ---- 1) split Stage-1 into intercept and slopes (always use d x d for slopes) ----
   has_int_col <- (ncol(stage1$A_pre) == d + 1L)
@@ -42,7 +42,6 @@ pretrained_var_stage2 <- function(object, stage1, alpha = 0, stage2adaptive = FA
       subgroup_membership = object@subgroup_membership,
       subgroup  = object@subgroup,
       nlambda1  = object@nlambda1,
-      nlambda2  = object@nlambda2,
       tvp       = object@tvp,
       breaks    = object@breaks,
       intercept = object@intercept,
@@ -52,7 +51,7 @@ pretrained_var_stage2 <- function(object, stage1, alpha = 0, stage2adaptive = FA
   }
   
   if(!stage2ratios){
-    object@ratios <- rep(1, length(object@ratios))
+    object@ratios_unique <- rep(1, length(object@ratios_unique))
   }
   
   ## Initial B slices per scenario (match Stage 1 convention)
@@ -78,7 +77,7 @@ pretrained_var_stage2 <- function(object, stage1, alpha = 0, stage2adaptive = FA
       
     } else {
       
-      for (s in seq_len(nscen)) Wk[ , , s] <- pf_mat  # * object@ratios[s]
+      for (s in seq_len(nscen)) Wk[ , , s] <- pf_mat  # * object@ratios_unique[s]
       
     }
     

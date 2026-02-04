@@ -11,11 +11,8 @@ constructModel(
   t1 = NULL,
   t2 = NULL,
   lambda1 = NULL,
-  lambda2 = NULL,
-  tau = NULL,
   nlambda1 = 30,
-  nlambda2 = 30,
-  ntau = 30,
+  n_ratios_subgroup = 30,
   depth = NULL,
   tol = 1e-04,
   window = 1,
@@ -26,9 +23,9 @@ constructModel(
   lassotype = "adaptive",
   intercept = FALSE,
   W = NULL,
-  ratios = NULL,
-  ratiostau = NULL,
-  ratiosalpha = NULL,
+  ratios_unique = NULL,
+  ratios_subgroup = NULL,
+  ratios_unique_tvp = NULL,
   cv = "blocked",
   nfolds = 10,
   lamadapt = FALSE,
@@ -55,19 +52,13 @@ constructModel(
 
 \item{t2}{Numeric. Index of times series in which to end cross validation. If NULL, default is floor(2*nrow(n)/3) where nk is the time series length for individual k.}
 
-\item{lambda1}{Matrix. Regularization parameter 1. Default is NULL.}
-
-\item{lambda2}{Matrix. Regularization parameter 2. Default is NULL.}
-
-\item{tau}{Matrix. Regularization parameter for subgroup effects.}
+\item{lambda1}{Matrix. Regularization parameter grid. Default is NULL (auto-generated).}
 
 \item{nlambda1}{Numeric. Number of lambda1 values to search over. Default is 30.}
 
-\item{nlambda2}{Numeric. Number of lambda2 values to search over. Default is 30.}
+\item{n_ratios_subgroup}{Numeric. Number of ratios_subgroup values to search over. Default is 30.}
 
-\item{ntau}{Numeric. Number of tau values to search over. Default is 30.}
-
-\item{depth}{Numeric. Depth of lambda1 grid construction (lambda_min = lambda_max / depth). Default is 10000 for non-TVP models. For TVP models, depth is determined by nlambda1 as 10^(nlambda1/5) to maintain consistent lambda step ratio (~1.6x per step), giving depth ≈ 1e6 for nlambda1=30 and ≈ 100 for nlambda1=10. Note: other hyperparameter grids (ratios, ratiosalpha) are constructed independently of depth.}
+\item{depth}{Numeric. Depth of lambda1 grid construction (lambda_min = lambda_max / depth). Default is 10000 for non-TVP models. For TVP models, depth is determined by nlambda1 as 10^(nlambda1/5) to maintain consistent lambda step ratio (~1.6x per step), giving depth ≈ 1e6 for nlambda1=30 and ≈ 100 for nlambda1=10. Note: other hyperparameter grids (ratios_unique, ratios_unique_tvp) are constructed independently of depth.}
 
 \item{tol}{Numeric. Optimization tolerance (default 1e-4).}
 
@@ -87,11 +78,11 @@ constructModel(
 
 \item{W}{Matrix. Default is NULL.}
 
-\item{ratios}{Numeric vector. Default is NULL.}
+\item{ratios_unique}{Numeric vector. Penalty ratio for unique effects. Default is NULL.}
 
-\item{ratiostau}{Numeric vector. Default is NULL.}
+\item{ratios_subgroup}{Numeric vector. Penalty ratio for subgroup effects. Default is NULL.}
 
-\item{ratiosalpha}{Numeric vector. Default is NULL.}
+\item{ratios_unique_tvp}{Numeric vector. Default is NULL.}
 
 \item{cv}{Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.}
 

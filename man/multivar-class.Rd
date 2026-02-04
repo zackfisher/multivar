@@ -41,17 +41,11 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{t2}}{Numeric vector. Index of time series in which to end cross validation for individual k.}
 
-\item{\code{lambda1}}{Numeric vector. Regularization parameter 1.}
-
-\item{\code{lambda2}}{Numeric vector. Regularization parameter 2.}
-
-\item{\code{tau}}{Numeric vector. Regularization parameter for subgroup effects.}
+\item{\code{lambda1}}{Numeric vector. Regularization parameter grid.}
 
 \item{\code{nlambda1}}{Numeric. Number of lambda1 values to search over. Default is 30.}
 
-\item{\code{nlambda2}}{Numeric. Number of lambda2 values to search over. Default is 30.}
-
-\item{\code{ntau}}{Numeric. Number of tau values to search over. Default is 30.}
+\item{\code{n_ratios_subgroup}}{Numeric. Number of ratios_subgroup values to search over. Default is 30.}
 
 \item{\code{tol}}{Numeric. Convergence tolerance.}
 
@@ -73,13 +67,13 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{W}}{Matrix. Default is NULL.}
 
-\item{\code{ratios}}{Numeric vector. Default is NULL.}
+\item{\code{ratios_unique}}{Numeric vector. Penalty ratio for unique effects. Default is NULL.}
 
-\item{\code{ratiostau}}{Numeric vector. Default is NULL.}
+\item{\code{ratios_subgroup}}{Numeric vector. Penalty ratio for subgroup effects. Default is NULL.}
 
-\item{\code{ratiosalpha}}{Numeric vector. Default is NULL.}
+\item{\code{ratios_unique_tvp}}{Numeric vector. Default is NULL.}
 
-\item{\code{ratiosbeta}}{Numeric vector. Penalty ratio for common TVP effects. Default is NULL.}
+\item{\code{ratios_common_tvp}}{Numeric vector. Penalty ratio for common TVP effects. Default is NULL.}
 
 \item{\code{cv}}{Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.}
 
@@ -108,6 +102,8 @@ To construct an object of class multivar, use the function \code{\link{construct
 \item{\code{common_effects}}{Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE.}
 
 \item{\code{common_tvp_effects}}{Logical. Whether to include common TVP effects (shared time-varying patterns) in TVP models. Only applies when tvp = TRUE.}
+
+\item{\code{spec}}{List. Design matrix specification object created by \code{\link{build_matrix_spec}}. Single source of truth for column/row indices.}
 }}
 
 \seealso{

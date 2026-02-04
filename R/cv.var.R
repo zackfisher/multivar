@@ -5,7 +5,7 @@
 cv.var <- function(object, lambda_best = "min", adaptive = TRUE, intercept = FALSE) {
   
   d      <- object@d[1L]
-  nscen  <- length(object@ratios)
+  nscen  <- length(object@ratios_unique)
   
   ## ---- 3) (re)initialize coefs on residualized data ----
   if(adaptive){
@@ -20,7 +20,6 @@ cv.var <- function(object, lambda_best = "min", adaptive = TRUE, intercept = FAL
       subgroup_membership = object@subgroup_membership,
       subgroup  = object@subgroup,
       nlambda1  = object@nlambda1,
-      nlambda2  = object@nlambda2,
       tvp       = object@tvp,
       breaks    = object@breaks,
       intercept = object@intercept,
@@ -29,7 +28,7 @@ cv.var <- function(object, lambda_best = "min", adaptive = TRUE, intercept = FAL
     
   }
   
-  object@ratios <- rep(1, length(object@ratios))
+  object@ratios_unique <- rep(1, length(object@ratios_unique))
   
   ## Initial B slices per scenario (match Stage 1 convention)
   B_empty <- array(0, dim = c(d, d + 1L, dim(object@B)[3]))

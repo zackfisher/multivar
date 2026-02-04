@@ -44,7 +44,7 @@ extract_multivar_hyperparams <- function(object, fit) {
 
   # Assign the actual lambda1 and ratio values
   param_map$lambda1_value <- as.vector(t(object@lambda1))
-  param_map$ratio_value   <- object@ratios[param_map$ratio_index]
+  param_map$ratio_value   <- object@ratios_unique[param_map$ratio_index]
 
   # Compute lambda2 = lambda1 * ratio
   param_map$lambda2_value <- param_map$lambda1_value * param_map$ratio_value
