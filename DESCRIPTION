@@ -8,7 +8,7 @@ Authors@R: c(
  person("Younghoon", "Kim", role = "ctb"),
  person("Vladas", "Pipiras", role = "ctb"),
  )
-Description: Functions for simulating, estimating and forecasting stationary Vector Autoregressive (VAR) models for multiple subject data using the penalized multi-VAR framework in Fisher, Kim and Pipiras (2020) <arXiv:2007.05052>. 
+Description: Functions for simulating, estimating and forecasting Vector Autoregressive (VAR) models for multiple subject data using structured penalization. 
 Depends: R (>= 2.10)
 Imports: methods, stats, utils, MASS, Rcpp (>= 1.0.3), Matrix, ggplot2, vars, reshape2, glmnet, igraph
 License: GPL (>= 2)
