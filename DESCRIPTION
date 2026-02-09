@@ -4,9 +4,9 @@ Title: Penalized Estimation of Multiple-Subject Vector Autoregressive (multi-VAR
 Version: 1.3.0
 Authors@R: c(
  person("Zachary","Fisher", email = "fish.zachary@gmail.com", role = c("aut", "cre")),
+ person("Christopher", "Crawford", role = "aut"),
  person("Younghoon", "Kim", role = "ctb"),
  person("Vladas", "Pipiras", role = "ctb"),
- person("Christopher", "Crawford", role = "aut")
  )
 Description: Functions for simulating, estimating and forecasting stationary Vector Autoregressive (VAR) models for multiple subject data using the penalized multi-VAR framework in Fisher, Kim and Pipiras (2020) <arXiv:2007.05052>. 
 Depends: R (>= 2.10)
