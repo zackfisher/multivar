@@ -26,18 +26,18 @@
 #'
 #' @details
 #' For each group k, the total intercept is recovered using:
-#'   c_total^(k) = mean(b^(k)) - Phi^(k) * mean(A^(k))
-#' where b^(k) are the outcomes (Y_t) and A^(k) are the predictors (Y_{t-1}).
+#'   \eqn{c_total^(k) = mean(b^(k)) - Phi^(k) * mean(A^(k))}
+#' where \eqn{b^{(k)}} are the outcomes \eqn{(Y_t)} and \eqn{A^{(k)}} are the predictors \eqn{(Y_{t-1})}.
 #' This is the same approach used by glmnet for intercept recovery.
 #'
 #' For multi-group models (k > 1), intercepts are decomposed as:
-#'   c = (1/K) * sum_k(c_total^(k))     # Common intercept
-#'   c^(k) = c_total^(k) - c             # Group-specific intercept
+#'   \eqn{c = (1/K) * sum_k(c_total^(k))}     # Common intercept
+#'   \eqn{c^(k) = c_total^(k) - c}             # Group-specific intercept
 #'
 #' This decomposition ensures the constraint: sum_k(c^(k)) = 0
 #'
 #' Note: This formula c = mean(b) - Phi * mean(A) is different from the steady-state
-#' formula c = (I - Phi) * mean(Y), which assumes mean(b) = mean(A) = mean(Y).
+#' formula \eqn{c = (I - Phi) * mean(Y)}, which assumes mean(b) = mean(A) = mean(Y).
 #' In finite samples they give similar but not identical results. The formula used
 #' here is preferred as it matches standard practice in penalized regression (e.g., glmnet).
 #'

@@ -1,4 +1,4 @@
-#' @export
+#' @keywords internal
 cv.pretrain.multivar <- function(object, lambda_best = "min", stage1adaptive = TRUE, stage2adaptive = TRUE) {
   
   alpha <- seq(0,1,by=0.1)

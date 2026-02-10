@@ -1,5 +1,5 @@
 #' @importFrom Matrix Matrix
-#' @export
+#' @keywords internal
 setup_data <- function (data, standardize, lag, horizon, intercept, tvp = FALSE, breaks = NULL) {
   
    if (is.null(data)){

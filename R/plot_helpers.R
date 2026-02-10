@@ -76,7 +76,7 @@
   # Convert matrices to long-form dataframe
   df_list <- lapply(seq_along(mat_list), function(i) {
     mat <- mat_list[[i]]
-    df <- setNames(reshape2::melt(mat), c('rows', 'vars', 'values'))
+    df <- stats::setNames(reshape2::melt(mat), c('rows', 'vars', 'values'))
     df$panel <- titles[i]
     df
   })
@@ -90,12 +90,12 @@
 
   # Set up color palette
   if (palette == "default") {
-    zf_red <- rgb(255, 0, 90, maxColorValue = 255)
-    zf_blue <- rgb(0, 152, 233, maxColorValue = 255)
+    zf_red <- grDevices::rgb(255, 0, 90, maxColorValue = 255)
+    zf_blue <- grDevices::rgb(0, 152, 233, maxColorValue = 255)
     zf_fore <- "white"
 
-    colfunc_low <- colorRampPalette(c(zf_red, zf_fore))
-    colfunc_high <- colorRampPalette(c(zf_fore, zf_blue))
+    colfunc_low <- grDevices::colorRampPalette(c(zf_red, zf_fore))
+    colfunc_high <- grDevices::colorRampPalette(c(zf_fore, zf_blue))
     colors_to_use <- c(colfunc_low(6)[1:3], zf_fore, colfunc_high(6)[4:6])
 
   } else if (palette == "viridis") {
@@ -117,7 +117,7 @@
   }
 
   # Theme colors
-  text_color <- rgb(51, 51, 51, maxColorValue = 255)
+  text_color <- grDevices::rgb(51, 51, 51, maxColorValue = 255)
   plot_background <- "white"
 
   # Set factor levels for correct ordering
@@ -131,7 +131,9 @@
   limit <- max(abs(c(lb, ub))) * c(-1, 1)
 
   # Build ggplot
-  gg <- ggplot2::ggplot(df, ggplot2::aes(y = rows, x = vars, fill = values))
+  gg <- ggplot2::ggplot(df, ggplot2::aes(y = .data$rows, 
+                                         x = .data$vars, 
+                                         fill = .data$values))
   gg <- gg + ggplot2::geom_tile()
 
   # Apply color scale
@@ -170,8 +172,8 @@
     plot.title = ggplot2::element_text(hjust = 0, color = text_color, face = "bold"),
     strip.text = ggplot2::element_text(hjust = 0, color = text_color, size = 12, face = "bold"),
     strip.background = ggplot2::element_rect(fill = plot_background, color = plot_background),
-    panel.spacing.x = ggplot2::unit(0.5, "cm"),
-    panel.spacing.y = ggplot2::unit(0.5, "cm"),
+    panel.spacing.x = grid::unit(0.5, "cm"),
+    panel.spacing.y = grid::unit(0.5, "cm"),
     legend.background = ggplot2::element_rect(fill = plot_background, color = plot_background),
     legend.title = ggplot2::element_text(size = 12, color = text_color),
     legend.title.align = 1,

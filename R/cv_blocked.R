@@ -8,7 +8,7 @@
 #'
 #' @return List with rows$subject and optionally rows$period
 #' @keywords internal
-build_row_spec <- function(Ak, breaks = NULL) {
+build_row_spec_old <- function(Ak, breaks = NULL) {
   k <- length(Ak)
   final_tmpt <- cumsum(unlist(lapply(Ak, function(x) nrow(x))))
   first_tmpt <- c(1, (final_tmpt[-length(final_tmpt)] + 1))

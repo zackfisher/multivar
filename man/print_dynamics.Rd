@@ -27,7 +27,7 @@ or a fit object from cv.multivar() (will automatically extract total effects)}
 
 \item{max_print}{Maximum number of rows/cols to print before truncating (default: 15)}
 
-\item{time_labels}{Logical; if TRUE, add subscripts like V1_t, V1_{t-1} (default: TRUE)}
+\item{time_labels}{Logical; if TRUE, add subscripts like \eqn{V1_t}, \eqn{V1_{t-1}} (default: TRUE)}
 
 \item{subject_label}{Optional label for the subject/matrix (e.g., "Subject 1")}
 

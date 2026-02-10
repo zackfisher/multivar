@@ -1,7 +1,7 @@
 ## ------------------------------------------------------------
 ## cross-validation for N=1 adaptive VAR
 ## ------------------------------------------------------------
-#' @export
+#' @keywords internal
 cv.var <- function(object, lambda_best = "min", adaptive = TRUE, intercept = FALSE) {
   
   d      <- object@d[1L]

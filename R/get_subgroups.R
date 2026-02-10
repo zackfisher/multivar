@@ -20,10 +20,20 @@ get_subgroups <- function(data, nlambda1, pendiag){
   sim_mat[lower.tri(sim_mat)] <- sim_vec
   sim_mat <- sim_mat + t(sim_mat)
   
-  g       <- graph.adjacency(sim_mat, mode = "undirected", weighted = TRUE)
-  weights <- E(g)$weight 
-  res     <- cluster_walktrap(g, weights = weights, steps = 4)
-  sub_mem <- as.numeric(membership(res))
+  if (!requireNamespace("igraph", quietly = TRUE)) {
+    stop("Package 'igraph' is required for get_subgroups(). Please install it.", call. = FALSE)
+  }
+  
+  g <- igraph::graph_from_adjacency_matrix(
+    sim_mat,
+    mode = "undirected",
+    weighted = TRUE,
+    diag = FALSE
+  )
+  
+  weights <- igraph::E(g)$weight
+  res     <- igraph::cluster_walktrap(g, weights = weights, steps = 4)
+  sub_mem <- as.numeric(igraph::membership(res))
   
   return(sub_mem)
 }

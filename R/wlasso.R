@@ -1,4 +1,4 @@
-#' @export
+#' @keywords internal
 wlasso <- function(B, Z, Y, W = NULL, k, d, lambda1,eps,intercept=FALSE){
   
   # B <- B[1,,,drop=F]

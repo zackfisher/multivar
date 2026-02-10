@@ -1,16 +1,16 @@
 Encoding: UTF-8
 Package: multivar
-Title: Penalized Estimation of Multiple-Subject Vector Autoregressive (multi-VAR) Models
+Title: Penalized Estimation of Multiple-Subject Vector Autoregressive (Multi-VAR) Models
 Version: 1.3.0
 Authors@R: c(
  person("Zachary","Fisher", email = "fish.zachary@gmail.com", role = c("aut", "cre")),
  person("Christopher", "Crawford", role = "aut"),
  person("Younghoon", "Kim", role = "ctb"),
- person("Vladas", "Pipiras", role = "ctb"),
+ person("Vladas", "Pipiras", role = "ctb")
  )
-Description: Functions for simulating, estimating and forecasting stationary Vector Autoregressive (VAR) models for multiple subject data using the penalized multi-VAR framework in Fisher, Kim and Pipiras (2020) <arXiv:2007.05052>. 
+Description: Functions for simulating, estimating and forecasting stationary Vector Autoregressive (VAR) models for multiple subject data using the penalization.
 Depends: R (>= 2.10)
-Imports: methods, stats, utils, MASS, Rcpp (>= 1.0.3), Matrix, ggplot2, vars, reshape2, glmnet, igraph
+Imports: methods, stats, utils, MASS, Rcpp (>= 1.0.3), Matrix, ggplot2, vars, reshape2, glmnet, igraph, viridis, scales
 License: GPL (>= 2)
 LazyData: true
 ByteCompile: true

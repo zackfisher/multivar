@@ -50,18 +50,18 @@ extract_multivar_hyperparams <- function(object, fit) {
   param_map$lambda2_value <- param_map$lambda1_value * param_map$ratio_value
 
   # Extract MSFE and average across folds
-  # Handle both 2D (nfolds × n_combos) and 3D (d × ? × n_combos) arrays
+  # Handle both 2D (nfolds x n_combos) and 3D (d x ? x n_combos) arrays
   msfe_raw <- fit[[2]]
 
   if (length(dim(msfe_raw)) == 2) {
-    # 2D case: (nfolds × n_combos)
+    # 2D case: (nfolds x n_combos)
     MSFE_vec <- colMeans(msfe_raw)
   } else if (length(dim(msfe_raw)) == 3) {
     # 3D case: average across first two dimensions
     MSFE_vec <- apply(msfe_raw, 3, mean)
   } else {
     stop("extract_multivar_hyperparams: unexpected MSFE array dimensions: ",
-         paste(dim(msfe_raw), collapse = " × "))
+         paste(dim(msfe_raw), collapse = " x "))
   }
 
   # Verify correct length

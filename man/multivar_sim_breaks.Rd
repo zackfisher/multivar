@@ -46,9 +46,19 @@ multivar_sim_breaks(
 
 \item{ub}{Numeric. The lower bound for individual elements of the transition matrices.}
 
+\item{lb_int}{Numeric. The upper bound for individual elements of the intercepts.}
+
+\item{ub_int}{Numeric. The lower bound for individual elements of the intercepts.}
+
+\item{lb_slope}{Numeric. The upper bound for individual elements of the slopes.}
+
+\item{ub_slope}{Numeric. The lower bound for individual elements of the slopes.}
+
 \item{sigma}{Matrix. The (population) innovation covariance matrix.}
 
 \item{diag}{Logical. Default is FALSE. Should diagonal elements be filled first for common elements.}
+
+\item{iters}{Integer. Default is 1. Number of iterations}
 
 \item{intercept}{List. Default is NULL. A list of length K containing numeric vectors of length d representing the intercept values. If NULL, intercepts are set to 0.}
 }

@@ -23,6 +23,10 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{bk}}{List. A list (length = k) of (T-lag-horizon) by d multivariate time series.}
 
+\item{\code{Ak_orig}}{List. A list (length = k) of lagged (T-lag-horizon) by d unscaled multivariate time series.}
+
+\item{\code{bk_orig}}{List A list (length = k) of (T-lag-horizon) by d unscaled multivariate time series.}
+
 \item{\code{Hk}}{List. A list (length = k) of (horizon) by d multivariate time series.}
 
 \item{\code{A}}{Matrix. A matrix containing the lagged ((T-lag-horizon)k) by (d+dk) multivariate time series.}
@@ -41,11 +45,21 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{t2}}{Numeric vector. Index of time series in which to end cross validation for individual k.}
 
+\item{\code{t1k}}{Numeric vector. Index of time series in which to start cross validation for individual k.}
+
+\item{\code{t2k}}{Numeric vector. Index of time series in which to end cross validation for individual k.}
+
+\item{\code{ntk}}{Numeric. Number of usable timepoints (rows of b) per individual k}
+
+\item{\code{ndk}}{Numeric. Number of variables (cols of b) per individual k}
+
 \item{\code{lambda1}}{Numeric vector. Regularization parameter grid.}
 
 \item{\code{nlambda1}}{Numeric. Number of lambda1 values to search over. Default is 30.}
 
 \item{\code{n_ratios_subgroup}}{Numeric. Number of ratios_subgroup values to search over. Default is 30.}
+
+\item{\code{gamma}}{Numeric. Need definition here}
 
 \item{\code{tol}}{Numeric. Convergence tolerance.}
 

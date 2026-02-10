@@ -8,9 +8,9 @@
 \alias{coef.multivar_fit}
 \title{S3 Methods for multivar_fit Objects}
 \usage{
-print.multivar_fit(x, ...)
+\method{print}{multivar_fit}(x, ...)
 
-summary.multivar_fit(object, ...)
+\method{summary}{multivar_fit}(object, ...)
 
 \method{plot}{multivar_fit}(x, type = c("dynamics", "prevalence"), ...)
 
@@ -23,12 +23,29 @@ summary.multivar_fit(object, ...)
 )
 }
 \arguments{
-\item{x}{A multivar_fit object (output from cv.multivar())}
+\item{x}{A multivar_fit object (output from cv.multivar()).}
 
-\item{...}{Additional arguments (currently unused)}
+\item{...}{Additional arguments (unused).}
 
-\item{object}{A multivar_fit object (output from cv.multivar())}
+\item{object}{A multivar_fit object (output from cv.multivar()).}
+
+\item{type}{Character; one of `"total"`, `"common"`, `"unique"`.}
+
+\item{subject}{Optional integer subject index.}
+
+\item{period}{Optional integer period index (TVP only).}
 }
 \description{
-Standard S3 methods for fitted multivar models
+Standard S3 methods for fitted multivar models.
 }
+\section{Functions}{
+\itemize{
+\item \code{print(multivar_fit)}: Print a fitted multivar model.
+
+\item \code{summary(multivar_fit)}: Summarize a fitted multivar model.
+
+\item \code{plot(multivar_fit)}: Plot fitted dynamics or prevalence.
+
+\item \code{coef(multivar_fit)}: Extract coefficient matrices.
+
+}}

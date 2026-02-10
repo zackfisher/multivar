@@ -1,7 +1,7 @@
 ## ------------------------------------------------------------
 ## Stage 2: subject-specific fine-tuning with offset
 ## ------------------------------------------------------------
-#' @export
+#' @keywords internal
 pretrained_var_stage2 <- function(object, stage1, alpha = 0, stage2adaptive = FALSE, stage2ratios = FALSE, intercept = FALSE, lambda_best = "1se") {
   
   d      <- object@d[1L]

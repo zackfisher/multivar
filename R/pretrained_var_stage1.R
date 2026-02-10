@@ -1,10 +1,15 @@
 #' Stage 1 for pretrained VAR: common block only
 #'
 #' Runs blocked CV on the reduced problem:
-#'   Y_t = X_t^{(com)} A_0^T + e_t
-#' where X_t^{(com)} are the first d columns of object@A.
+#'   \eqn{Y_t = X_t^{(com)} A_0^T + e_t}
+#' where \eqn{X_t^{(com)}} are the first d columns of \code{object@A}.
 #'
-#' @export
+#' @param object multivar object built using \code{ConstructModel}.
+#' @param stage1adaptive Logical. Default is FALSE. If TRUE, use adaptive lasso for stage 1
+#' @param stage1ratios Logical. Default is FALSE. If TRUE, use ratios in stage 1
+#' @param lambda_best Character. Default is `"1se"`. Which value of lambda to use.
+#'
+#' @keywords internal
 pretrained_var_stage1 <- function(object, stage1adaptive = FALSE, stage1ratios = FALSE, lambda_best = "1se") {
   
   # notes on dimension:

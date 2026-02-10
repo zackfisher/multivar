@@ -4,6 +4,8 @@
 #' ratios_unique, and (optionally) ratios_subgroup and ratios_unique_tvp into a list
 #' of S scenarios, where S = dim(W)[3].
 #'
+#' @param object multivar object built using \code{ConstructModel}.
+#'
 #' @export
 build_scenario_table <- function(object) {
   ratios_unique      <- object@ratios_unique

@@ -1,2 +1,6 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^src/.*\.o$
+^src/.*\.o\.tmp$
+^src/.*\.(so|dll|dylib)$
+^notes\.txt$

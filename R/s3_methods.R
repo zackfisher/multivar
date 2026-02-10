@@ -1,14 +1,14 @@
 #' S3 Methods for multivar_fit Objects
 #'
-#' Standard S3 methods for fitted multivar models
+#' Standard S3 methods for fitted multivar models.
 #'
 #' @name multivar_fit_methods
-#' @param x A multivar_fit object (output from cv.multivar())
-#' @param object A multivar_fit object (output from cv.multivar())
-#' @param ... Additional arguments (currently unused)
 NULL
 
-#' @rdname multivar_fit_methods
+#' @describeIn multivar_fit_methods Print a fitted multivar model.
+#' @param x A multivar_fit object (output from cv.multivar()).
+#' @param ... Additional arguments (currently unused).
+#' @method print multivar_fit
 #' @export
 print.multivar_fit <- function(x, ...) {
   cat("\n")
@@ -55,7 +55,10 @@ print.multivar_fit <- function(x, ...) {
   invisible(x)
 }
 
-#' @rdname multivar_fit_methods
+#' @describeIn multivar_fit_methods Summarize a fitted multivar model.
+#' @param object A multivar_fit object (output from cv.multivar()).
+#' @param ... Additional arguments (currently unused).
+#' @method summary multivar_fit
 #' @export
 summary.multivar_fit <- function(object, ...) {
   # Call the existing summary_multivar function
@@ -63,7 +66,11 @@ summary.multivar_fit <- function(object, ...) {
   invisible(object)
 }
 
-#' @rdname multivar_fit_methods
+#' @describeIn multivar_fit_methods Plot fitted dynamics or prevalence.
+#' @param x A multivar_fit object (output from cv.multivar()).
+#' @param type Character; `"dynamics"` or `"prevalence"`.
+#' @param ... Passed to the plotting helpers.
+#' @method plot multivar_fit
 #' @export
 plot.multivar_fit <- function(x, type = c("dynamics", "prevalence"), ...) {
   type <- match.arg(type)
@@ -83,7 +90,13 @@ plot.multivar_fit <- function(x, type = c("dynamics", "prevalence"), ...) {
   invisible(x)
 }
 
-#' @rdname multivar_fit_methods
+#' @describeIn multivar_fit_methods Extract coefficient matrices.
+#' @param object A multivar_fit object (output from cv.multivar()).
+#' @param type Character; one of `"total"`, `"common"`, `"unique"`.
+#' @param subject Optional integer subject index.
+#' @param period Optional integer period index (TVP only).
+#' @param ... Additional arguments (unused).
+#' @method coef multivar_fit
 #' @export
 coef.multivar_fit <- function(object, type = c("total", "common", "unique"),
                                subject = NULL, period = NULL, ...) {

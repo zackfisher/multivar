@@ -58,7 +58,7 @@ constructModel(
 
 \item{n_ratios_subgroup}{Numeric. Number of ratios_subgroup values to search over. Default is 30.}
 
-\item{depth}{Numeric. Depth of lambda1 grid construction (lambda_min = lambda_max / depth). Default is 10000 for non-TVP models. For TVP models, depth is determined by nlambda1 as 10^(nlambda1/5) to maintain consistent lambda step ratio (~1.6x per step), giving depth ≈ 1e6 for nlambda1=30 and ≈ 100 for nlambda1=10. Note: other hyperparameter grids (ratios_unique, ratios_unique_tvp) are constructed independently of depth.}
+\item{depth}{Numeric. Depth of lambda1 grid construction (lambda_min = lambda_max / depth). Default is 10000 for non-TVP models. For TVP models, depth is determined by nlambda1 as 10^(nlambda1/5) to maintain consistent lambda step ratio (~1.6x per step), giving depth \eqn{\approx} 1e6 for nlambda1=30 and \eqn{\approx} 100 for nlambda1=10. Note: other hyperparameter grids (ratios_unique, ratios_unique_tvp) are constructed independently of depth.}
 
 \item{tol}{Numeric. Optimization tolerance (default 1e-4).}
 

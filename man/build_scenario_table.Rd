@@ -6,6 +6,9 @@
 \usage{
 build_scenario_table(object)
 }
+\arguments{
+\item{object}{multivar object built using \code{ConstructModel}.}
+}
 \description{
 This matches the logic in est_base_weight_mat(): we expand
 ratios_unique, and (optionally) ratios_subgroup and ratios_unique_tvp into a list

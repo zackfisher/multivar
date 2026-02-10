@@ -22,18 +22,25 @@ check.multivar <- function(object){
 #' @slot d Numeric Vector. Vector containing the number of variables for each dataset.
 #' @slot Ak List. A list (length = k) of lagged (T-lag-horizon) by d multivariate time series.
 #' @slot bk List. A list (length = k) of (T-lag-horizon) by d multivariate time series.
+#' @slot Ak_orig List. A list (length = k) of lagged (T-lag-horizon) by d unscaled multivariate time series.
+#' @slot bk_orig List A list (length = k) of (T-lag-horizon) by d unscaled multivariate time series.
 #' @slot Hk List. A list (length = k) of (horizon) by d multivariate time series.
-#' @slot A  Matrix. A matrix containing the lagged ((T-lag-horizon)k) by (d+dk) multivariate time series.
-#' @slot b  Matrix. A matrix containing the non-lagged ((T-lag-horizon)k) by (d) multivariate time series.
-#' @slot H  Matrix. A matrix containing the non-lagged (horizon k) by d multivariate time series.
+#' @slot A Matrix. A matrix containing the lagged ((T-lag-horizon)k) by (d+dk) multivariate time series.
+#' @slot b Matrix. A matrix containing the non-lagged ((T-lag-horizon)k) by (d) multivariate time series.
+#' @slot H Matrix. A matrix containing the non-lagged (horizon k) by d multivariate time series.
 #' @slot data_means List. A list (length = k) of column means for each group's data, used for intercept recovery when intercept=TRUE.
 #' @slot lag Numeric. The VAR order. Currently only lag 1 is supported.
 #' @slot horizon Numeric. Forecast horizon.
 #' @slot t1 Numeric vector. Index of time series in which to start cross validation for individual k. 
 #' @slot t2 Numeric vector. Index of time series in which to end cross validation for individual k.
+#' @slot t1k Numeric vector. Index of time series in which to start cross validation for individual k.
+#' @slot t2k Numeric vector. Index of time series in which to end cross validation for individual k.
+#' @slot ntk Numeric. Number of usable timepoints (rows of b) per individual k
+#' @slot ndk Numeric. Number of variables (cols of b) per individual k
 #' @slot lambda1 Numeric vector. Regularization parameter grid.
 #' @slot nlambda1 Numeric. Number of lambda1 values to search over. Default is 30.
 #' @slot n_ratios_subgroup Numeric. Number of ratios_subgroup values to search over. Default is 30.
+#' @slot gamma Numeric. Need definition here
 #' @slot tol Numeric. Convergence tolerance.
 #' @slot depth Numeric. Depth of grid construction. Default is 1000.
 #' @slot window Numeric. Size of rolling window.
@@ -67,19 +74,19 @@ check.multivar <- function(object){
 #' @seealso \code{\link{constructModel}}
 #' @export
 setClass(
-    Class="multivar",
+    Class = "multivar",
     representation(
         k = "numeric",
-        n  = "numeric",
-        d  = "numeric",
+        n = "numeric",
+        d = "numeric",
         Ak = "list",
         bk = "list",
         Ak_orig = "list",
         bk_orig = "list",
         Hk = "list",
-        A  = "matrix",
-        b  = "matrix",
-        H  = "matrix",
+        A = "matrix",
+        b = "matrix",
+        H = "matrix",
         data_means = "list",
         lag="numeric",
         horizon="numeric",
@@ -89,13 +96,13 @@ setClass(
         t2k = "numeric",
         ntk = "numeric",
         ndk = "numeric",
-        lambda1="matrix",
-        nlambda1="numeric",
-        n_ratios_subgroup ="numeric",
+        lambda1 = "matrix",
+        nlambda1 = "numeric",
+        n_ratios_subgroup = "numeric",
         gamma = "numeric",
-        tol="numeric",
-        depth="numeric",
-        window="numeric",
+        tol = "numeric",
+        depth = "numeric",
+        window = "numeric",
         standardize = "logical",
         weightest = "character",
         canonical = "logical",

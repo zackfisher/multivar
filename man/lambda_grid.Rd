@@ -16,6 +16,55 @@ lambda_grid(
   k = NULL
 )
 }
+\arguments{
+\item{depth}{numeric. Default is 1000. Controls how wide the lambda1 path is. The top of the path is lambda_max (the largest penalty we think we need to zero everything out). The bottom is lambda_max / depth. Typical depth ~ 1000.}
+
+\item{nlam}{integer. Default is 30. Number of lambda1 values along the path (rows of the output).}
+
+\item{Y}{numeric outcome matrix. Matrix of outcomes.}
+
+\item{Z}{numeric matrix. Matrix of predictors.}
+
+\item{W}{numeric array of penalty weights. Shape: [ n_outcomes , n_predictors , n_scenarios ].
+
+           Interpretation:
+           - W[,,i] is the penalty weight layout for scenario i.
+             Different scenarios correspond to different relative
+             penalization of global vs subgroup vs individual vs
+             time-varying effects.}
+
+\item{tol}{numeric scalar. Default 1e-4. Tolerance used in the adaptive branch (lamadapt = TRUE) when binary-searching for the scenario-specific max lambda. If lamadapt = FALSE, tol is not used.}
+
+\item{intercept}{logical. Default FALSE. Whether the model includes an intercept column. Intercepts are usually unpenalized. In lamadapt = TRUE mode, we drop the first column of the fitted coefficient array when checking if everything is (approximately) zero, so we don't falsely call the intercept "nonzero".}
+
+\item{lamadapt}{logical. Default FALSE.
+           If FALSE:
+               We compute one proxy lambda_max from data (max(Y %*% t(Z))),
+               and then generate the same log-spaced path for every scenario.
+
+           If TRUE:
+               For each scenario i, we refine its own lambda_max using
+               weighted penalized fits with W[,,i], using a binary search.
+               That is closer to "adaptive lasso" logic: strong signals get
+               downweighted and don't need as huge a lambda to kill them;
+               weak ones get upweighted and do.}
+
+\item{k}{integer or NULL. Number of individuals. Only needed if lamadapt = TRUE, because we pass it to the solver (wlasso) inside the scenario-specific binary search. Ignored when lamadapt = FALSE.
+
+Notes on the returned object:}
+}
+\value{
+lambda1 matrix, dimension [nlam x n_scenarios].
+
+           Column i is the lambda1 path for scenario i.
+           Row r is a particular lambda1 magnitude along that path
+
+           Later:
+           - cv.multivar() stores this in object@lambda1,
+             and cross-validates across [row r, column i].
+           - Combined with object@ratios_unique, you can reconstruct lambda2
+             via lambda2 = ratio * lambda1 and plot CV error surfaces.
+}
 \description{
 Construct the sequence (path) of lambda1 values that will be used for cv.
 }
@@ -57,73 +106,4 @@ matrix with:
   to construct the lambda2 grid..
 
 Some notes on the arguments:
-
-depth      numeric.
-           Default is 1000.
-           Controls how wide the lambda1 path is. The top of the path
-           is lambda_max (the largest penalty we think we need to zero
-           everything out). The bottom is lambda_max / depth.
-           Typical depth ~ 1000.
-
-nlam       integer.
-           Default is 30.
-           Number of lambda1 values along the path (rows of the output).
-
-Y          numeric outcome matrix.
-           Matrix of outcomes.
-
-Z          numeric matrix.
-           Matrix of predictors.
-
-W          numeric array of penalty weights.
-           Shape: [ n_outcomes , n_predictors , n_scenarios ].
-
-           Interpretation:
-           - W[,,i] is the penalty weight layout for scenario i.
-             Different scenarios correspond to different relative
-             penalization of global vs subgroup vs individual vs
-             time-varying effects.
-
-tol        numeric scalar.
-           Default 1e-4.
-           Tolerance used in the adaptive branch (lamadapt = TRUE) when
-           binary-searching for the scenario-specific max lambda.
-           If lamadapt = FALSE, tol is not used.
-
-intercept  logical, default FALSE.
-           Whether the model includes an intercept column. Intercepts are
-           usually unpenalized. In lamadapt = TRUE mode, we drop the first
-           column of the fitted coefficient array when checking if
-           everything is (approximately) zero, so we don't falsely call
-           the intercept "nonzero".
-
-lamadapt   logical, default FALSE.
-           If FALSE:
-               We compute one proxy lambda_max from data (max(Y %*% t(Z))),
-               and then generate the same log-spaced path for every scenario.
-
-           If TRUE:
-               For each scenario i, we refine its own lambda_max using
-               weighted penalized fits with W[,,i], using a binary search.
-               That is closer to "adaptive lasso" logic: strong signals get
-               downweighted and don't need as huge a lambda to kill them;
-               weak ones get upweighted and do.
-
-k          integer or NULL.
-           Number of individuals. Only needed if lamadapt = TRUE, because
-           we pass it to the solver (wlasso) inside the scenario-specific
-           binary search. Ignored when lamadapt = FALSE.
-
-Notes on the returned object:
-
-lambda1    matrix, dimension [nlam x n_scenarios].
-
-           Column i is the lambda1 path for scenario i.
-           Row r is a particular lambda1 magnitude along that path
-
-           Later:
-           - cv.multivar() stores this in object@lambda1,
-             and cross-validates across [row r, column i].
-           - Combined with object@ratios_unique, you can reconstruct lambda2
-             via lambda2 = ratio * lambda1 and plot CV error surfaces.
 }

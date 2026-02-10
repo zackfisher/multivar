@@ -1,4 +1,5 @@
-#' @export
+#' @keywords internal
+# todo: delete (not being used)
 extract_results <- function(x){
   
   # traditional
@@ -19,21 +20,26 @@ extract_results <- function(x){
   # B <- x$beta[,,msfe_min_idx_se]
   #plot(MSFE_mean, col=ifelse(c(1:length(MSFE_mean))==msfe_min_idx_se, "red", "gray"))
 
+  # mats <- breakup_transition(
+  #   B,
+  #   x$obj@Ak,
+  #   x$obj@ndk,
+  #   x$obj@intercept,
+  #   x$obj@subgroup_membership,
+  #   x$obj@subgroup,
+  #   x$obj@tvp,
+  #   x$obj@ntk,
+  #   x$obj@breaks,
+  #   x$obj@common_effects,
+  #   x$obj@common_tvp_effects
+  # )
+  
   mats <- breakup_transition(
     B,
+    x$obj@spec,
     x$obj@Ak,
-    x$obj@ndk,
-    x$obj@intercept,
-    x$obj@subgroup_membership,
-    x$obj@subgroup,
-    x$obj@tvp,
-    x$obj@ntk,
-    x$obj@breaks,
-    x$obj@common_effects,
-    x$obj@common_tvp_effects
+    breaks = NULL
   )
-  
-  
   
   return(mats)
 }

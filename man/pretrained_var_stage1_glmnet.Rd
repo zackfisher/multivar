@@ -25,6 +25,8 @@ nfolds, etc.}
 If length N*d, used as-is. Otherwise ignored (glmnet will make its own).}
 
 \item{lambda}{optional numeric vector of lambdas to force glmnet to use (helps match multivar paths).}
+
+\item{lambest}{Character. Default is `"min"`.}
 }
 \value{
 list(A_pre, lambda_best, cvfit, include_intercept)

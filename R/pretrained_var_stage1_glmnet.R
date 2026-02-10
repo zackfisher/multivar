@@ -10,6 +10,7 @@
 #' @param foldid optional CV fold id. If length N, it will be replicated for each outcome (length N*d).
 #'               If length N*d, used as-is. Otherwise ignored (glmnet will make its own).
 #' @param lambda optional numeric vector of lambdas to force glmnet to use (helps match multivar paths).
+#' @param lambest Character. Default is `"min"`. 
 #' @return list(A_pre, lambda_best, cvfit, include_intercept)
 #' @importFrom glmnet cv.glmnet
 #' @export

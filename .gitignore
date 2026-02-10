@@ -3,3 +3,11 @@ tests_tmp/
 .Rproj.user
 CLAUDE.md
 .claude
+src/*.o
+src/*.o.tmp
+src/*.so
+src/*.dll
+src/*.dylib
+*.Rcheck/
+notes.txt
+*.tar.gz

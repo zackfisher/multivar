@@ -10,8 +10,13 @@
 #' @param offset Numeric. An offset dictating when dynamics should transition from time-invariant to time-varying.
 #' @param ub Numeric. The lower bound for individual elements of the transition matrices.
 #' @param lb Numeric. The upper bound for individual elements of the transition matrices.
+#' @param lb_int Numeric. The upper bound for individual elements of the intercepts.
+#' @param ub_int Numeric. The lower bound for individual elements of the intercepts.
+#' @param lb_slope Numeric. The upper bound for individual elements of the slopes.
+#' @param ub_slope Numeric. The lower bound for individual elements of the slopes.
 #' @param sigma Matrix. The (population) innovation covariance matrix.
 #' @param diag Logical. Default is FALSE. Should diagonal elements be filled first for common elements.
+#' @param iters Integer. Default is 1. Number of iterations 
 #' @param intercept List. Default is NULL. A list of length K containing numeric vectors of length d representing the intercept values. If NULL, intercepts are set to 0.
 #' @keywords var multivar simulate
 #' @export

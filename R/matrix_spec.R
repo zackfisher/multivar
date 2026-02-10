@@ -357,8 +357,10 @@ expand_range <- function(range) {
 }
 
 #' Print method for matrix_spec
-#' @param x A matrix_spec object
-#' @param ... Additional arguments (ignored)
+#'
+#' @param x A matrix_spec object.
+#' @param ... Additional arguments (ignored).
+#' @method print matrix_spec
 #' @export
 print.matrix_spec <- function(x, ...) {
   cat("Matrix Specification\n")

@@ -4,12 +4,12 @@
 \alias{print.matrix_spec}
 \title{Print method for matrix_spec}
 \usage{
-print.matrix_spec(x, ...)
+\method{print}{matrix_spec}(x, ...)
 }
 \arguments{
-\item{x}{A matrix_spec object}
+\item{x}{A matrix_spec object.}
 
-\item{...}{Additional arguments (ignored)}
+\item{...}{Additional arguments (ignored).}
 }
 \description{
 Print method for matrix_spec

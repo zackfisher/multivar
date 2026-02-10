@@ -1,4 +1,5 @@
-#' @export
+#' @keywords internal
+# todo: delete (not being used)
 pretrain.multivar <- function(object, alpha = 0, lambda_best = "1se", stage1adaptive = FALSE, stage2adaptive = FALSE) {
   
 

@@ -1,4 +1,4 @@
-#' @export
+#' @keywords internal
 cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALSE, cv, nfolds){
   
   t1  <- t1[1]

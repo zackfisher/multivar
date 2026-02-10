@@ -173,7 +173,7 @@ scale_weights_by_ratios <- function(w_mat, k, n_pred, subgroup, tvp,
  W
 }
 
-#' @export
+#' @keywords internal
 est_base_weight_mat <- function(
   W,
   Ak,

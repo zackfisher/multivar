@@ -18,6 +18,7 @@
 #' @param lb_quad Numeric. The upper bound for quadratic growth coefficients.
 #' @param sigma Matrix. The (population) innovation covariance matrix.
 #' @param diag Logical. Default is FALSE. Should diagonal elements be filled first for common elements.
+#' @param iters Integer. Default is 1. Number of iterations.
 #' @param type Character. Default is linear.
 #' @param extreme_cutoff Numericr. Default is 10.
 #' @param intercept List. Default is NULL. A list of length K containing numeric vectors of length d representing the intercept values. If NULL, intercepts are set to 0.
@@ -375,7 +376,7 @@ multivar_sim_growth <- function(
 
         for(jj in 1:iters){
           #print(paste0("iter: ", jj))
-          data_jj <- lapply(seq_along(phi), function(i) {multivar:::var_sim_growth(n, phi[[i]], sigma, intercept = intercept[[i]])})
+          data_jj <- lapply(seq_along(phi), function(i) {var_sim_growth(n, phi[[i]], sigma, intercept = intercept[[i]])})
           data_jj <- lapply(data_jj, function(df){colnames(df) <- paste0("V",1:ncol(df)); df})
           data[[jj]] <- data_jj
         }

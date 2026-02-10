@@ -66,6 +66,8 @@ multivar_sim_growth(
 
 \item{diag}{Logical. Default is FALSE. Should diagonal elements be filled first for common elements.}
 
+\item{iters}{Integer. Default is 1. Number of iterations.}
+
 \item{type}{Character. Default is linear.}
 
 \item{extreme_cutoff}{Numericr. Default is 10.}

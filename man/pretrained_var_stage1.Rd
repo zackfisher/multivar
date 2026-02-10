@@ -11,8 +11,18 @@ pretrained_var_stage1(
   lambda_best = "1se"
 )
 }
+\arguments{
+\item{object}{multivar object built using \code{ConstructModel}.}
+
+\item{stage1adaptive}{Logical. Default is FALSE. If TRUE, use adaptive lasso for stage 1}
+
+\item{stage1ratios}{Logical. Default is FALSE. If TRUE, use ratios in stage 1}
+
+\item{lambda_best}{Character. Default is `"1se"`. Which value of lambda to use.}
+}
 \description{
 Runs blocked CV on the reduced problem:
-  Y_t = X_t^{(com)} A_0^T + e_t
-where X_t^{(com)} are the first d columns of object@A.
+  \eqn{Y_t = X_t^{(com)} A_0^T + e_t}
+where \eqn{X_t^{(com)}} are the first d columns of \code{object@A}.
 }
+\keyword{internal}
