@@ -4,3 +4,4 @@
 ^src/.*\.o\.tmp$
 ^src/.*\.(so|dll|dylib)$
 ^notes\.txt$
+^tmp$
