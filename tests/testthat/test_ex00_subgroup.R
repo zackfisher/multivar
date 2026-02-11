@@ -45,7 +45,7 @@
 
 #saveRDS(fit, file = "/Users/zacharyfisher/Dropbox/GitHub/multivar2/tests/testthat/rds/test00_subgroup.rds")
   
-  mats <- readRDS("rds/test00_common_effects.rds")$mats
+  mats <- readRDS("rds/test00_subgroup.rds")$mats
 
   #-------------------------------------------------------# 
   context("test00: common effects correct")
@@ -59,7 +59,7 @@
   context("test00: subgroup effects correct")
   #-------------------------------------------------------# 
   
-  mats <- readRDS("rds/test00_common_effects.rds")$mats
+  #mats <- readRDS("rds/test00_common_effects.rds")
   
   expect_equal_to_reference(
     fit$mats$subgrp, mats$subgrp
