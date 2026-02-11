@@ -42,17 +42,21 @@
   )
   
   fit <- cv.multivar(object)
-
-#saveRDS(fit, file = "/Users/zacharyfisher/Dropbox/GitHub/multivar2/tests/testthat/rds/test00_subgroup.rds")
   
-  mats <- readRDS("rds/test00_subgroup.rds")$mats
+  # saveRDS(fit$mats$common, file = "/Users/zacharyfisher/Dropbox/GitHub/multivar2/tests/testthat/rds/test00_subgroup_common.rds")
+  # 
+  # saveRDS(fit$mats$subgrp, file = "/Users/zacharyfisher/Dropbox/GitHub/multivar2/tests/testthat/rds/test00_subgroup_subgroup.rds")
+  # 
+  # saveRDS(fit$mats$unique, file = "/Users/zacharyfisher/Dropbox/GitHub/multivar2/tests/testthat/rds/test00_subgroup_unique.rds")
+  # 
+  # saveRDS(fit$mats$total, file = "/Users/zacharyfisher/Dropbox/GitHub/multivar2/tests/testthat/rds/test00_subgroup_total.rds")
 
   #-------------------------------------------------------# 
   context("test00: common effects correct")
   #-------------------------------------------------------# 
   
   expect_equal_to_reference(
-    fit$mats$common, mats$common
+    fit$mats$common, "rds/test00_subgroup_common.rds"
   )
   
   #-------------------------------------------------------# 
@@ -62,7 +66,7 @@
   #mats <- readRDS("rds/test00_common_effects.rds")
   
   expect_equal_to_reference(
-    fit$mats$subgrp, mats$subgrp
+    fit$mats$subgrp, "rds/test00_subgroup_subgroup.rds"
   )
   
   #-------------------------------------------------------# 
@@ -70,7 +74,7 @@
   #-------------------------------------------------------# 
   
   expect_equal_to_reference(
-    fit$mats$unique, mats$unique
+    fit$mats$unique, "rds/test00_subgroup_unique.rds"
   )
   
   #-------------------------------------------------------# 
@@ -78,5 +82,5 @@
   #-------------------------------------------------------# 
   
   expect_equal_to_reference(
-    fit$mats$total, mats$total
+    fit$mats$total, "rds/test00_subgroup_total.rds"
   )
