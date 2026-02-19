@@ -8,7 +8,7 @@
 #' @param lambda1 Matrix. Regularization parameter grid. Default is NULL (auto-generated).
 #' @param nlambda1 Numeric. Number of lambda1 values to search over. Default is 30.
 #' @param n_ratios_subgroup Numeric. Number of ratios_subgroup values to search over. Default is 30.
-#' @param depth Numeric. Depth of lambda1 grid construction (lambda_min = lambda_max / depth). Default is 10000 for non-TVP models. For TVP models, depth is determined by nlambda1 as 10^(nlambda1/5) to maintain consistent lambda step ratio (~1.6x per step), giving depth \eqn{\approx} 1e6 for nlambda1=30 and \eqn{\approx} 100 for nlambda1=10. Note: other hyperparameter grids (ratios_unique, ratios_unique_tvp) are constructed independently of depth.
+#' @param depth Numeric. Depth of lambda1 grid construction (lambda_min = lambda_max / depth). Default is 10000.
 #' @param tol Numeric. Optimization tolerance (default 1e-4).
 #' @param window Numeric. Size of rolling window.   
 #' @param standardize Logical. Default is true. Whether to standardize the individual data. Note, if intercept = TRUE and standardize = TRUE, the data is scaled but not de-meaned.
@@ -108,13 +108,7 @@ constructModel <- function( data = NULL,
   # For TVP, nlambda1 determines depth to maintain consistent lambda1 step ratio (~1.6x)
   # Note: depth only affects the lambda1 grid; ratios_unique/ratios_unique_tvp grids are independent
   if (is.null(depth)){
-    if (tvp) {
-      # depth = 10^(nlambda1/5) gives ~1e6 for nlambda1=30, ~100 for nlambda1=10
-      # This maintains a step ratio of about 10^(1/5) ≈ 1.6 regardless of nlambda1
-      depth <- 10^(nlambda1 / 5)
-    } else {
-      depth <- 10000
-    }
+    depth <- 10000
   }
 
   # Validate common_effects
