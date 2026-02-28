@@ -34,6 +34,7 @@
 #' @param lambda_choice Character. Which lambda to use for initial coefficient estimation: "lambda.min" (default) or "lambda.1se". lambda.min provides better coefficient recovery, especially for small samples and TVP models; lambda.1se may be too conservative, causing all-zero initial estimates.
 #' @param common_effects Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE. Default is TRUE (include common effects). When FALSE, the model becomes Total = Unique + TVP instead of Total = Common + Unique + TVP. This can be useful when you expect no shared dynamics across subjects.
 #' @param common_tvp_effects Logical. Whether to include time-varying common effects in TVP models. Default is NULL, which automatically sets to TRUE when tvp = TRUE and FALSE when tvp = FALSE. Only meaningful when tvp = TRUE.
+#' @param save_beta Logical. Whether to retain the full beta coefficient array in the cv.multivar result. Default is TRUE. Set to FALSE to reduce memory usage when only the best-model coefficients (in mats) are needed.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -86,7 +87,8 @@ constructModel <- function( data = NULL,
                             breaks = list(),
                             lambda_choice = "lambda.min",
                             common_effects = TRUE,
-                            common_tvp_effects = NULL ){
+                            common_tvp_effects = NULL,
+                            save_beta = TRUE ){
 
   #------------------------------------------------------------------
   # basic checks (unchanged)
@@ -430,12 +432,12 @@ constructModel <- function( data = NULL,
           min_period_length <- min(min_period_length, period_len)
 
           # Check if period is too short for VAR estimation
-          # Need at least d*(d+1) observations to estimate d*d transition matrix + d intercepts
-          min_obs_needed <- ndk[i] * (ndk[i] + 1)
+          # Need at least d+2 observations (d predictors per equation + minimal df)
+          min_obs_needed <- ndk[i] + 2
           if (period_len < min_obs_needed){
             stop(sprintf(
-              "multivar ERROR: Period %d for subject %d has only %d observations but needs at least %d (d*(d+1) = %d*%d) for VAR estimation.",
-              j, i, period_len, min_obs_needed, ndk[i], ndk[i] + 1
+              "multivar ERROR: Period %d for subject %d has only %d observations but needs at least %d (d+2 = %d+2) for VAR estimation.",
+              j, i, period_len, min_obs_needed, ndk[i]
             ))
           }
 
@@ -597,12 +599,14 @@ constructModel <- function( data = NULL,
       if (k == 1) {
         if (common_effects) {
           # For k=1 TVP with common_effects, ratios_unique_tvp scales common weights
-          # Grid from 1/depth to 1: smaller values = less penalization on common
+          # Max ratio = P (number of periods), analogous to k>1 where max = k
+          # Common is estimated from P periods, so can afford P× less penalization
+          n_periods <- length(breaks[[1]])
           nalpha <- nlambda1
           ratios_unique_tvp <- rev(round(
             exp(seq(
-              log(1/depth),
-              log(1),
+              log(n_periods/depth),
+              log(n_periods),
               length.out = nalpha
             )),
             digits = 10
@@ -853,6 +857,7 @@ constructModel <- function( data = NULL,
              lambda_choice = lambda_choice,
              common_effects = common_effects,
              common_tvp_effects = common_tvp_effects,
+             save_beta = save_beta,
              spec = unclass(spec)
   )
 

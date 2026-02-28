@@ -38,7 +38,8 @@ constructModel(
   breaks = list(),
   lambda_choice = "lambda.min",
   common_effects = TRUE,
-  common_tvp_effects = NULL
+  common_tvp_effects = NULL,
+  save_beta = TRUE
 )
 }
 \arguments{
@@ -58,7 +59,7 @@ constructModel(
 
 \item{n_ratios_subgroup}{Numeric. Number of ratios_subgroup values to search over. Default is 30.}
 
-\item{depth}{Numeric. Depth of lambda1 grid construction (lambda_min = lambda_max / depth). Default is 10000 for non-TVP models. For TVP models, depth is determined by nlambda1 as 10^(nlambda1/5) to maintain consistent lambda step ratio (~1.6x per step), giving depth \eqn{\approx} 1e6 for nlambda1=30 and \eqn{\approx} 100 for nlambda1=10. Note: other hyperparameter grids (ratios_unique, ratios_unique_tvp) are constructed independently of depth.}
+\item{depth}{Numeric. Depth of lambda1 grid construction (lambda_min = lambda_max / depth). Default is 10000.}
 
 \item{tol}{Numeric. Optimization tolerance (default 1e-4).}
 
@@ -109,6 +110,8 @@ constructModel(
 \item{common_effects}{Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE. Default is TRUE (include common effects). When FALSE, the model becomes Total = Unique + TVP instead of Total = Common + Unique + TVP. This can be useful when you expect no shared dynamics across subjects.}
 
 \item{common_tvp_effects}{Logical. Whether to include time-varying common effects in TVP models. Default is NULL, which automatically sets to TRUE when tvp = TRUE and FALSE when tvp = FALSE. Only meaningful when tvp = TRUE.}
+
+\item{save_beta}{Logical. Whether to retain the full beta coefficient array in the cv.multivar result. Default is TRUE. Set to FALSE to reduce memory usage when only the best-model coefficients (in mats) are needed.}
 }
 \description{
 Construct an object of class multivar

@@ -1,8 +1,6 @@
 .DS_Store
 tests_tmp/
 .Rproj.user
-CLAUDE.md
-.claude
 src/*.o
 src/*.o.tmp
 src/*.so

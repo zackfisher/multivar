@@ -117,6 +117,8 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{common_tvp_effects}}{Logical. Whether to include common TVP effects (shared time-varying patterns) in TVP models. Only applies when tvp = TRUE.}
 
+\item{\code{save_beta}}{Logical. Whether to retain the full beta array in the cv.multivar result. Default is TRUE.}
+
 \item{\code{spec}}{List. Design matrix specification object created by \code{\link{build_matrix_spec}}. Single source of truth for column/row indices.}
 }}
 

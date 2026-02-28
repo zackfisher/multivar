@@ -69,6 +69,7 @@ check.multivar <- function(object){
 #' @slot lambda_choice Character. Which lambda to use for initial coefficient estimation ("lambda.min" or "lambda.1se").
 #' @slot common_effects Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE.
 #' @slot common_tvp_effects Logical. Whether to include common TVP effects (shared time-varying patterns) in TVP models. Only applies when tvp = TRUE.
+#' @slot save_beta Logical. Whether to retain the full beta array in the cv.multivar result. Default is TRUE.
 #' @slot spec List. Design matrix specification object created by \code{\link{build_matrix_spec}}. Single source of truth for column/row indices.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
@@ -128,6 +129,7 @@ setClass(
         lambda_choice = "character",
         common_effects = "logical",
         common_tvp_effects = "logical",
+        save_beta = "logical",
         spec = "list"
         ),validity=check.multivar
     )
@@ -327,7 +329,7 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
 
   results <- list(
     mats = mats,
-    beta = fit[[1]],
+    beta = if (object@save_beta) fit[[1]] else NULL,
     MSFE = fit[[2]],
     obj  = object,
     hyperparams = hyp
