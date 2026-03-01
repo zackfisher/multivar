@@ -88,8 +88,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // FISTA
-mat FISTA(const mat& Y, const mat& Z, mat& B, mat& W, const rowvec lambda1, const double eps, double step);
-RcppExport SEXP _multivar_FISTA(SEXP YSEXP, SEXP ZSEXP, SEXP BSEXP, SEXP WSEXP, SEXP lambda1SEXP, SEXP epsSEXP, SEXP stepSEXP) {
+mat FISTA(const mat& Y, const mat& Z, mat& B, mat& W, const rowvec lambda1, const double eps, double step, int stopping_crit);
+RcppExport SEXP _multivar_FISTA(SEXP YSEXP, SEXP ZSEXP, SEXP BSEXP, SEXP WSEXP, SEXP lambda1SEXP, SEXP epsSEXP, SEXP stepSEXP, SEXP stopping_critSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -100,13 +100,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const rowvec >::type lambda1(lambda1SEXP);
     Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
     Rcpp::traits::input_parameter< double >::type step(stepSEXP);
-    rcpp_result_gen = Rcpp::wrap(FISTA(Y, Z, B, W, lambda1, eps, step));
+    Rcpp::traits::input_parameter< int >::type stopping_crit(stopping_critSEXP);
+    rcpp_result_gen = Rcpp::wrap(FISTA(Y, Z, B, W, lambda1, eps, step, stopping_crit));
     return rcpp_result_gen;
 END_RCPP
 }
 // lamloopFISTA
-cube lamloopFISTA(NumericVector beta_, const mat& Y, const mat& Z, NumericVector W_, const mat& lambda1, const double eps, mat& B1, double step);
-RcppExport SEXP _multivar_lamloopFISTA(SEXP beta_SEXP, SEXP YSEXP, SEXP ZSEXP, SEXP W_SEXP, SEXP lambda1SEXP, SEXP epsSEXP, SEXP B1SEXP, SEXP stepSEXP) {
+cube lamloopFISTA(NumericVector beta_, const mat& Y, const mat& Z, NumericVector W_, const mat& lambda1, const double eps, mat& B1, double step, bool warmstart, int stopping_crit);
+RcppExport SEXP _multivar_lamloopFISTA(SEXP beta_SEXP, SEXP YSEXP, SEXP ZSEXP, SEXP W_SEXP, SEXP lambda1SEXP, SEXP epsSEXP, SEXP B1SEXP, SEXP stepSEXP, SEXP warmstartSEXP, SEXP stopping_critSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -118,13 +119,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
     Rcpp::traits::input_parameter< mat& >::type B1(B1SEXP);
     Rcpp::traits::input_parameter< double >::type step(stepSEXP);
-    rcpp_result_gen = Rcpp::wrap(lamloopFISTA(beta_, Y, Z, W_, lambda1, eps, B1, step));
+    Rcpp::traits::input_parameter< bool >::type warmstart(warmstartSEXP);
+    Rcpp::traits::input_parameter< int >::type stopping_crit(stopping_critSEXP);
+    rcpp_result_gen = Rcpp::wrap(lamloopFISTA(beta_, Y, Z, W_, lambda1, eps, B1, step, warmstart, stopping_crit));
     return rcpp_result_gen;
 END_RCPP
 }
 // lamloopFISTA_offset
-cube lamloopFISTA_offset(NumericVector beta_, const mat& Y, const mat& Z, NumericVector W_, const mat& lambda1, const double eps, const colvec& ZMean2, mat& B1, double step, const mat& offset);
-RcppExport SEXP _multivar_lamloopFISTA_offset(SEXP beta_SEXP, SEXP YSEXP, SEXP ZSEXP, SEXP W_SEXP, SEXP lambda1SEXP, SEXP epsSEXP, SEXP ZMean2SEXP, SEXP B1SEXP, SEXP stepSEXP, SEXP offsetSEXP) {
+cube lamloopFISTA_offset(NumericVector beta_, const mat& Y, const mat& Z, NumericVector W_, const mat& lambda1, const double eps, const colvec& ZMean2, mat& B1, double step, const mat& offset, bool warmstart, int stopping_crit);
+RcppExport SEXP _multivar_lamloopFISTA_offset(SEXP beta_SEXP, SEXP YSEXP, SEXP ZSEXP, SEXP W_SEXP, SEXP lambda1SEXP, SEXP epsSEXP, SEXP ZMean2SEXP, SEXP B1SEXP, SEXP stepSEXP, SEXP offsetSEXP, SEXP warmstartSEXP, SEXP stopping_critSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -138,7 +141,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< mat& >::type B1(B1SEXP);
     Rcpp::traits::input_parameter< double >::type step(stepSEXP);
     Rcpp::traits::input_parameter< const mat& >::type offset(offsetSEXP);
-    rcpp_result_gen = Rcpp::wrap(lamloopFISTA_offset(beta_, Y, Z, W_, lambda1, eps, ZMean2, B1, step, offset));
+    Rcpp::traits::input_parameter< bool >::type warmstart(warmstartSEXP);
+    Rcpp::traits::input_parameter< int >::type stopping_crit(stopping_critSEXP);
+    rcpp_result_gen = Rcpp::wrap(lamloopFISTA_offset(beta_, Y, Z, W_, lambda1, eps, ZMean2, B1, step, offset, warmstart, stopping_crit));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -150,9 +155,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_multivar_ST1a", (DL_FUNC) &_multivar_ST1a, 2},
     {"_multivar_ST3a", (DL_FUNC) &_multivar_ST3a, 2},
     {"_multivar_ind", (DL_FUNC) &_multivar_ind, 2},
-    {"_multivar_FISTA", (DL_FUNC) &_multivar_FISTA, 7},
-    {"_multivar_lamloopFISTA", (DL_FUNC) &_multivar_lamloopFISTA, 8},
-    {"_multivar_lamloopFISTA_offset", (DL_FUNC) &_multivar_lamloopFISTA_offset, 10},
+    {"_multivar_FISTA", (DL_FUNC) &_multivar_FISTA, 8},
+    {"_multivar_lamloopFISTA", (DL_FUNC) &_multivar_lamloopFISTA, 10},
+    {"_multivar_lamloopFISTA_offset", (DL_FUNC) &_multivar_lamloopFISTA_offset, 12},
     {NULL, NULL, 0}
 };
 

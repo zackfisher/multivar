@@ -22,7 +22,10 @@ cv_multivar(
   nfolds,
   tvp = FALSE,
   breaks = NULL,
-  spec = NULL
+  spec = NULL,
+  ncores = 1,
+  warmstart = FALSE,
+  stopping_crit = 0L
 )
 }
 \arguments{

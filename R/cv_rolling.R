@@ -1,5 +1,6 @@
 #' @keywords internal
-cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALSE, cv, nfolds){
+cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALSE, cv, nfolds,
+                       warmstart = FALSE, stopping_crit = 0L){
   
   t1  <- t1[1]
   t2  <- t2[1]
@@ -24,7 +25,8 @@ cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALS
     #cat("test : ", train_idx, "\n")
     #cat("train: ", test_idx, "\n\n")
   
-    beta <- wlasso(B, Z[,train_idx], Y[,train_idx], W, k, d, lambda1,eps,intercept)
+    beta <- wlasso(B, Z[,train_idx], Y[,train_idx], W, k, d, lambda1,eps,intercept,
+                   warmstart = warmstart, stopping_crit = stopping_crit)
 
     # Calculate h-step MSFE for each penalty parameter
     for (ii in 1:dim(beta)[3]) {
@@ -33,7 +35,8 @@ cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALS
     }
   }
   
-  beta <- wlasso(B, Z, Y, W, k, d, lambda1,eps,intercept)
+  beta <- wlasso(B, Z, Y, W, k, d, lambda1,eps,intercept,
+                 warmstart = warmstart, stopping_crit = stopping_crit)
   
   return(list(beta,MSFE))
   

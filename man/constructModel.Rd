@@ -39,7 +39,12 @@ constructModel(
   lambda_choice = "lambda.min",
   common_effects = TRUE,
   common_tvp_effects = NULL,
-  save_beta = TRUE
+  save_beta = TRUE,
+  ncores = 1,
+  max_grid_size = NULL,
+  eps = 0.001,
+  warmstart = TRUE,
+  stopping_crit = "absolute"
 )
 }
 \arguments{
@@ -112,6 +117,12 @@ constructModel(
 \item{common_tvp_effects}{Logical. Whether to include time-varying common effects in TVP models. Default is NULL, which automatically sets to TRUE when tvp = TRUE and FALSE when tvp = FALSE. Only meaningful when tvp = TRUE.}
 
 \item{save_beta}{Logical. Whether to retain the full beta coefficient array in the cv.multivar result. Default is TRUE. Set to FALSE to reduce memory usage when only the best-model coefficients (in mats) are needed.}
+
+\item{eps}{Numeric. FISTA convergence tolerance. Default is 1e-3. Smaller values yield more precise solutions but increase computation time.}
+
+\item{warmstart}{Logical. Whether to use the previous lambda's solution as the starting point for the next lambda in the FISTA solver. Default is TRUE. Reduces computation time with negligible effect on accuracy.}
+
+\item{stopping_crit}{Character. FISTA convergence criterion. One of "absolute" (default), "relative", or "objective". "absolute" checks max|B_new - B_old| < eps; "relative" normalizes by max|B_old|; "objective" checks relative change in the objective function.}
 }
 \description{
 Construct an object of class multivar

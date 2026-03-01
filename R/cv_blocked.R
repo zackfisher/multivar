@@ -61,7 +61,8 @@ build_row_spec_old <- function(Ak, breaks = NULL) {
 #' @export
 cv_blocked <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,
                        intercept = FALSE, cv, nfolds, tvp = FALSE,
-                       breaks = NULL, spec = NULL) {
+                       breaks = NULL, spec = NULL, ncores = 1,
+                       warmstart = FALSE, stopping_crit = 0L) {
 
   # Build spec if not provided (for legacy callers)
   if (is.null(spec)) {
@@ -110,39 +111,47 @@ cv_blocked <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,
   }
   #MSFE <- matrix(NA, nrow = nfolds, ncol = nrow(lambda1)*length(ratios_unique))
   MSFE <- matrix(NA, nrow = nfolds, ncol = nrow(lambda1)*dim(W)[3])
-  pb   <- txtProgressBar(1, nfolds, style=3)
-  
-  for(fold_id in 1:nfolds){ # fold_id <- 1
-    
-    setTxtProgressBar(pb, fold_id)
-    
-    test_idx  <- unlist(lapply(1:k,function(a){cv_list[[a]][fold_id]}))   
-    train_idx <- unlist(lapply(1:k,function(a){cv_list[[a]][-fold_id]})) 
-    
-    # dim(B)
-    # dim(Z[,train_idx])
-    # dim(Y[,train_idx])
-    # dim(W)
-   
-    # dataset1 dataset1          
-    # 5       21      900 
-    # [1]  20 267
-    # [1]   5 267
-    # [1]  5 20 30
-    
-    beta <- wlasso(B, Z[,train_idx], Y[,train_idx], W, k, d, lambda1,eps,intercept)
-    
-    # beta <- multivar:::wlasso(B[1,,,drop=F], Z[,train_idx], Y[1,train_idx,drop=F], W[1,,,drop=F], k, d, lambda1,eps,intercept)
-    # beta <- multivar:::wlasso(B, Z[,train_idx], Y[1,train_idx,drop=F], W, k, d, lambda1,eps,intercept)
-    
-    # Calculate h-step MSFE for each penalty parameter
-    for (ii in 1:dim(beta)[3]) {
-      #MSFE[fold_id,ii] <- norm2(Y[,test_idx,drop=F]- beta[,-1,ii] %*% Z[,test_idx,drop=F] )^2
-      MSFE[fold_id,ii] <- norm2(Y[,test_idx,drop=F]- beta[,,ii] %*% Z[,test_idx,drop=F] )^2
+
+  if (ncores > 1) {
+    # Parallel CV folds
+    fold_results <- parallel::mclapply(1:nfolds, function(fold_id) {
+      test_idx  <- unlist(lapply(1:k, function(a) cv_list[[a]][fold_id]))
+      train_idx <- unlist(lapply(1:k, function(a) cv_list[[a]][-fold_id]))
+      beta_fold <- wlasso(B, Z[,train_idx], Y[,train_idx], W, k, d, lambda1, eps, intercept,
+                          warmstart = warmstart, stopping_crit = stopping_crit)
+      msfe_row <- numeric(nrow(lambda1)*dim(W)[3])
+      for (ii in 1:dim(beta_fold)[3]) {
+        msfe_row[ii] <- norm2(Y[,test_idx,drop=F] - beta_fold[,,ii] %*% Z[,test_idx,drop=F])^2
+      }
+      msfe_row
+    }, mc.cores = ncores)
+    for (fold_id in 1:nfolds) {
+      MSFE[fold_id, ] <- fold_results[[fold_id]]
     }
+  } else {
+    # Sequential with progress bar (original behavior)
+    pb   <- txtProgressBar(1, nfolds, style=3)
+
+    for(fold_id in 1:nfolds){ # fold_id <- 1
+
+      setTxtProgressBar(pb, fold_id)
+
+      test_idx  <- unlist(lapply(1:k,function(a){cv_list[[a]][fold_id]}))
+      train_idx <- unlist(lapply(1:k,function(a){cv_list[[a]][-fold_id]}))
+
+      beta <- wlasso(B, Z[,train_idx], Y[,train_idx], W, k, d, lambda1,eps,intercept,
+                     warmstart = warmstart, stopping_crit = stopping_crit)
+
+      # Calculate h-step MSFE for each penalty parameter
+      for (ii in 1:dim(beta)[3]) {
+        MSFE[fold_id,ii] <- norm2(Y[,test_idx,drop=F]- beta[,,ii] %*% Z[,test_idx,drop=F] )^2
+      }
+    }
+    close(pb)
   }
-  
-  beta <- wlasso(B, Z, Y, W, k, d, lambda1,eps,intercept)
+
+  beta <- wlasso(B, Z, Y, W, k, d, lambda1,eps,intercept,
+                 warmstart = warmstart, stopping_crit = stopping_crit)
 
   return(list(beta,MSFE))
   

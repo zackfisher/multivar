@@ -130,7 +130,11 @@ setClass(
         common_effects = "logical",
         common_tvp_effects = "logical",
         save_beta = "logical",
-        spec = "list"
+        ncores = "numeric",
+        spec = "list",
+        eps = "numeric",
+        warmstart = "logical",
+        stopping_crit = "character"
         ),validity=check.multivar
     )
 
@@ -235,14 +239,18 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@spec
   )
   
+  # Precompute transposes once (used for lambda_grid and cv_multivar)
+  tA <- t(as.matrix(object@A))
+  tb <- t(as.matrix(object@b))
+
   # Only construct lambda grid if user didn't provide fixed lambda values
   # User-provided lambdas have non-zero values; default is all zeros
   if (all(object@lambda1 == 0)) {
     object@lambda1 <- lambda_grid(
       depth     = object@depth,
       nlam      = object@nlambda1,
-      Y         = t(as.matrix(object@b)),
-      Z         = t(as.matrix(object@A)),
+      Y         = tb,
+      Z         = tA,
       W         = object@W,
       tol       = object@tol,
       intercept = object@intercept,
@@ -251,10 +259,12 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     )
   }
 
+  stopping_crit_int <- match(object@stopping_crit, c("absolute", "relative", "objective")) - 1L
+
   fit <- cv_multivar(
     object@B,
-    t(as.matrix(object@A)),
-    t(as.matrix(object@b)),
+    tA,
+    tb,
     object@W,
     object@Ak,
     object@bk,
@@ -263,13 +273,16 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@lambda1,
     object@t1,
     object@t2,
-    eps = 1e-3,
+    eps = object@eps,
     object@intercept,
     object@cv,
     object@nfolds,
     object@tvp,
     object@breaks,
-    object@spec
+    object@spec,
+    object@ncores,
+    warmstart = object@warmstart,
+    stopping_crit = stopping_crit_int
   )
   
 

@@ -35,6 +35,9 @@
 #' @param common_effects Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE. Default is TRUE (include common effects). When FALSE, the model becomes Total = Unique + TVP instead of Total = Common + Unique + TVP. This can be useful when you expect no shared dynamics across subjects.
 #' @param common_tvp_effects Logical. Whether to include time-varying common effects in TVP models. Default is NULL, which automatically sets to TRUE when tvp = TRUE and FALSE when tvp = FALSE. Only meaningful when tvp = TRUE.
 #' @param save_beta Logical. Whether to retain the full beta coefficient array in the cv.multivar result. Default is TRUE. Set to FALSE to reduce memory usage when only the best-model coefficients (in mats) are needed.
+#' @param eps Numeric. FISTA convergence tolerance. Default is 1e-3. Smaller values yield more precise solutions but increase computation time.
+#' @param warmstart Logical. Whether to use the previous lambda's solution as the starting point for the next lambda in the FISTA solver. Default is TRUE. Reduces computation time with negligible effect on accuracy.
+#' @param stopping_crit Character. FISTA convergence criterion. One of "absolute" (default), "relative", or "objective". "absolute" checks max|B_new - B_old| < eps; "relative" normalizes by max|B_old|; "objective" checks relative change in the objective function.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -88,7 +91,12 @@ constructModel <- function( data = NULL,
                             lambda_choice = "lambda.min",
                             common_effects = TRUE,
                             common_tvp_effects = NULL,
-                            save_beta = TRUE ){
+                            save_beta = TRUE,
+                            ncores = 1,
+                            max_grid_size = NULL,
+                            eps = 1e-3,
+                            warmstart = TRUE,
+                            stopping_crit = "absolute" ){
 
   #------------------------------------------------------------------
   # basic checks (unchanged)
@@ -104,6 +112,13 @@ constructModel <- function( data = NULL,
   if (!lambda_choice %in% c("lambda.min", "lambda.1se")){
     stop("multivar ERROR: lambda_choice must be either 'lambda.min' or 'lambda.1se'")
   }
+
+  if (!is.numeric(eps) || length(eps) != 1 || eps <= 0)
+    stop("multivar ERROR: eps must be a positive numeric scalar.")
+  if (!is.logical(warmstart) || length(warmstart) != 1)
+    stop("multivar ERROR: warmstart must be TRUE or FALSE.")
+  if (!stopping_crit %in% c("absolute", "relative", "objective"))
+    stop("multivar ERROR: stopping_crit must be 'absolute', 'relative', or 'objective'.")
 
   # Set depth default based on model type
   # TVP models need larger depth because adaptive weights can be extreme (up to 1e10)
@@ -648,6 +663,56 @@ constructModel <- function( data = NULL,
       ratios_common_tvp <- rep(1, nbeta)
     }
 
+    # Coarsen grids if total size exceeds max_grid_size
+    if (!is.null(max_grid_size) && max_grid_size > 0) {
+      grid_dims <- c(
+        lambda = nlambda1,
+        ratio = length(ratios_unique),
+        ratio_tvp = length(ratios_unique_tvp),
+        ratio_subgroup = length(ratios_subgroup),
+        ratio_common_tvp = length(ratios_common_tvp)
+      )
+      # Only count dimensions > 1 as "active"
+      active <- grid_dims[grid_dims > 1]
+      total_grid <- prod(grid_dims)
+
+      if (total_grid > max_grid_size) {
+        # Proportionally reduce each active dimension
+        reduction_factor <- (max_grid_size / total_grid)^(1 / length(active))
+        thin_grid <- function(x, n_new) {
+          if (length(x) <= n_new) return(x)
+          idx <- round(seq(1, length(x), length.out = n_new))
+          x[idx]
+        }
+
+        if (nlambda1 > 1) {
+          nlambda1 <- max(2L, as.integer(ceiling(nlambda1 * reduction_factor)))
+        }
+        if (length(ratios_unique) > 1) {
+          ratios_unique <- thin_grid(ratios_unique,
+            max(2L, as.integer(ceiling(length(ratios_unique) * reduction_factor))))
+        }
+        if (length(ratios_unique_tvp) > 1) {
+          ratios_unique_tvp <- thin_grid(ratios_unique_tvp,
+            max(2L, as.integer(ceiling(length(ratios_unique_tvp) * reduction_factor))))
+        }
+        if (length(ratios_subgroup) > 1) {
+          ratios_subgroup <- thin_grid(ratios_subgroup,
+            max(2L, as.integer(ceiling(length(ratios_subgroup) * reduction_factor))))
+        }
+        if (length(ratios_common_tvp) > 1) {
+          ratios_common_tvp <- thin_grid(ratios_common_tvp,
+            max(2L, as.integer(ceiling(length(ratios_common_tvp) * reduction_factor))))
+        }
+
+        message(sprintf("Grid coarsened from %d to %d combinations (max_grid_size=%d)",
+                        total_grid,
+                        nlambda1 * length(ratios_unique) * length(ratios_unique_tvp) *
+                          length(ratios_subgroup) * length(ratios_common_tvp),
+                        max_grid_size))
+      }
+    }
+
     lambda1 <- matrix(0, nlambda1, length(ratios_unique))
 
   } else {
@@ -858,7 +923,11 @@ constructModel <- function( data = NULL,
              common_effects = common_effects,
              common_tvp_effects = common_tvp_effects,
              save_beta = save_beta,
-             spec = unclass(spec)
+             ncores = ncores,
+             spec = unclass(spec),
+             eps = eps,
+             warmstart = warmstart,
+             stopping_crit = stopping_crit
   )
 
   return(obj)
