@@ -35,8 +35,17 @@ print.multivar_fit <- function(x, ...) {
 
   # Model fit
   cat("\nModel Fit:\n")
-  cat(sprintf("  Lambda selected:        %.6f\n", x$hyperparams$lambda))
-  cat(sprintf("  Mean CV error:          %.6f\n", min(colMeans(x$MSFE))))
+  sel <- if (!is.null(x$selection)) x$selection else "cv"
+  if (sel == "ebic") {
+    cat(sprintf("  Selection criterion:    EBIC (gamma=%.1f)\n", x$ebic$gamma))
+    cat(sprintf("  EBIC value:             %.2f\n", x$ebic$values[x$ebic$best_idx]))
+    best_B <- x$beta[, , x$ebic$best_idx]
+    cat(sprintf("  Nonzero coefficients:   %d\n", sum(abs(best_B) > 0)))
+  } else {
+    cat(sprintf("  Selection criterion:    CV (MSFE)\n"))
+    cat(sprintf("  Lambda selected:        %.6f\n", x$hyperparams$lambda))
+    cat(sprintf("  Mean CV error:          %.6f\n", min(colMeans(x$MSFE))))
+  }
 
   # Results
   if (obj@tvp) {

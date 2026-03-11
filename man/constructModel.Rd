@@ -44,7 +44,9 @@ constructModel(
   max_grid_size = NULL,
   eps = 0.001,
   warmstart = TRUE,
-  stopping_crit = "absolute"
+  stopping_crit = "absolute",
+  selection = "cv",
+  ebic_gamma = 0.5
 )
 }
 \arguments{
@@ -123,6 +125,10 @@ constructModel(
 \item{warmstart}{Logical. Whether to use the previous lambda's solution as the starting point for the next lambda in the FISTA solver. Default is TRUE. Reduces computation time with negligible effect on accuracy.}
 
 \item{stopping_crit}{Character. FISTA convergence criterion. One of "absolute" (default), "relative", or "objective". "absolute" checks max|B_new - B_old| < eps; "relative" normalizes by max|B_old|; "objective" checks relative change in the objective function.}
+
+\item{selection}{Character. Model selection criterion. \code{"cv"} (default) uses cross-validated MSFE. \code{"ebic"} skips CV folds entirely, fits once on the full data, and selects by Extended BIC. EBIC is much faster and can improve structure recovery when n >> p.}
+
+\item{ebic_gamma}{Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. \code{0} gives standard BIC; \code{0.5} (default) is moderate EBIC; \code{1} is most conservative.}
 }
 \description{
 Construct an object of class multivar

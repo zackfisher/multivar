@@ -71,6 +71,8 @@ check.multivar <- function(object){
 #' @slot common_tvp_effects Logical. Whether to include common TVP effects (shared time-varying patterns) in TVP models. Only applies when tvp = TRUE.
 #' @slot save_beta Logical. Whether to retain the full beta array in the cv.multivar result. Default is TRUE.
 #' @slot spec List. Design matrix specification object created by \code{\link{build_matrix_spec}}. Single source of truth for column/row indices.
+#' @slot selection Character. Model selection criterion: \code{"cv"} (default) for cross-validated MSFE, or \code{"ebic"} for Extended BIC.
+#' @slot ebic_gamma Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. Default is 0.5.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -134,7 +136,9 @@ setClass(
         spec = "list",
         eps = "numeric",
         warmstart = "logical",
-        stopping_crit = "character"
+        stopping_crit = "character",
+        selection = "character",
+        ebic_gamma = "numeric"
         ),validity=check.multivar
     )
 
@@ -261,65 +265,78 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
 
   stopping_crit_int <- match(object@stopping_crit, c("absolute", "relative", "objective")) - 1L
 
-  fit <- cv_multivar(
-    object@B,
-    tA,
-    tb,
-    object@W,
-    object@Ak,
-    object@bk,
-    object@k,
-    object@d,
-    object@lambda1,
-    object@t1,
-    object@t2,
-    eps = object@eps,
-    object@intercept,
-    object@cv,
-    object@nfolds,
-    object@tvp,
-    object@breaks,
-    object@spec,
-    object@ncores,
-    warmstart = object@warmstart,
-    stopping_crit = stopping_crit_int
-  )
-  
+  if (object@selection == "ebic") {
+    # EBIC path: fit all scenarios on full data (no CV folds)
+    beta <- wlasso(object@B, tA, tb, object@W, object@k, object@d,
+                   object@lambda1, object@eps, object@intercept,
+                   warmstart = object@warmstart, stopping_crit = stopping_crit_int)
+    fit <- list(beta, NULL)  # No MSFE matrix
 
-  hyp <- extract_multivar_hyperparams(
-    object,
-    fit
-  )
+    # Select best scenario by EBIC
+    ebic_vals <- compute_ebic(beta, tA, tb, object@d, object@ebic_gamma)
+    best_idx <- which.min(ebic_vals)
 
-  # Check if selected hyperparameters are at grid boundaries
-  best_idx <- which.min(hyp$MSFE)
-  best_lambda_idx <- hyp$lambda1_index[best_idx]
-  best_ratio_idx <- hyp$ratio_index[best_idx]
-  n_lambda <- nrow(object@lambda1)
-  n_ratios <- ncol(object@lambda1)
+  } else {
+    # CV path: existing cross-validation code
+    fit <- cv_multivar(
+      object@B,
+      tA,
+      tb,
+      object@W,
+      object@Ak,
+      object@bk,
+      object@k,
+      object@d,
+      object@lambda1,
+      object@t1,
+      object@t2,
+      eps = object@eps,
+      object@intercept,
+      object@cv,
+      object@nfolds,
+      object@tvp,
+      object@breaks,
+      object@spec,
+      object@ncores,
+      warmstart = object@warmstart,
+      stopping_crit = stopping_crit_int
+    )
 
-  # Check lambda1 boundaries
-  if (best_lambda_idx == 1) {
-    warning("lambda1 selected at upper boundary (maximum regularization). ",
-            "Consider increasing depth or checking if model is overpenalized.")
-  } else if (best_lambda_idx == n_lambda) {
-    warning("lambda1 selected at lower boundary (minimum regularization). ",
-            "Consider increasing depth for wider lambda range.")
-  }
+    hyp <- extract_multivar_hyperparams(
+      object,
+      fit
+    )
 
-  # Check ratio boundaries (only warn if more than 1 ratio value)
-  if (n_ratios > 1) {
-    if (best_ratio_idx == 1) {
-      warning("ratio selected at upper boundary. ",
-              "Consider expanding the ratios_unique grid.")
-    } else if (best_ratio_idx == n_ratios) {
-      warning("ratio selected at lower boundary. ",
-              "Consider expanding the ratios_unique grid.")
+    # Check if selected hyperparameters are at grid boundaries
+    best_idx <- which.min(hyp$MSFE)
+    best_lambda_idx <- hyp$lambda1_index[best_idx]
+    best_ratio_idx <- hyp$ratio_index[best_idx]
+    n_lambda <- nrow(object@lambda1)
+    n_ratios <- ncol(object@lambda1)
+
+    # Check lambda1 boundaries
+    if (best_lambda_idx == 1) {
+      warning("lambda1 selected at upper boundary (maximum regularization). ",
+              "Consider increasing depth or checking if model is overpenalized.")
+    } else if (best_lambda_idx == n_lambda) {
+      warning("lambda1 selected at lower boundary (minimum regularization). ",
+              "Consider increasing depth for wider lambda range.")
+    }
+
+    # Check ratio boundaries (only warn if more than 1 ratio value)
+    if (n_ratios > 1) {
+      if (best_ratio_idx == 1) {
+        warning("ratio selected at upper boundary. ",
+                "Consider expanding the ratios_unique grid.")
+      } else if (best_ratio_idx == n_ratios) {
+        warning("ratio selected at lower boundary. ",
+                "Consider expanding the ratios_unique grid.")
+      }
     }
   }
 
   mats <- breakup_transition(
-    B = fit[[1]][,,which.min(colMeans(fit[[2]]))],
+    B = fit[[1]][,,best_idx],
     spec = object@spec,
     Ak = object@Ak,
     breaks = object@breaks
@@ -340,13 +357,30 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     )
   }
 
-  results <- list(
-    mats = mats,
-    beta = if (object@save_beta) fit[[1]] else NULL,
-    MSFE = fit[[2]],
-    obj  = object,
-    hyperparams = hyp
-  )
+  if (object@selection == "ebic") {
+    results <- list(
+      mats = mats,
+      beta = if (object@save_beta) fit[[1]] else NULL,
+      MSFE = NULL,
+      obj  = object,
+      hyperparams = NULL,
+      selection = "ebic",
+      ebic = list(
+        values   = ebic_vals,
+        best_idx = best_idx,
+        gamma    = object@ebic_gamma
+      )
+    )
+  } else {
+    results <- list(
+      mats = mats,
+      beta = if (object@save_beta) fit[[1]] else NULL,
+      MSFE = fit[[2]],
+      obj  = object,
+      hyperparams = hyp,
+      selection = "cv"
+    )
+  }
 
   # Add S3 class for method dispatch
   class(results) <- c("multivar_fit", "list")

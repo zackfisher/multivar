@@ -38,6 +38,8 @@
 #' @param eps Numeric. FISTA convergence tolerance. Default is 1e-3. Smaller values yield more precise solutions but increase computation time.
 #' @param warmstart Logical. Whether to use the previous lambda's solution as the starting point for the next lambda in the FISTA solver. Default is TRUE. Reduces computation time with negligible effect on accuracy.
 #' @param stopping_crit Character. FISTA convergence criterion. One of "absolute" (default), "relative", or "objective". "absolute" checks max|B_new - B_old| < eps; "relative" normalizes by max|B_old|; "objective" checks relative change in the objective function.
+#' @param selection Character. Model selection criterion. \code{"cv"} (default) uses cross-validated MSFE. \code{"ebic"} skips CV folds entirely, fits once on the full data, and selects by Extended BIC. EBIC is much faster and can improve structure recovery when n >> p.
+#' @param ebic_gamma Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. \code{0} gives standard BIC; \code{0.5} (default) is moderate EBIC; \code{1} is most conservative.
 #' @examples
 #' 
 #' sim  <- multivar_sim(
@@ -96,7 +98,9 @@ constructModel <- function( data = NULL,
                             max_grid_size = NULL,
                             eps = 1e-3,
                             warmstart = TRUE,
-                            stopping_crit = "absolute" ){
+                            stopping_crit = "absolute",
+                            selection = "cv",
+                            ebic_gamma = 0.5 ){
 
   #------------------------------------------------------------------
   # basic checks (unchanged)
@@ -119,6 +123,10 @@ constructModel <- function( data = NULL,
     stop("multivar ERROR: warmstart must be TRUE or FALSE.")
   if (!stopping_crit %in% c("absolute", "relative", "objective"))
     stop("multivar ERROR: stopping_crit must be 'absolute', 'relative', or 'objective'.")
+  if (!selection %in% c("cv", "ebic"))
+    stop("multivar ERROR: selection must be 'cv' or 'ebic'.")
+  if (!is.numeric(ebic_gamma) || length(ebic_gamma) != 1 || ebic_gamma < 0)
+    stop("multivar ERROR: ebic_gamma must be a non-negative numeric scalar.")
 
   # Set depth default based on model type
   # TVP models need larger depth because adaptive weights can be extreme (up to 1e10)
@@ -927,7 +935,9 @@ constructModel <- function( data = NULL,
              spec = unclass(spec),
              eps = eps,
              warmstart = warmstart,
-             stopping_crit = stopping_crit
+             stopping_crit = stopping_crit,
+             selection = selection,
+             ebic_gamma = ebic_gamma
   )
 
   return(obj)

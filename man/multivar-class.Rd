@@ -120,6 +120,10 @@ To construct an object of class multivar, use the function \code{\link{construct
 \item{\code{save_beta}}{Logical. Whether to retain the full beta array in the cv.multivar result. Default is TRUE.}
 
 \item{\code{spec}}{List. Design matrix specification object created by \code{\link{build_matrix_spec}}. Single source of truth for column/row indices.}
+
+\item{\code{selection}}{Character. Model selection criterion: \code{"cv"} (default) for cross-validated MSFE, or \code{"ebic"} for Extended BIC.}
+
+\item{\code{ebic_gamma}}{Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. Default is 0.5.}
 }}
 
 \seealso{
