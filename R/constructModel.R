@@ -599,7 +599,7 @@ constructModel <- function( data = NULL,
     }
 
     ratios_unique <- rev(round(
-      exp(seq(log(effective_k/depth), log(effective_k), length.out = nlambda1)),
+      exp(seq(log(effective_k/sqrt(depth)), log(effective_k*sqrt(depth)), length.out = nlambda1)),
       digits = 10
     ))
     
