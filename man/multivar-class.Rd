@@ -119,7 +119,15 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{save_beta}}{Logical. Whether to retain the full beta array in the cv.multivar result. Default is TRUE.}
 
+\item{\code{ncores}}{Numeric. Number of cores for parallel computation. Default is 1.}
+
 \item{\code{spec}}{List. Design matrix specification object created by \code{\link{build_matrix_spec}}. Single source of truth for column/row indices.}
+
+\item{\code{eps}}{Numeric. FISTA convergence tolerance. Default is 1e-3.}
+
+\item{\code{warmstart}}{Logical. Whether to use warm starts in the FISTA solver. Default is TRUE.}
+
+\item{\code{stopping_crit}}{Character. FISTA convergence criterion. One of \code{"absolute"}, \code{"relative"}, or \code{"objective"}.}
 
 \item{\code{selection}}{Character. Model selection criterion: \code{"cv"} (default) for cross-validated MSFE, or \code{"ebic"} for Extended BIC.}
 

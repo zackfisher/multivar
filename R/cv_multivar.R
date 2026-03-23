@@ -20,6 +20,9 @@
 #' @param tvp Whether time-varying parameters are used
 #' @param breaks List of period indices per subject
 #' @param spec Optional matrix_spec object for row/column indices
+#' @param ncores Numeric. Number of cores for parallel computation. Default is 1.
+#' @param warmstart Logical. Whether to use warm starts in the FISTA solver. Default is FALSE.
+#' @param stopping_crit Integer. Stopping criterion flag passed to the C++ solver. Default is 0.
 #'
 #' @return List with beta coefficients and MSFE matrix
 #' @export

@@ -70,7 +70,11 @@ check.multivar <- function(object){
 #' @slot common_effects Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE.
 #' @slot common_tvp_effects Logical. Whether to include common TVP effects (shared time-varying patterns) in TVP models. Only applies when tvp = TRUE.
 #' @slot save_beta Logical. Whether to retain the full beta array in the cv.multivar result. Default is TRUE.
+#' @slot ncores Numeric. Number of cores for parallel computation. Default is 1.
 #' @slot spec List. Design matrix specification object created by \code{\link{build_matrix_spec}}. Single source of truth for column/row indices.
+#' @slot eps Numeric. FISTA convergence tolerance. Default is 1e-3.
+#' @slot warmstart Logical. Whether to use warm starts in the FISTA solver. Default is TRUE.
+#' @slot stopping_crit Character. FISTA convergence criterion. One of \code{"absolute"}, \code{"relative"}, or \code{"objective"}.
 #' @slot selection Character. Model selection criterion: \code{"cv"} (default) for cross-validated MSFE, or \code{"ebic"} for Extended BIC.
 #' @slot ebic_gamma Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. Default is 0.5.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}

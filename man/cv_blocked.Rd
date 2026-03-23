@@ -62,6 +62,12 @@ cv_blocked(
 
 \item{spec}{Optional matrix_spec object. If not provided, a minimal spec is
 built from Ak and breaks.}
+
+\item{ncores}{Numeric. Number of cores for parallel computation. Default is 1.}
+
+\item{warmstart}{Logical. Whether to use warm starts in the FISTA solver. Default is FALSE.}
+
+\item{stopping_crit}{Integer. Stopping criterion flag passed to the C++ solver. Default is 0.}
 }
 \value{
 List with beta coefficients and MSFE matrix

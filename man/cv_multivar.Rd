@@ -64,6 +64,12 @@ cv_multivar(
 \item{breaks}{List of period indices per subject}
 
 \item{spec}{Optional matrix_spec object for row/column indices}
+
+\item{ncores}{Numeric. Number of cores for parallel computation. Default is 1.}
+
+\item{warmstart}{Logical. Whether to use warm starts in the FISTA solver. Default is FALSE.}
+
+\item{stopping_crit}{Integer. Stopping criterion flag passed to the C++ solver. Default is 0.}
 }
 \value{
 List with beta coefficients and MSFE matrix

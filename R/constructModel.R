@@ -40,6 +40,8 @@
 #' @param stopping_crit Character. FISTA convergence criterion. One of "absolute" (default), "relative", or "objective". "absolute" checks max|B_new - B_old| < eps; "relative" normalizes by max|B_old|; "objective" checks relative change in the objective function.
 #' @param selection Character. Model selection criterion. \code{"cv"} (default) uses cross-validated MSFE. \code{"ebic"} skips CV folds entirely, fits once on the full data, and selects by Extended BIC. EBIC is much faster and can improve structure recovery when n >> p.
 #' @param ebic_gamma Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. \code{0} gives standard BIC; \code{0.5} (default) is moderate EBIC; \code{1} is most conservative.
+#' @param ncores Numeric. Number of cores for parallel cross-validation. Default is 1.
+#' @param max_grid_size Numeric. Maximum number of hyperparameter combinations. If the full grid exceeds this, dimensions are coarsened proportionally. Default is NULL (no limit).
 #' @examples
 #' 
 #' sim  <- multivar_sim(

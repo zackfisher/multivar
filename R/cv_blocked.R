@@ -56,6 +56,9 @@ build_row_spec_old <- function(Ak, breaks = NULL) {
 #' @param breaks List of period indices per subject (required if tvp=TRUE)
 #' @param spec Optional matrix_spec object. If not provided, a minimal spec is
 #'             built from Ak and breaks.
+#' @param ncores Numeric. Number of cores for parallel computation. Default is 1.
+#' @param warmstart Logical. Whether to use warm starts in the FISTA solver. Default is FALSE.
+#' @param stopping_crit Integer. Stopping criterion flag passed to the C++ solver. Default is 0.
 #'
 #' @return List with beta coefficients and MSFE matrix
 #' @export

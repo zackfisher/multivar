@@ -120,6 +120,10 @@ constructModel(
 
 \item{save_beta}{Logical. Whether to retain the full beta coefficient array in the cv.multivar result. Default is TRUE. Set to FALSE to reduce memory usage when only the best-model coefficients (in mats) are needed.}
 
+\item{ncores}{Numeric. Number of cores for parallel cross-validation. Default is 1.}
+
+\item{max_grid_size}{Numeric. Maximum number of hyperparameter combinations. If the full grid exceeds this, dimensions are coarsened proportionally. Default is NULL (no limit).}
+
 \item{eps}{Numeric. FISTA convergence tolerance. Default is 1e-3. Smaller values yield more precise solutions but increase computation time.}
 
 \item{warmstart}{Logical. Whether to use the previous lambda's solution as the starting point for the next lambda in the FISTA solver. Default is TRUE. Reduces computation time with negligible effect on accuracy.}

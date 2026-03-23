@@ -8,7 +8,7 @@ Authors@R: c(
  person("Younghoon", "Kim", role = "ctb"),
  person("Vladas", "Pipiras", role = "ctb")
  )
-Description: Functions for simulating, estimating and forecasting stationary Vector Autoregressive (VAR) models for multiple subject data using the penalization.
+Description: Functions for simulating, estimating and forecasting Vector Autoregressive (VAR) models for multiple-subject data using structured penalization.
 Depends: R (>= 2.10)
 Imports: methods, stats, utils, MASS, Rcpp (>= 1.0.3), Matrix, ggplot2, vars, reshape2, glmnet, igraph, viridis, scales
 License: GPL (>= 2)
@@ -20,5 +20,3 @@ Packaged: 2017-05-19 21:30:05 UTC;
 Maintainer: Zachary Fisher <fish.zachary@gmail.com>
 Repository: CRAN
 LinkingTo: Rcpp,RcppArmadillo
-VignetteBuilder: knitr, rmarkdown
-Suggests: knitr, rmarkdown
