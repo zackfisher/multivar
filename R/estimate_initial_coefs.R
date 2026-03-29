@@ -48,12 +48,24 @@ estimate_initial_coefs <- function(
     nfolds,
     lambda_choice = "lambda.min",
     common_effects = TRUE,
-    common_tvp_effects = TRUE) {
+    common_tvp_effects = TRUE,
+    maity_opts = list()) {
 
 
   # Standard lasso: return all-ones matrices (no adaptive weighting)
   if (lassotype == "standard") {
     return(make_unit_weights(d, k, subgroup, subgroup_membership, tvp, Ak, breaks))
+  }
+
+  # Maity et al. (2022) MrLasso approach: debias + re-descending loss + threshold
+  if (weightest == "maity") {
+    eta <- if (!is.null(maity_opts$eta)) maity_opts$eta else 2.0
+    thresh_const <- if (!is.null(maity_opts$thresh_const)) maity_opts$thresh_const else 1.0
+    return(estimate_maity_effects(
+      Ak = Ak, bk = bk, d = d, k = k,
+      nfolds = nfolds, lambda_choice = lambda_choice,
+      eta = eta, thresh_const = thresh_const
+    ))
   }
 
   # Step 1: Estimate raw effects (per-subject, and per-period if TVP)
@@ -111,7 +123,7 @@ make_unit_weights <- function(d, k, subgroup, subgroup_membership, tvp, Ak, brea
 #'
 #' @param Ak List of design matrices per subject
 #' @param bk List of response matrices per subject
-#' @param weightest Character. Estimation method: "lasso", "ridge", or "ols"
+#' @param weightest Character. Estimation method: "lasso", "alasso", "ridge", or "ols"
 #' @param tvp Logical. Whether to estimate time-varying parameters
 #' @param breaks List of period indices per subject
 #' @param nfolds Numeric. Number of CV folds
@@ -121,15 +133,18 @@ make_unit_weights <- function(d, k, subgroup, subgroup_membership, tvp, Ak, brea
 #' @keywords internal
 estimate_raw_effects <- function(Ak, bk, weightest, tvp, breaks, nfolds, lambda_choice) {
 
+  # For alasso, run lasso first then refine with adaptive weights
+  base_method <- if (weightest == "alasso") "lasso" else weightest
+
   # Set alpha for glmnet: 1 = lasso, 0 = ridge
-  alpha <- switch(weightest,
+  alpha <- switch(base_method,
     "lasso" = 1,
     "ridge" = 0,
     "ols" = NA
   )
 
   # Build fold structure for CV (only needed for lasso/ridge)
-  if (weightest %in% c("lasso", "ridge")) {
+  if (base_method %in% c("lasso", "ridge")) {
     fold_structure <- build_cv_folds(Ak, nfolds)
   } else {
     fold_structure <- NULL
@@ -137,12 +152,22 @@ estimate_raw_effects <- function(Ak, bk, weightest, tvp, breaks, nfolds, lambda_
 
   # Estimate total effects per subject
   total_effects <- lapply(seq_along(Ak), function(g) {
-    if (weightest == "ols") {
+    if (base_method == "ols") {
       estimate_ols(Ak[[g]], bk[[g]])
     } else {
       estimate_glmnet(Ak[[g]], bk[[g]], alpha, fold_structure[[g]], lambda_choice)
     }
   })
+
+  # Refine with adaptive lasso if weightest = "alasso"
+  if (weightest == "alasso") {
+    total_effects <- lapply(seq_along(Ak), function(g) {
+      estimate_glmnet_alasso(
+        Ak[[g]], bk[[g]], total_effects[[g]],
+        fold_structure[[g]], lambda_choice
+      )
+    })
+  }
 
   # Estimate per-period effects if TVP
   period_effects <- NULL
@@ -150,7 +175,7 @@ estimate_raw_effects <- function(Ak, bk, weightest, tvp, breaks, nfolds, lambda_
     period_effects <- lapply(seq_along(Ak), function(g) {
       lapply(seq_along(breaks[[g]]), function(p) {
         idx <- breaks[[g]][[p]]
-        if (weightest == "ols") {
+        if (base_method == "ols") {
           estimate_ols(Ak[[g]][idx, , drop = FALSE], bk[[g]][idx, , drop = FALSE])
         } else {
           period_folds <- build_period_folds(idx, nfolds)
@@ -159,12 +184,22 @@ estimate_raw_effects <- function(Ak, bk, weightest, tvp, breaks, nfolds, lambda_
           # FALSE is more principled (glmnet's intercept is not the right kind for
           # VAR models). Requires regenerating RDS test fixtures.
           # Currently using TRUE to match legacy behavior.
-          estimate_glmnet(
+          init_est <- estimate_glmnet(
             Ak[[g]][idx, , drop = FALSE],
             bk[[g]][idx, , drop = FALSE],
             alpha, period_folds, lambda_choice,
             glmnet_intercept = TRUE
           )
+          if (weightest == "alasso") {
+            estimate_glmnet_alasso(
+              Ak[[g]][idx, , drop = FALSE],
+              bk[[g]][idx, , drop = FALSE],
+              init_est, period_folds, lambda_choice,
+              glmnet_intercept = TRUE
+            )
+          } else {
+            init_est
+          }
         }
       })
     })
@@ -256,6 +291,63 @@ estimate_glmnet <- function(A, b, alpha, folds, lambda_choice, glmnet_intercept 
     alpha = alpha,
     standardize = FALSE,
     intercept = glmnet_intercept,
+    foldid = rep(folds, n_responses)
+  )
+
+  coefs <- coef(fit, s = lambda_choice)[-1]
+  matrix(coefs, n_responses, n_predictors, byrow = TRUE)
+}
+
+
+#' Estimate coefficients using adaptive LASSO via glmnet penalty.factor
+#'
+#' Two-stage procedure: uses initial LASSO estimates to construct adaptive
+#' penalty weights (1/|init|), then runs cv.glmnet with those weights.
+#' This produces sparser pilot estimates than plain LASSO, particularly
+#' at larger sample sizes where LASSO tends to include too many variables.
+#'
+#' @param A Design matrix (n x d)
+#' @param b Response matrix (n x d)
+#' @param init_coefs Initial coefficient matrix from LASSO (d x d)
+#' @param folds Fold ID vector for CV
+#' @param lambda_choice Which lambda to use ("lambda.min" or "lambda.1se")
+#' @param glmnet_intercept Logical. Whether glmnet should fit an intercept (default FALSE)
+#' @param adapower Power for adaptive weighting (default 1)
+#'
+#' @return Coefficient matrix (d x d)
+#' @keywords internal
+estimate_glmnet_alasso <- function(A, b, init_coefs, folds, lambda_choice,
+                                   glmnet_intercept = FALSE, adapower = 1) {
+  n_responses <- ncol(b)
+  n_predictors <- ncol(A)
+
+  # Build penalty factors from initial estimates
+  # init_coefs is d_response x d_predictor (row = response equation)
+  # glmnet stacked system has d_response*d_predictor coefficients
+  # ordered: all predictors for response 1, then response 2, etc. (byrow=TRUE in matrix())
+  penalty_vec <- as.vector(t(1 / abs(init_coefs)^adapower))
+
+  # Cap infinite penalties at a finite value that is large relative to the
+  # finite penalties, but not so extreme that glmnet's internal rescaling
+  # (penalty.factor is rescaled to sum = nvars) makes the finite penalties
+  # effectively zero. A cap of 10x the max finite penalty keeps the ratio
+  # meaningful after rescaling.
+  finite_vals <- penalty_vec[is.finite(penalty_vec)]
+  if (length(finite_vals) > 0 && max(finite_vals) > 0) {
+    cap <- max(finite_vals) * 10
+  } else {
+    cap <- 1e10
+  }
+  penalty_vec[is.infinite(penalty_vec)] <- cap
+
+  fit <- glmnet::cv.glmnet(
+    x = diag(n_responses) %x% A,
+    y = as.vector(b),
+    family = "gaussian",
+    alpha = 1,
+    standardize = FALSE,
+    intercept = glmnet_intercept,
+    penalty.factor = penalty_vec,
     foldid = rep(folds, n_responses)
   )
 

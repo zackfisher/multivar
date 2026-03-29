@@ -4,7 +4,7 @@
 \alias{compute_ebic}
 \title{Compute EBIC for an array of fitted coefficient matrices}
 \usage{
-compute_ebic(beta_array, Z, Y, d, gamma = 0.5)
+compute_ebic(beta_array, Z, Y, d, gamma = 0.5, spec = NULL)
 }
 \arguments{
 \item{beta_array}{3D array (d x p x n_scenarios) of fitted coefficients.}
@@ -18,6 +18,13 @@ compute_ebic(beta_array, Z, Y, d, gamma = 0.5)
 \item{gamma}{EBIC tuning parameter. \code{gamma = 0} gives standard BIC;
 \code{gamma = 0.5} (default) is a moderate EBIC; \code{gamma = 1} is
 the most conservative (strongest sparsity preference).}
+
+\item{spec}{Optional matrix_spec object. When provided, degrees of freedom
+are counted per coefficient position within each block (common, unique,
+TVP), following Chen & Chen (2008). Each d x d position that has any
+nonzero entry counts as one degree of freedom, regardless of how many
+subjects share that position. This avoids over-penalizing shared structure.
+When NULL, falls back to raw nonzero counting.}
 }
 \value{
 Numeric vector of EBIC values, one per scenario.
@@ -29,10 +36,14 @@ when \code{selection = "ebic"} and by \code{select_by_ebic} for post-hoc
 reselection.
 }
 \details{
-The EBIC is computed per-equation and summed:
+With \code{spec = NULL} (legacy behavior), EBIC counts every nonzero entry
+in B as one degree of freedom:
 \deqn{\text{EBIC}_i = \sum_{j=1}^{d} n \log(\text{RSS}_{ij} / n) + k_i \log(n) + 2 \gamma \, k_i \log(p)}
-where \eqn{\text{RSS}_{ij}} is the residual sum of squares for equation
-\eqn{j} under scenario \eqn{i}, \eqn{k_i} is the total number of
-nonzero coefficients across all equations, and \eqn{p} is the number
-of predictors per equation.
+
+With a \code{spec} object, degrees of freedom are counted per position:
+for each d x d coefficient position (i,j), the position contributes 1 df
+if any block (common, any unique, any TVP) has a nonzero entry at that
+position. The eBIC extension uses \code{p = d} (predictors per equation)
+instead of the full design matrix width, and employs the Chen & Chen (2008)
+\code{lchoose(p, df)} formulation per equation.
 }

@@ -4,7 +4,7 @@
 \alias{adaptive_weights}
 \title{Compute adaptive LASSO weights from initial estimates}
 \usage{
-adaptive_weights(coefs, adapower = 1, pendiag = TRUE)
+adaptive_weights(coefs, adapower = 1, pendiag = TRUE, weight_type = "standard")
 }
 \arguments{
 \item{coefs}{Matrix of initial coefficient estimates}
@@ -12,6 +12,10 @@ adaptive_weights(coefs, adapower = 1, pendiag = TRUE)
 \item{adapower}{Power for adaptive weighting (default 1)}
 
 \item{pendiag}{Whether to penalize diagonal (AR effects). If FALSE, diagonal gets weight 1e-10}
+
+\item{weight_type}{Character. \code{"standard"} (default) uses \code{1/|coef|^gamma} with
+Inf replaced by 1e10. \code{"bounded"} uses \code{1/(1 + |coef|/tau)^gamma} where
+\code{tau = median(|nonzero coefs|)}, producing weights in [0, 1] with no infinities.}
 }
 \value{
 Weight matrix with same dimensions as coefs

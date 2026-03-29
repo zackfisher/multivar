@@ -3,11 +3,22 @@
 #' @param coefs Matrix of initial coefficient estimates
 #' @param adapower Power for adaptive weighting (default 1)
 #' @param pendiag Whether to penalize diagonal (AR effects). If FALSE, diagonal gets weight 1e-10
+#' @param weight_type Character. \code{"standard"} (default) uses \code{1/|coef|^gamma} with
+#'   Inf replaced by 1e10. \code{"bounded"} uses \code{1/(1 + |coef|/tau)^gamma} where
+#'   \code{tau = median(|nonzero coefs|)}, producing weights in [0, 1] with no infinities.
 #' @return Weight matrix with same dimensions as coefs
 #' @keywords internal
-adaptive_weights <- function(coefs, adapower = 1, pendiag = TRUE) {
-  w <- 1/abs(coefs)^adapower
-  w[is.infinite(w)] <- 1e10
+adaptive_weights <- function(coefs, adapower = 1, pendiag = TRUE,
+                             weight_type = "standard") {
+  if (weight_type == "bounded") {
+    abs_coefs <- abs(coefs)
+    nonzero <- abs_coefs[abs_coefs > 0]
+    tau <- if (length(nonzero) > 0) median(nonzero) else 1
+    w <- 1 / (1 + abs_coefs / tau)^adapower
+  } else {
+    w <- 1/abs(coefs)^adapower
+    w[is.infinite(w)] <- 1e10
+  }
   if (!pendiag) diag(w) <- 1e-10
   w
 }
@@ -193,7 +204,8 @@ est_base_weight_mat <- function(
   intercept,
   common_effects = TRUE,
   common_tvp_effects = TRUE,
-  spec = NULL){
+  spec = NULL,
+  weight_type = "standard"){
 
   # Note: if intercepts are included, pendiag should account for AR effects
 
@@ -223,7 +235,7 @@ est_base_weight_mat <- function(
 
       if(!tvp){
         # Non-TVP k=1 case
-        w_mat <- adaptive_weights(initcoefs$total_effects[[1]], adapower, pendiag)
+        w_mat <- adaptive_weights(initcoefs$total_effects[[1]], adapower, pendiag, weight_type = weight_type)
 
       } else {
         # TVP k=1 case
@@ -232,7 +244,7 @@ est_base_weight_mat <- function(
           # No time-invariant component: weights from per-period estimates directly
           # tvp_effects[[1]] contains the per-period estimates (not deviations)
           tvp_list <- lapply(seq_along(initcoefs$tvp_effects[[1]]), function(j){
-            adaptive_weights(initcoefs$tvp_effects[[1]][[j]], adapower, pendiag)
+            adaptive_weights(initcoefs$tvp_effects[[1]][[j]], adapower, pendiag, weight_type = weight_type)
           })
 
           # Reformat tvp weights to match A matrix structure (block-diagonal by period)
@@ -244,11 +256,11 @@ est_base_weight_mat <- function(
         } else {
           # Time-invariant (common) weights from common_effects
           # (For k=1 TVP, common_effects = median of per-period estimates)
-          common_weights <- adaptive_weights(initcoefs$common_effects, adapower, pendiag)
+          common_weights <- adaptive_weights(initcoefs$common_effects, adapower, pendiag, weight_type = weight_type)
 
           # TVP weights from tvp_effects (period-specific deviations from common)
           tvp_list <- lapply(seq_along(initcoefs$tvp_effects[[1]]), function(j){
-            adaptive_weights(initcoefs$tvp_effects[[1]][[j]], adapower, pendiag = TRUE)
+            adaptive_weights(initcoefs$tvp_effects[[1]][[j]], adapower, pendiag = TRUE, weight_type = weight_type)
           })
 
           # Reformat tvp weights to match A matrix structure (block-diagonal by period)
@@ -267,12 +279,12 @@ est_base_weight_mat <- function(
       if(!subgroup){
 
         unique_weights_list <- lapply(seq_along(Ak), function(i){
-          adaptive_weights(initcoefs$unique_effects[[i]], adapower, pendiag = TRUE)
+          adaptive_weights(initcoefs$unique_effects[[i]], adapower, pendiag = TRUE, weight_type = weight_type)
         })
 
         if (include_common_effects){
           # Standard: common + unique weights
-          common_weights <- adaptive_weights(initcoefs$common_effects, adapower, pendiag)
+          common_weights <- adaptive_weights(initcoefs$common_effects, adapower, pendiag, weight_type = weight_type)
           w_mat <- cbind(common_weights, do.call("cbind", unique_weights_list))
         } else {
           # No common effects: only unique weights
@@ -282,14 +294,14 @@ est_base_weight_mat <- function(
       } else {
 
         subgroup_weights_list <- lapply(seq_along(initcoefs$subgroup_effects), function(i){
-          adaptive_weights(initcoefs$subgroup_effects[[i]], adapower, pendiag = TRUE)
+          adaptive_weights(initcoefs$subgroup_effects[[i]], adapower, pendiag = TRUE, weight_type = weight_type)
         })
 
         unique_weights_list <- lapply(seq_along(Ak), function(i){
-          adaptive_weights(initcoefs$unique_effects[[i]], adapower, pendiag = TRUE)
+          adaptive_weights(initcoefs$unique_effects[[i]], adapower, pendiag = TRUE, weight_type = weight_type)
         })
 
-        common_weights <- adaptive_weights(initcoefs$common_effects, adapower, pendiag)
+        common_weights <- adaptive_weights(initcoefs$common_effects, adapower, pendiag, weight_type = weight_type)
         w_mat <- cbind(common_weights, do.call("cbind", subgroup_weights_list), do.call("cbind", unique_weights_list))
 
       }
@@ -300,13 +312,13 @@ est_base_weight_mat <- function(
         # 1. Compute unique TVP weights
         tvp_list <- lapply(seq_along(initcoefs$tvp_effects), function(i){
           lapply(seq_along(initcoefs$tvp_effects[[i]]), function(j){
-            adaptive_weights(initcoefs$tvp_effects[[i]][[j]], adapower, pendiag = TRUE)
+            adaptive_weights(initcoefs$tvp_effects[[i]][[j]], adapower, pendiag = TRUE, weight_type = weight_type)
           })
         })
 
         # 2. Compute unique base weights
         unique_weights_list <- lapply(seq_along(Ak), function(i){
-          adaptive_weights(initcoefs$unique_effects[[i]], adapower, pendiag = TRUE)
+          adaptive_weights(initcoefs$unique_effects[[i]], adapower, pendiag = TRUE, weight_type = weight_type)
         })
 
         # 3. Compute common TVP weights (if enabled)
@@ -314,7 +326,7 @@ est_base_weight_mat <- function(
 
           # Note: no pendiag for TVP (time-varying, not autoregressive)
           common_tvp_list <- lapply(seq_along(initcoefs$common_tvp_effects), function(p){
-            adaptive_weights(initcoefs$common_tvp_effects[[p]], adapower, pendiag = TRUE)
+            adaptive_weights(initcoefs$common_tvp_effects[[p]], adapower, pendiag = TRUE, weight_type = weight_type)
           })
 
           # Reformat common TVP weights to match A matrix column structure (block-diagonal by period)
@@ -341,12 +353,12 @@ est_base_weight_mat <- function(
         # 5. Combine weights in correct order
         if (include_common_effects && !is.null(phi_common_weights)){
           # 4-layer or 3-layer with common base and common TVP
-          common_weights <- adaptive_weights(initcoefs$common_effects, adapower, pendiag)
+          common_weights <- adaptive_weights(initcoefs$common_effects, adapower, pendiag, weight_type = weight_type)
           w_mat <- cbind(common_weights, do.call("cbind", unique_weights_list), phi_common_weights, phi_unique_weights)
 
         } else if (include_common_effects && is.null(phi_common_weights)){
           # Current default: common base + unique base + unique TVP
-          common_weights <- adaptive_weights(initcoefs$common_effects, adapower, pendiag)
+          common_weights <- adaptive_weights(initcoefs$common_effects, adapower, pendiag, weight_type = weight_type)
           w_mat <- cbind(common_weights, do.call("cbind", unique_weights_list), phi_unique_weights)
 
         } else if (!include_common_effects && !is.null(phi_common_weights)){

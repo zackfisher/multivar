@@ -12,7 +12,7 @@
 #' @param tol Numeric. Optimization tolerance (default 1e-4).
 #' @param window Numeric. Size of rolling window.   
 #' @param standardize Logical. Default is true. Whether to standardize the individual data. Note, if intercept = TRUE and standardize = TRUE, the data is scaled but not de-meaned.
-#' @param weightest Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "ridge", "ols", and "multivar". The "multivar" option fits a standard lasso multivar model first to get structured initial estimates. Note: for k=1 TVP models, "multivar" works well with common_effects=TRUE but not with common_effects=FALSE (use "lasso" instead). Only used when lassotype = "adaptive" (ignored for standard LASSO).
+#' @param weightest Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "alasso" (adaptive LASSO: two-stage procedure using LASSO pilot then adaptive reweighting for sparser estimates), "ridge", "ols", and "multivar". The "multivar" option fits a standard lasso multivar model first to get structured initial estimates. Note: for k=1 TVP models, "multivar" works well with common_effects=TRUE but not with common_effects=FALSE (use "lasso" instead). Only used when lassotype = "adaptive" (ignored for standard LASSO).
 #' @param canonical Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.
 #' @param threshold Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.
 #' @param lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
@@ -40,6 +40,7 @@
 #' @param stopping_crit Character. FISTA convergence criterion. One of "absolute" (default), "relative", or "objective". "absolute" checks max|B_new - B_old| < eps; "relative" normalizes by max|B_old|; "objective" checks relative change in the objective function.
 #' @param selection Character. Model selection criterion. \code{"cv"} (default) uses cross-validated MSFE. \code{"ebic"} skips CV folds entirely, fits once on the full data, and selects by Extended BIC. EBIC is much faster and can improve structure recovery when n >> p.
 #' @param ebic_gamma Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. \code{0} gives standard BIC; \code{0.5} (default) is moderate EBIC; \code{1} is most conservative.
+#' @param weight_type Character. Adaptive weight function type. \code{"standard"} (default) uses \code{1/|coef|^gamma} with Inf replaced by 1e10. \code{"bounded"} uses \code{1/(1+|coef|/tau)^gamma} where tau is the median of nonzero |coefs|, producing weights in [0,1] with no infinities.
 #' @param ncores Numeric. Number of cores for parallel cross-validation. Default is 1.
 #' @param max_grid_size Numeric. Maximum number of hyperparameter combinations. If the full grid exceeds this, dimensions are coarsened proportionally. Default is NULL (no limit).
 #' @examples
@@ -73,7 +74,7 @@ constructModel <- function( data = NULL,
                             tol = 1e-4,
                             window = 1,
                             standardize = TRUE,
-                            weightest = "lasso",
+                            weightest = "maity",
                             canonical = FALSE,
                             threshold = FALSE,
                             lassotype = "adaptive",
@@ -102,7 +103,9 @@ constructModel <- function( data = NULL,
                             warmstart = TRUE,
                             stopping_crit = "absolute",
                             selection = "cv",
-                            ebic_gamma = 0.5 ){
+                            ebic_gamma = 0.5,
+                            weight_type = "standard",
+                            maity_opts = list() ){
 
   #------------------------------------------------------------------
   # basic checks (unchanged)
@@ -129,6 +132,8 @@ constructModel <- function( data = NULL,
     stop("multivar ERROR: selection must be 'cv' or 'ebic'.")
   if (!is.numeric(ebic_gamma) || length(ebic_gamma) != 1 || ebic_gamma < 0)
     stop("multivar ERROR: ebic_gamma must be a non-negative numeric scalar.")
+  if (!weight_type %in% c("standard", "bounded"))
+    stop("multivar ERROR: weight_type must be 'standard' or 'bounded'.")
 
   # Set depth default based on model type
   # TVP models need larger depth because adaptive weights can be extreme (up to 1e10)
@@ -175,6 +180,13 @@ constructModel <- function( data = NULL,
       "Please provide structural break points via the 'breaks' argument, ",
       "or use weightest = 'lasso' (the default) instead."
     ))
+  }
+
+  # weightest = "maity" restrictions (Maity et al. 2022 MrLasso approach)
+  if (weightest == "maity") {
+    if (tvp) stop("multivar ERROR: weightest = 'maity' is not yet supported for TVP models.")
+    if (subgroup) stop("multivar ERROR: weightest = 'maity' is not yet supported with subgroups.")
+    if (length(data) == 1) stop("multivar ERROR: weightest = 'maity' requires k > 1 (multiple subjects).")
   }
 
   initcoefs <- list()
@@ -939,7 +951,9 @@ constructModel <- function( data = NULL,
              warmstart = warmstart,
              stopping_crit = stopping_crit,
              selection = selection,
-             ebic_gamma = ebic_gamma
+             ebic_gamma = ebic_gamma,
+             weight_type = weight_type,
+             maity_opts = maity_opts
   )
 
   return(obj)

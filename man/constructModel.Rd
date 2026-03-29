@@ -17,7 +17,7 @@ constructModel(
   tol = 1e-04,
   window = 1,
   standardize = TRUE,
-  weightest = "lasso",
+  weightest = "maity",
   canonical = FALSE,
   threshold = FALSE,
   lassotype = "adaptive",
@@ -46,7 +46,9 @@ constructModel(
   warmstart = TRUE,
   stopping_crit = "absolute",
   selection = "cv",
-  ebic_gamma = 0.5
+  ebic_gamma = 0.5,
+  weight_type = "standard",
+  maity_opts = list()
 )
 }
 \arguments{
@@ -74,7 +76,7 @@ constructModel(
 
 \item{standardize}{Logical. Default is true. Whether to standardize the individual data. Note, if intercept = TRUE and standardize = TRUE, the data is scaled but not de-meaned.}
 
-\item{weightest}{Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "ridge", "ols", and "multivar". The "multivar" option fits a standard lasso multivar model first to get structured initial estimates. Note: for k=1 TVP models, "multivar" works well with common_effects=TRUE but not with common_effects=FALSE (use "lasso" instead). Only used when lassotype = "adaptive" (ignored for standard LASSO).}
+\item{weightest}{Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "alasso" (adaptive LASSO: two-stage procedure using LASSO pilot then adaptive reweighting for sparser estimates), "ridge", "ols", and "multivar". The "multivar" option fits a standard lasso multivar model first to get structured initial estimates. Note: for k=1 TVP models, "multivar" works well with common_effects=TRUE but not with common_effects=FALSE (use "lasso" instead). Only used when lassotype = "adaptive" (ignored for standard LASSO).}
 
 \item{canonical}{Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.}
 
@@ -133,6 +135,8 @@ constructModel(
 \item{selection}{Character. Model selection criterion. \code{"cv"} (default) uses cross-validated MSFE. \code{"ebic"} skips CV folds entirely, fits once on the full data, and selects by Extended BIC. EBIC is much faster and can improve structure recovery when n >> p.}
 
 \item{ebic_gamma}{Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. \code{0} gives standard BIC; \code{0.5} (default) is moderate EBIC; \code{1} is most conservative.}
+
+\item{weight_type}{Character. Adaptive weight function type. \code{"standard"} (default) uses \code{1/|coef|^gamma} with Inf replaced by 1e10. \code{"bounded"} uses \code{1/(1+|coef|/tau)^gamma} where tau is the median of nonzero |coefs|, producing weights in [0,1] with no infinities.}
 }
 \description{
 Construct an object of class multivar

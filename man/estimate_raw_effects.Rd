@@ -11,7 +11,7 @@ estimate_raw_effects(Ak, bk, weightest, tvp, breaks, nfolds, lambda_choice)
 
 \item{bk}{List of response matrices per subject}
 
-\item{weightest}{Character. Estimation method: "lasso", "ridge", or "ols"}
+\item{weightest}{Character. Estimation method: "lasso", "alasso", "ridge", or "ols"}
 
 \item{tvp}{Logical. Whether to estimate time-varying parameters}
 

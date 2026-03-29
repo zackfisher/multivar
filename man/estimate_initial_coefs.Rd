@@ -20,7 +20,8 @@ estimate_initial_coefs(
   nfolds,
   lambda_choice = "lambda.min",
   common_effects = TRUE,
-  common_tvp_effects = TRUE
+  common_tvp_effects = TRUE,
+  maity_opts = list()
 )
 }
 \arguments{

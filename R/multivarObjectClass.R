@@ -77,6 +77,7 @@ check.multivar <- function(object){
 #' @slot stopping_crit Character. FISTA convergence criterion. One of \code{"absolute"}, \code{"relative"}, or \code{"objective"}.
 #' @slot selection Character. Model selection criterion: \code{"cv"} (default) for cross-validated MSFE, or \code{"ebic"} for Extended BIC.
 #' @slot ebic_gamma Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. Default is 0.5.
+#' @slot weight_type Character. Adaptive weight function type: \code{"standard"} (default) uses \code{1/|coef|^gamma}, \code{"bounded"} uses \code{1/(1+|coef|/tau)^gamma}.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
@@ -142,7 +143,9 @@ setClass(
         warmstart = "logical",
         stopping_crit = "character",
         selection = "character",
-        ebic_gamma = "numeric"
+        ebic_gamma = "numeric",
+        weight_type = "character",
+        maity_opts = "list"
         ),validity=check.multivar
     )
 
@@ -222,7 +225,8 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@nfolds,
     object@lambda_choice,
     object@common_effects,
-    object@common_tvp_effects
+    object@common_tvp_effects,
+    object@maity_opts
   )
 
   object@W <- est_base_weight_mat(
@@ -244,9 +248,10 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     object@intercept,
     object@common_effects,
     object@common_tvp_effects,
-    object@spec
+    object@spec,
+    object@weight_type
   )
-  
+
   # Precompute transposes once (used for lambda_grid and cv_multivar)
   tA <- t(as.matrix(object@A))
   tb <- t(as.matrix(object@b))
@@ -277,7 +282,7 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
     fit <- list(beta, NULL)  # No MSFE matrix
 
     # Select best scenario by EBIC
-    ebic_vals <- compute_ebic(beta, tA, tb, object@d, object@ebic_gamma)
+    ebic_vals <- compute_ebic(beta, tA, tb, object@d, object@ebic_gamma, object@spec)
     best_idx <- which.min(ebic_vals)
 
   } else {

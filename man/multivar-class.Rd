@@ -132,6 +132,8 @@ To construct an object of class multivar, use the function \code{\link{construct
 \item{\code{selection}}{Character. Model selection criterion: \code{"cv"} (default) for cross-validated MSFE, or \code{"ebic"} for Extended BIC.}
 
 \item{\code{ebic_gamma}}{Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. Default is 0.5.}
+
+\item{\code{weight_type}}{Character. Adaptive weight function type: \code{"standard"} (default) uses \code{1/|coef|^gamma}, \code{"bounded"} uses \code{1/(1+|coef|/tau)^gamma}.}
 }}
 
 \seealso{
