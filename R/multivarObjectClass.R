@@ -22,36 +22,41 @@ check.multivar <- function(object){
 #' @slot d Numeric Vector. Vector containing the number of variables for each dataset.
 #' @slot Ak List. A list (length = k) of lagged (T-lag-horizon) by d multivariate time series.
 #' @slot bk List. A list (length = k) of (T-lag-horizon) by d multivariate time series.
+#' @slot Ak_orig List. A list (length = k) of lagged (T-lag-horizon) by d unscaled multivariate time series.
+#' @slot bk_orig List A list (length = k) of (T-lag-horizon) by d unscaled multivariate time series.
 #' @slot Hk List. A list (length = k) of (horizon) by d multivariate time series.
-#' @slot A  Matrix. A matrix containing the lagged ((T-lag-horizon)k) by (d+dk) multivariate time series.
-#' @slot b  Matrix. A matrix containing the non-lagged ((T-lag-horizon)k) by (d) multivariate time series.
-#' @slot H  Matrix. A matrix containing the non-lagged (horizon k) by d multivariate time series.
+#' @slot A Matrix. A matrix containing the lagged ((T-lag-horizon)k) by (d+dk) multivariate time series.
+#' @slot b Matrix. A matrix containing the non-lagged ((T-lag-horizon)k) by (d) multivariate time series.
+#' @slot H Matrix. A matrix containing the non-lagged (horizon k) by d multivariate time series.
+#' @slot data_means List. A list (length = k) of column means for each group's data, used for intercept recovery when intercept=TRUE.
 #' @slot lag Numeric. The VAR order. Currently only lag 1 is supported.
 #' @slot horizon Numeric. Forecast horizon.
 #' @slot t1 Numeric vector. Index of time series in which to start cross validation for individual k. 
 #' @slot t2 Numeric vector. Index of time series in which to end cross validation for individual k.
-#' @slot lambda1 Numeric vector. Regularization parameter 1.
-#' @slot lambda2 Numeric vector. Regularization parameter 2.
-#' @slot tau Numeric vector. Regularization parameter for subgroup effects.
+#' @slot t1k Numeric vector. Index of time series in which to start cross validation for individual k.
+#' @slot t2k Numeric vector. Index of time series in which to end cross validation for individual k.
+#' @slot ntk Numeric. Number of usable timepoints (rows of b) per individual k
+#' @slot ndk Numeric. Number of variables (cols of b) per individual k
+#' @slot lambda1 Numeric vector. Regularization parameter grid.
 #' @slot nlambda1 Numeric. Number of lambda1 values to search over. Default is 30.
-#' @slot nlambda2 Numeric. Number of lambda2 values to search over. Default is 30.
-#' @slot ntau Numeric. Number of tau values to search over. Default is 30.
+#' @slot n_ratios_subgroup Numeric. Number of ratios_subgroup values to search over. Default is 30.
+#' @slot gamma Numeric. Power for adaptive weighting (default 1). Controls how strongly initial estimates influence the penalty: weight = 1/|coef|^gamma.
 #' @slot tol Numeric. Convergence tolerance.
 #' @slot depth Numeric. Depth of grid construction. Default is 1000.
 #' @slot window Numeric. Size of rolling window.
 #' @slot standardize Logical. Default is true. Whether to standardize the individual data.
-#' @slot weightest Character. How to estimate the first-stage weights. Default is "lasso". Other options include "ridge", "ols" and "var". 
+#' @slot weightest Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "ridge" and "ols". 
 #' @slot canonical Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.
 #' @slot threshold Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.
 #' @slot lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
-#' @slot intercept Logical. Default is FALSE. 
+#' @slot intercept Logical. Default is FALSE.
 #' @slot W Matrix. Default is NULL. 
-#' @slot ratios Numeric vector. Default is NULL. 
-#' @slot ratiostau Numeric vector. Default is NULL. 
-#' @slot ratiosalpha Numeric vector. Default is NULL. 
+#' @slot ratios_unique Numeric vector. Penalty ratio for unique effects. Default is NULL.
+#' @slot ratios_subgroup Numeric vector. Penalty ratio for subgroup effects. Default is NULL.
+#' @slot ratios_unique_tvp Numeric vector. Default is NULL.
+#' @slot ratios_common_tvp Numeric vector. Penalty ratio for common TVP effects. Default is NULL. 
 #' @slot cv Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.
 #' @slot nfolds Numeric. The number of folds for use with "blocked" cross-validation.
-#' @slot thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
 #' @slot lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
 #' @slot subgroup_membership Numeric. Vector of subgroup assignments.
 #' @slot subgroup Logical. Argument whether to run subgrouping algorithm.
@@ -61,21 +66,36 @@ check.multivar <- function(object){
 #' @slot tvp Logical.
 #' @slot inittvpcoefs List. A list of initial tvp estimates.
 #' @slot breaks List. A list of length K indicating structural breaks in the time series.
+#' @slot lambda_choice Character. Which lambda to use for initial coefficient estimation ("lambda.min" or "lambda.1se").
+#' @slot common_effects Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE.
+#' @slot common_tvp_effects Logical. Whether to include common TVP effects (shared time-varying patterns) in TVP models. Only applies when tvp = TRUE.
+#' @slot save_beta Logical. Whether to retain the full beta array in the cv.multivar result. Default is TRUE.
+#' @slot ncores Numeric. Number of cores for parallel computation. Default is 1.
+#' @slot spec List. Design matrix specification object created by \code{\link{build_matrix_spec}}. Single source of truth for column/row indices.
+#' @slot eps Numeric. FISTA convergence tolerance. Default is 1e-3.
+#' @slot warmstart Logical. Whether to use warm starts in the FISTA solver. Default is TRUE.
+#' @slot stopping_crit Character. FISTA convergence criterion. One of \code{"absolute"}, \code{"relative"}, or \code{"objective"}.
+#' @slot selection Character. Model selection criterion: \code{"cv"} (default) for cross-validated MSFE, or \code{"ebic"} for Extended BIC.
+#' @slot ebic_gamma Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. Default is 0.5.
+#' @slot weight_type Character. Adaptive weight function type: \code{"standard"} (default) uses \code{1/|coef|^gamma}, \code{"bounded"} uses \code{1/(1+|coef|/tau)^gamma}.
 #' @details To construct an object of class multivar, use the function \code{\link{constructModel}}
 #' @seealso \code{\link{constructModel}}
 #' @export
 setClass(
-    Class="multivar",
+    Class = "multivar",
     representation(
         k = "numeric",
-        n  = "numeric",
-        d  = "numeric",
+        n = "numeric",
+        d = "numeric",
         Ak = "list",
         bk = "list",
+        Ak_orig = "list",
+        bk_orig = "list",
         Hk = "list",
-        A  = "matrix",
-        b  = "matrix",
-        H  = "matrix",
+        A = "matrix",
+        b = "matrix",
+        H = "matrix",
+        data_means = "list",
         lag="numeric",
         horizon="numeric",
         t1 = "numeric",
@@ -84,16 +104,13 @@ setClass(
         t2k = "numeric",
         ntk = "numeric",
         ndk = "numeric",
-        lambda1="matrix",
-        lambda2="matrix",
-        tau="matrix",
-        nlambda1="numeric",
-        nlambda2="numeric",
-        ntau ="numeric",
+        lambda1 = "matrix",
+        nlambda1 = "numeric",
+        n_ratios_subgroup = "numeric",
         gamma = "numeric",
-        tol="numeric",
-        depth="numeric",
-        window="numeric",
+        tol = "numeric",
+        depth = "numeric",
+        window = "numeric",
         standardize = "logical",
         weightest = "character",
         canonical = "logical",
@@ -101,12 +118,12 @@ setClass(
         lassotype = "character",
         intercept = "logical",
         W = "array",
-        ratios = "numeric",
-        ratiostau = "numeric",
-        ratiosalpha = "numeric",
+        ratios_unique = "numeric",
+        ratios_subgroup = "numeric",
+        ratios_unique_tvp = "numeric",
+        ratios_common_tvp = "numeric",
         cv = "character",
         nfolds = "numeric",
-        thresh = "numeric",
         lamadapt = "logical",
         subgroup_membership = "numeric",
         subgroup = "logical",
@@ -115,352 +132,24 @@ setClass(
         pendiag = "logical",
         tvp = "logical",
         inittvpcoefs = "list",
-        breaks = "list"
+        breaks = "list",
+        lambda_choice = "character",
+        common_effects = "logical",
+        common_tvp_effects = "logical",
+        save_beta = "logical",
+        ncores = "numeric",
+        spec = "list",
+        eps = "numeric",
+        warmstart = "logical",
+        stopping_crit = "character",
+        selection = "character",
+        ebic_gamma = "numeric",
+        weight_type = "character",
+        maity_opts = "list"
         ),validity=check.multivar
     )
 
 
-#' Construct an object of class multivar
-#' 
-#' @param data List. A list (length = k) of T by d multivariate time series
-#' @param lag Numeric. The VAR order. Default is 1.
-#' @param horizon Numeric. Desired forecast horizon. Default is 1. ZF Note: Should probably be zero.
-#' @param t1 Numeric. Index of time series in which to start cross validation. If NULL, default is floor(nrow(n)/3) where nk is the time series length for individual k.
-#' @param t2 Numeric. Index of times series in which to end cross validation. If NULL, default is floor(2*nrow(n)/3) where nk is the time series length for individual k.
-#' @param lambda1 Matrix. Regularization parameter 1. Default is NULL.
-#' @param lambda2 Matrix. Regularization parameter 2. Default is NULL.
-#' @param tau Matrix. Regularization parameter for subgroup effects.
-#' @param nlambda1 Numeric. Number of lambda1 values to search over. Default is 30.
-#' @param nlambda2 Numeric. Number of lambda2 values to search over. Default is 30.
-#' @param ntau Numeric. Number of tau values to search over. Default is 30.
-#' @param depth Numeric. Depth of grid construction. Default is 1000.
-#' @param tol Numeric. Optimization tolerance (default 1e-4).
-#' @param window Numeric. Size of rolling window.   
-#' @param standardize Logical. Default is true. Whether to standardize the individual data.
-#' @param weightest Character. Default is "mlr" for multiple linear regression. "sls" for simple linear regression also available. How to estimate the first-stage weights.
-#' @param canonical Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.
-#' @param threshold Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.
-#' @param lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
-#' @param intercept Logical. Default is FALSE. 
-#' @param W Matrix. Default is NULL. 
-#' @param ratios Numeric vector. Default is NULL. 
-#' @param ratiostau Numeric vector. Default is NULL. 
-#' @param ratiosalpha Numeric vector. Default is NULL. 
-#' @param cv Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.
-#' @param nfolds Numeric. The number of folds for use with "blocked" cross-validation.
-#' @param thresh Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.
-#' @param lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
-#' @param subgroup_membership Numeric. Vector of subgroup assignments.
-#' @param subgroup Logical. Internal argument whether to run subgrouping algorithm.
-#' @param B Matrix. Default is NULL.
-#' @param pendiag Logical. Logical indicating whether autoregressive parameters should be penalized. Default is TRUE.
-#' @param tvp Logical. Default is FALSE.
-#' @param inittvpcoefs List. 
-#' @param breaks List. A list of length K indicating structural breaks in the time series.
-#' @examples
-#' 
-#' sim  <- multivar_sim(
-#'   k = 2,  # individuals
-#'   d = 3,  # number of variables
-#'   n = 20, # number of timepoints
-#'   prop_fill_com = 0.1, # proportion of paths common
-#'   prop_fill_ind = 0.1, # proportion of paths unique
-#'   lb = 0.1,  # lower bound on coefficient magnitude
-#'   ub = 0.9,  # upper bound on coefficient magnitude
-#'   sigma = diag(3) # noise
-#' )
-#' 
-#' plot_sim(sim, plot_type = "common")
-#' 
-#' model <- constructModel(data = sim$data, weightest = "ols")
-#'
-#' @export
-constructModel <- function( data = NULL,
-                            lag = 1,
-                            horizon=0,
-                            t1 = NULL, 
-                            t2 = NULL, 
-                            lambda1=NULL,
-                            lambda2=NULL,
-                            tau=NULL,
-                            nlambda1=30,
-                            nlambda2=30,
-                            ntau=30,
-                            depth = 1000,
-                            tol=1e-4,
-                            window = 1,
-                            standardize = T,
-                            weightest = "lasso",
-                            canonical = FALSE,
-                            threshold = FALSE,
-                            lassotype = "adaptive",
-                            intercept = FALSE,
-                            W = NULL,
-                            ratios = NULL,
-                            ratiostau = NULL,
-                            ratiosalpha = NULL,
-                            cv = "blocked",
-                            nfolds = 10,
-                            thresh = 0,
-                            lamadapt = FALSE,
-                            subgroup_membership = NULL,
-                            subgroup = FALSE,
-                            B = NULL,
-                            pendiag = TRUE,
-                            tvp = FALSE,
-                            inittvpcoefs = list(),
-                            breaks = list()){
-  
-  if( lag != 1 ){
-    stop("multivar ERROR: Currently only lag of order 1 is supported.")
-  }
-  
-  # if(!is.null(horizon) & horizon<1 ){
-  #   stop("Forecast Horizon must be at least 1")
-  # }
-  
-  if( tol<0 | tol>1e-1 ){
-    stop("Tolerance must be positive")
-  }
-  
-  initcoefs <- list()
-  
-  dat <- setup_data(data, standardize, lag, horizon) 
-  
-  # what indices do we need for forecasting
-  t1k <- unlist(lapply(dat, function(x){floor(nrow(x$b)/3)}))
-  #t2k <- unlist(lapply(dat, function(x){floor(2*nrow(x$b)/3)}))
-  t2k <- unlist(lapply(dat, function(x){nrow(x$b)}))
-  ntk <- unlist(lapply(dat, function(x){nrow(x$b)})) # number tps
-  ndk <- unlist(lapply(dat, function(x){ncol(x$b)})) # number cols
-  
-  #getj  <- function(mat){dp = diff(mat@p);rep(seq_along(dp), dp) - 1}
-  getj  <- function(mat){rep(0:(ncol(mat)-1),each=nrow(mat))}
-  k     <- length(dat)
-  p     <- ncol(dat[[1]]$A)
-  ns    <- sapply(dat, function(item){nrow(item$A)})
-  cns   <- endrows <- cumsum(ns)
-  sr    <- c(1,cns[-length(cns)] + 1) - 1
-  nz    <- tail(cns,1)
-  is    <- js <- xs <- NULL
-  
-  if(!is.null(subgroup_membership)){
-    subgroup <- TRUE
-  } else if (subgroup == TRUE & is.null(subgroup_membership)){
-    subgroup_membership <- get_subgroups(data = data, nlambda1 = nlambda1, nlambda2 = nlambda2, pendiag = pendiag)
-  } else {
-    subgroup <- FALSE
-    subgroup_membership <- rep(1, k)
-    #subgroup <- NULL
-  }
-  
-  if(subgroup){
-   clust <- lapply(seq_along(subgroup_membership), function(i){rep(subgroup_membership[i],ntk[i]*p)})
-  }
-  
-  for(ii in 1:k){
-    #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for group effects
-    #is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
-    is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A)-1,ncol(dat[[ii]]$A)))
-    js <- c(js, getj(dat[[ii]]$A)) #get non-zero column indices for group effects
-    xs <- c(xs, dat[[ii]]$A@x) #vectorize data ffor group
-    
-    if(subgroup){
-      #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for subgroup
-      #is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
-      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A)-1,ncol(dat[[ii]]$A)))
-      js <- c(js, getj(dat[[ii]]$A) + clust[[ii]]*p) #get non-zero column indices for subgroup
-      xs <- c(xs, dat[[ii]]$A@x) #vectorize data for subgroups
-      #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for individual effects
-      #is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
-      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A)-1,ncol(dat[[ii]]$A)))
-      #js <- c(js, getj(dat[[ii]]$A) + p*(ii + length(unique(clust)))) #get non-zero column indices for individual effects
-      js <- c(js, getj(dat[[ii]]$A) + p*(ii + length(unique(subgroup_membership))))
-      xs <- c(xs, dat[[ii]]$A@x) #vectorize data for individual
-    } else{
-      #is <- c(is, sr[ii] + dat[[ii]]$A@i) #get non-zero row indices for individual effects
-      #is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A),ncol(dat[[ii]]$A)))
-      is <- c(is, sr[ii] + rep(1:nrow(dat[[ii]]$A)-1,ncol(dat[[ii]]$A)))
-      js <- c(js, getj(dat[[ii]]$A) + p*ii) #get non-zero column indices for individual effects
-      xs <- c(xs, dat[[ii]]$A@x) #vectorize data for individual
-    }
-  }
-  
-  Ak <- lapply(dat, "[[", "A")
-  bk <- lapply(dat, "[[", "b")
-  Hk <- lapply(dat, "[[", "H")
-  
-  if(subgroup){
-    dims_a <- c(nz, p*((k+1)+length(unique(subgroup_membership))))
-  } else{
-    dims_a <- c(nz,p*(k+1))
-  }
-  
-  if(k == 1) {
-     A  <- Matrix(Ak[[1]], sparse = TRUE)
-  } else {
-     A  <- sparseMatrix(i = is, j = js, x = xs, index1=FALSE, dims = dims_a)
-  }
-  
-  b  <- as.matrix(do.call(rbind, bk))
-  H  <- as.matrix(do.call(rbind, Hk))
-  
-  if(tvp){
-    
-    splitAt <- function(x, pos) unname(split(x, cumsum(seq_along(x) %in% pos)))
-    
-    if(length(breaks)==0){
-      
-      breaks <- lapply(1:k, function(j){seq(from = 1, to = ntk[j], by = 1)})
-
-    } 
-    
-    breaks <- lapply(1:k, function(j){splitAt(c(1:(ntk[j])), breaks[[j]])})
-      
-    A <- Matrix(cbind(A, Matrix::bdiag(lapply(seq_along(Ak), function(i){
-      tvp <- do.call(cbind,lapply(1:ncol(Ak[[i]]), function(j){
-        Matrix::bdiag(
-          lapply(breaks[[i]],function(window){
-            Ak[[i]][window,j]
-          })
-        )
-      }))
-    }))), sparse=TRUE)
-      
-  }
-  
-  # here we also assume all individuals have the same number
-  # of timepoints. (zff 2021-09-15)
-  
-  #if(is.null(t1)){
-    #t1 <- nrow(Ak[[1]]) - floor(.33*(nrow(Ak[[1]]))) 
-  #  t1 <- nrow(Ak[[1]]) - floor(.5*(nrow(Ak[[1]]))) 
-  #}
-  
-  #(is.null(t2)){
-  #  t2 <- nrow(Ak[[1]])
-  #}
-  
-  # adjust t1 and t2 by max lag to account for initialization
-  #t1 <- t1 - lag
-  #t2 <- t2 - lag
-  
-  # tks <- c(1, cumsum(ntk[-length(ntk)])+1)
-  # tke <- cumsum(ntk)
-  # t1s <- c(1, cumsum(t1k[-length(t1k)])+1)
-  # t1e <- cumsum(t1k)
-  # t2s <- t1e+1
-  # t1e <- cumsum(t1k)
-  
-  # 
-  # we need to review this part of the code for the following issues:
-  # - should S be used to define range of ratios2?
-  # - if user supplies these values (lambda1,lambda2,tau) do we handle them appropriately?
-  
-  if(is.null(lambda1) & is.null(lambda2)){
-    # construct ratios, and initialize vectors for lambda1, lambda2.
-    # ratios is \lambda_{2,k}/\lambda_1
-    ratios <- rev(round(exp(seq(log(k/depth),log(k),length.out = nlambda1)), digits = 10)) 
-    # ratios2 is \tau_{s}/\lambda_1
-    
-    if(subgroup){
-      ratiostau <- rev(round(exp(seq(log(max(subgroup_membership)/depth),log(max(subgroup_membership)),length.out = ntau)), digits = 10))
-    } else {
-      ratiostau <- rep(1, ntau)
-    }
-    
-    if(tvp){
-      nalpha <- nlambda1
-      ratiosalpha <- rev(round(exp(seq(log((max(ntk))/depth),log((max(ntk))),length.out = nalpha)), digits = 10))
-    } else {
-      nalpha <- nlambda1
-      ratiosalpha <- rep(1, nalpha)
-    }
-
-    lambda1 <- matrix(0, nlambda1,length(ratios))
-    lambda2 <- matrix(0, nlambda2,length(ratios))
-    tau <- matrix(0, ntau,length(ratiostau))
-    
-  } else {
-    
-    nlambda1 <- length(lambda1)
-    nlambda2 <- length(lambda2)
-    lambda1 <- matrix(lambda1, nrow = 1)
-    lambda2 <- matrix(lambda2, nrow = 1)
-    ratios <- tau <- alpha <- c(0)
-  }
-
-
-  # construct W
-  W <- matrix(1, nrow = ncol(bk[[1]]), ncol = ncol(A))
-  
-  # this includes the intercept? do we want this?
-  if(!subgroup){
-    if(k == 1){
-      B <- array(0,dim = c((ndk[1]),(ndk[1]*(k) + 1), nlambda1*length(ratios)))
-    } else {
-      B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + 1) + 1), nlambda1*length(ratios)))
-    }
-  } else {
-    B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + max(subgroup_membership) + 1) + 1), nlambda1*length(ratios)*length(ratiostau)))
-  }
-  
-  if(tvp){
-    B <- array(0,dim = c((ndk[1]),(ndk[1]*(k + 1) + (ndk[1]*sum(unlist(lapply(breaks,function(g){length(g)})))) + 1), nlambda1*length(ratios)*length(ratiosalpha)))
-  }
-  
-  obj <- new("multivar",
-    k  = k,
-    n  = ntk,
-    d  = ndk,
-    Ak = Ak,
-    bk = bk,
-    Hk = Hk,
-    A  = as.matrix(A),
-    b  = b,
-    H  = H,
-    horizon = horizon,
-    t1 = t1k,
-    t2 = t2k,
-    t1k = t1k,
-    t2k = t2k,
-    ntk = ntk,
-    ndk = ndk,
-    lambda1 = lambda1,
-    lambda2 = lambda2,
-    tau = tau,
-    nlambda1 = nlambda1,
-    nlambda2 = nlambda2,
-    ntau = ntau,
-    depth = depth,
-    tol = tol,
-    window = window,
-    weightest = weightest,
-    canonical  = canonical,
-    threshold  = threshold,
-    lassotype = lassotype,
-    intercept = intercept,
-    W = W,
-    ratios = ratios,
-    ratiostau = ratiostau,
-    ratiosalpha = ratiosalpha,
-    cv = cv,
-    nfolds = nfolds,
-    thresh = thresh,
-    lamadapt = lamadapt,
-    subgroup_membership = subgroup_membership,
-    subgroup = subgroup,
-    B = B,
-    initcoefs = initcoefs,
-    pendiag = pendiag,
-    tvp = tvp,
-    inittvpcoefs = inittvpcoefs,
-    breaks = breaks
-  )
-
-  return(obj)
-
-}
 
 
 # show-default method to show an object when its name is printed in the console.
@@ -523,105 +212,188 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
   object@initcoefs <- estimate_initial_coefs(
     object@Ak,
     object@bk,
-    object@d, 
-    object@k, 
-    object@lassotype, 
+    object@d,
+    object@k,
+    object@lassotype,
     object@weightest,
     object@subgroup_membership,
     object@subgroup,
     object@nlambda1,
-    object@nlambda2,
     object@tvp,
-    object@breaks
+    object@breaks,
+    object@intercept,
+    object@nfolds,
+    object@lambda_choice,
+    object@common_effects,
+    object@common_tvp_effects,
+    object@maity_opts
   )
-  
+
   object@W <- est_base_weight_mat(
-    object@W,        
-    object@Ak,        
-    object@initcoefs, 
-    object@ratios,    
-    object@d, 
-    object@k, 
-    object@lassotype, 
-    object@weightest, 
-    object@subgroup_membership,     
-    object@subgroup, 
-    object@ratiostau,
-    object@pendiag,
-    object@tvp,
-    object@ratiosalpha
-  )
-
-  # object@W <- est_base_weight_mat(
-  #   object@W,
-  #   object@Ak,
-  #   object@bk,
-  #   object@ratios, 
-  #   object@d, 
-  #   object@k, 
-  #   object@lassotype, 
-  #   object@weightest,
-  #   object@subgroup,
-  #   object@subgroupflag,
-  #   object@ratiostau,
-  #   object@nlambda1,
-  #   object@nlambda2
-  # )
-  
-  object@lambda1 <- lambda_grid(
-    object@B,
-    object@depth, 
-    object@nlambda1, 
-    t(as.matrix(object@b)), 
-    t(as.matrix(object@A)), 
-    object@W, 
-    object@k,
-    object@tol,
-    object@intercept,
-    object@lamadapt
-  )
-
-  fit <- cv_multivar(
-    object@B, 
-    t(as.matrix(object@A)), 
-    t(as.matrix(object@b)), 
-    object@W, 
+    object@W,
     object@Ak,
-    object@bk,
-    object@k, 
-    object@d, 
-    object@lambda1, 
-    object@lambda2, 
-    #object@ratios, 
-    object@t1, 
-    object@t2, 
-    eps = 1e-3,
-    object@intercept,
-    object@cv,
-    object@nfolds
-  )
-
-
-  mats <- breakup_transition(
-    fit[[1]][,,which.min(colMeans(fit[[2]]))], 
-    object@Ak, 
-    object@ndk, 
-    object@intercept,
-    object@thresh,
+    object@initcoefs,
+    object@ratios_unique,
+    object@d,
+    object@k,
+    object@lassotype,
+    object@weightest,
     object@subgroup_membership,
     object@subgroup,
+    object@ratios_subgroup,
+    object@pendiag,
     object@tvp,
-    object@ntk,
-    object@breaks
+    object@ratios_unique_tvp,
+    object@ratios_common_tvp,
+    object@intercept,
+    object@common_effects,
+    object@common_tvp_effects,
+    object@spec,
+    object@weight_type
   )
-  
-  results <- list(
-    mats = mats,
-    beta = fit[[1]],
-    MSFE = fit[[2]],
-    obj  = object
+
+  # Precompute transposes once (used for lambda_grid and cv_multivar)
+  tA <- t(as.matrix(object@A))
+  tb <- t(as.matrix(object@b))
+
+  # Only construct lambda grid if user didn't provide fixed lambda values
+  # User-provided lambdas have non-zero values; default is all zeros
+  if (all(object@lambda1 == 0)) {
+    object@lambda1 <- lambda_grid(
+      depth     = object@depth,
+      nlam      = object@nlambda1,
+      Y         = tb,
+      Z         = tA,
+      W         = object@W,
+      tol       = object@tol,
+      intercept = object@intercept,
+      lamadapt  = object@lamadapt,
+      k         = object@k
+    )
+  }
+
+  stopping_crit_int <- match(object@stopping_crit, c("absolute", "relative", "objective")) - 1L
+
+  if (object@selection == "ebic") {
+    # EBIC path: fit all scenarios on full data (no CV folds)
+    beta <- wlasso(object@B, tA, tb, object@W, object@k, object@d,
+                   object@lambda1, object@eps, object@intercept,
+                   warmstart = object@warmstart, stopping_crit = stopping_crit_int)
+    fit <- list(beta, NULL)  # No MSFE matrix
+
+    # Select best scenario by EBIC
+    ebic_vals <- compute_ebic(beta, tA, tb, object@d, object@ebic_gamma, object@spec)
+    best_idx <- which.min(ebic_vals)
+
+  } else {
+    # CV path: existing cross-validation code
+    fit <- cv_multivar(
+      object@B,
+      tA,
+      tb,
+      object@W,
+      object@Ak,
+      object@bk,
+      object@k,
+      object@d,
+      object@lambda1,
+      object@t1,
+      object@t2,
+      eps = object@eps,
+      object@intercept,
+      object@cv,
+      object@nfolds,
+      object@tvp,
+      object@breaks,
+      object@spec,
+      object@ncores,
+      warmstart = object@warmstart,
+      stopping_crit = stopping_crit_int
+    )
+
+    hyp <- extract_multivar_hyperparams(
+      object,
+      fit
+    )
+
+    # Check if selected hyperparameters are at grid boundaries
+    best_idx <- which.min(hyp$MSFE)
+    best_lambda_idx <- hyp$lambda1_index[best_idx]
+    best_ratio_idx <- hyp$ratio_index[best_idx]
+    n_lambda <- nrow(object@lambda1)
+    n_ratios <- ncol(object@lambda1)
+
+    # Check lambda1 boundaries
+    if (best_lambda_idx == 1) {
+      warning("lambda1 selected at upper boundary (maximum regularization). ",
+              "Consider increasing depth or checking if model is overpenalized.")
+    } else if (best_lambda_idx == n_lambda) {
+      warning("lambda1 selected at lower boundary (minimum regularization). ",
+              "Consider increasing depth for wider lambda range.")
+    }
+
+    # Check ratio boundaries (only warn if more than 1 ratio value)
+    if (n_ratios > 1) {
+      if (best_ratio_idx == 1) {
+        warning("ratio selected at upper boundary. ",
+                "Consider expanding the ratios_unique grid.")
+      } else if (best_ratio_idx == n_ratios) {
+        warning("ratio selected at lower boundary. ",
+                "Consider expanding the ratios_unique grid.")
+      }
+    }
+  }
+
+  mats <- breakup_transition(
+    B = fit[[1]][,,best_idx],
+    spec = object@spec,
+    Ak = object@Ak,
+    breaks = object@breaks
   )
-  
+
+  # Recover intercepts if intercept=TRUE
+  # Intercepts are computed post-hoc using: c = mean(b) - Phi * mean(A)
+  if (object@intercept && length(object@data_means) > 0) {
+    mats$intercepts <- recover_intercepts(
+      mats = mats,
+      data_means = object@data_means,
+      k = object@k,
+      d = object@d,
+      subgroup = object@subgroup,
+      subgroup_membership = object@subgroup_membership,
+      tvp = object@tvp,
+      breaks = object@breaks
+    )
+  }
+
+  if (object@selection == "ebic") {
+    results <- list(
+      mats = mats,
+      beta = if (object@save_beta) fit[[1]] else NULL,
+      MSFE = NULL,
+      obj  = object,
+      hyperparams = NULL,
+      selection = "ebic",
+      ebic = list(
+        values   = ebic_vals,
+        best_idx = best_idx,
+        gamma    = object@ebic_gamma
+      )
+    )
+  } else {
+    results <- list(
+      mats = mats,
+      beta = if (object@save_beta) fit[[1]] else NULL,
+      MSFE = fit[[2]],
+      obj  = object,
+      hyperparams = hyp,
+      selection = "cv"
+    )
+  }
+
+  # Add S3 class for method dispatch
+  class(results) <- c("multivar_fit", "list")
+
   #results <- new("multivar.results",object)
   return(results)
 })
@@ -658,12 +430,16 @@ setMethod(f = "cv.multivar", signature = "multivar",definition = function(object
 setGeneric(name = "canonical.multivar",def=function(object){standardGeneric("canonical.multivar")})
 setMethod(f = "canonical.multivar", signature = "multivar",definition = function(object){
 
-  can_var <- lapply(seq_along(object@bk), function(i){
+  can_var <- lapply(seq_along(object@bk_orig), function(i){
+    # Use original (unscaled) data for canonical VAR fitting
+    # Reconstruct the time series by prepending one lag observation
     df <- as.matrix(rbind(
-      object@Ak[[i]][1,],
-      object@bk[[i]]
+      object@Ak_orig[[i]][1,],
+      object@bk_orig[[i]]
      ))
-     fit_canonical_var(df, p = 1, type = "none")
+     # Use type="const" if intercept=TRUE, otherwise type="none"
+     var_type <- if(object@intercept) "const" else "none"
+     fit_canonical_var(df, p = 1, type = var_type)
   })
 
 
@@ -673,6 +449,35 @@ setMethod(f = "canonical.multivar", signature = "multivar",definition = function
     total  = lapply(can_var,"[[","transition_mat"),
     total_sigonly  = lapply(can_var,"[[","transition_mat_sigonly")
   )
+
+  # Handle intercepts
+  if (object@intercept) {
+    # Extract intercepts directly from canonical VAR fit (vars with type="const")
+    intercepts_total <- lapply(can_var, "[[", "intercepts")
+
+    # For k=1, no decomposition
+    if (object@k == 1) {
+      res$intercepts <- list(
+        intercepts_total = intercepts_total,
+        intercept_common = NULL,
+        intercepts_unique = NULL
+      )
+    } else {
+      # For k>1, decompose into common and group-specific
+      intercept_common <- Reduce("+", intercepts_total) / object@k
+      intercepts_unique <- lapply(intercepts_total, function(c_total) {
+        c_total - intercept_common
+      })
+
+      res$intercepts <- list(
+        intercepts_total = intercepts_total,
+        intercept_common = intercept_common,
+        intercepts_unique = intercepts_unique
+      )
+    }
+  } else {
+    res$intercepts <- NULL
+  }
 
   return(list(mats = res))
 })

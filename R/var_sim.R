@@ -7,7 +7,7 @@
 #' @param tvp A d x d logical matrix indicating if a dynamic is time varying.
 #' @keywords var simulate internal
 #' @noRd
-var_sim = function(n, phi, sigma, burn = 500,tvp=NULL,int=0){
+var_sim = function(n, phi, sigma, burn = 500,tvp=NULL,intercept=0){
   k    <- dim(phi)[1]
   p    <- dim(phi)[2]/k
   inno <- MASS::mvrnorm(n=n+burn, rep(0, k), sigma)
@@ -41,7 +41,7 @@ var_sim = function(n, phi, sigma, burn = 500,tvp=NULL,int=0){
   
   
   for(r in 1:(n+burn)){
-  	Y[r,] <-  int + phi[[r]] %*% as.vector(t(init[id,])) + inno[r,]
+  	Y[r,] <-  intercept + phi[[r]] %*% as.vector(t(init[id,])) + inno[r,]
     init <- rbind(init[-1,], Y[r,])
   }
   

@@ -25,11 +25,15 @@ ind <- function(n2, m) {
     .Call(`_multivar_ind`, n2, m)
 }
 
-FISTA <- function(Y, Z, B, W, lambda1, eps, step) {
-    .Call(`_multivar_FISTA`, Y, Z, B, W, lambda1, eps, step)
+FISTA <- function(Y, Z, B, W, lambda1, eps, step, stopping_crit = 0L) {
+    .Call(`_multivar_FISTA`, Y, Z, B, W, lambda1, eps, step, stopping_crit)
 }
 
-lamloopFISTA <- function(beta_, Y, Z, W_, lambda1, eps, YMean2, ZMean2, B1, step) {
-    .Call(`_multivar_lamloopFISTA`, beta_, Y, Z, W_, lambda1, eps, YMean2, ZMean2, B1, step)
+lamloopFISTA <- function(beta_, Y, Z, W_, lambda1, eps, B1, step, warmstart = FALSE, stopping_crit = 0L) {
+    .Call(`_multivar_lamloopFISTA`, beta_, Y, Z, W_, lambda1, eps, B1, step, warmstart, stopping_crit)
+}
+
+lamloopFISTA_offset <- function(beta_, Y, Z, W_, lambda1, eps, ZMean2, B1, step, offset, warmstart = FALSE, stopping_crit = 0L) {
+    .Call(`_multivar_lamloopFISTA_offset`, beta_, Y, Z, W_, lambda1, eps, ZMean2, B1, step, offset, warmstart, stopping_crit)
 }
 

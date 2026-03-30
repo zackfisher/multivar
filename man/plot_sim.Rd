@@ -2,48 +2,78 @@
 % Please edit documentation in R/plot_sim.R
 \name{plot_sim}
 \alias{plot_sim}
-\title{Plot data arising from multivar_sim.}
+\title{Plot simulated multivar ground truth}
 \usage{
 plot_sim(
   x,
-  plot_type = "common",
+  plot_type = c("common", "unique", "total", "subgrp"),
   facet_ncol = 3,
-  datasets = "all",
+  subjects = "all",
   ub = 1,
-  lb = -1
+  lb = -1,
+  palette = "default",
+  show_zeros = FALSE,
+  ...
 )
 }
 \arguments{
-\item{x}{Object. An object returned by multivar_sim.}
+\item{x}{Object returned by \code{multivar_sim()} or \code{multivar_sim_subgroups()}}
 
-\item{plot_type}{Character. User can specify "common" to plot the common effects matrix, "unique" to plot the unique effects matrix, or "total" to plot the total effects matrix.}
+\item{plot_type}{Character. Type of effects to plot:
+\itemize{
+  \item "common" - Common effects shared across all subjects
+  \item "unique" - Subject-specific unique effects
+  \item "total" - Total effects (common + unique for each subject)
+  \item "subgrp" - Subgroup effects (if simulation includes subgroups)
+}}
 
-\item{facet_ncol}{Numeric. Number of columns to use in the "unique" or "total" effects plot.}
+\item{facet_ncol}{Numeric. Number of columns when faceting multiple matrices}
 
-\item{datasets}{Numeric. A vector containing the index of datasets to plot. Default is "all".}
+\item{subjects}{Character "all" or numeric vector. Which subjects to plot for
+"unique" or "total" types. Default is "all"}
 
-\item{ub}{Numeric. Upper bound on coefficient values for heatmap index. Default is 1.}
+\item{ub}{Numeric. Upper bound for color scale. Default is 1}
 
-\item{lb}{Numeric. Lower bound on coefficient values for heatmap index. Default is -1.}
+\item{lb}{Numeric. Lower bound for color scale. Default is -1}
+
+\item{palette}{Character. Color palette: "default", "viridis", or "greyscale"}
+
+\item{show_zeros}{Logical. If FALSE (default), zero values shown as white/NA}
+
+\item{...}{Additional arguments passed to plotting engine}
+}
+\value{
+A ggplot2 object that can be further customized
 }
 \description{
-Plot data arising from multivar_sim.
+Creates heatmap visualizations of true transition matrices from multivar simulations.
+Supports plotting common effects, unique (subject-specific) effects, total effects,
+and subgroup effects.
 }
 \examples{
+\dontrun{
+# Simulate data
+sim <- multivar_sim(k = 3, d = 5, n = 50,
+                    prop_fill_com = 0.2, prop_fill_ind = 0.1,
+                    lb = 0.1, ub = 0.9, sigma = diag(5))
 
-k <- 3
-d <- 5
-n <- 50
-prop_fill_com <- .2
-prop_fill_ind <- .2
-lb <- 0.1
-ub <- 0.7
-sigma <- diag(0.1,d)
-sim <- multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub,sigma)
+# Plot true common effects
 plot_sim(sim, plot_type = "common")
 
+# Plot true unique effects for subjects 1-2
+plot_sim(sim, plot_type = "unique", subjects = 1:2)
+
+# Simulate with subgroups
+sim_sub <- multivar_sim_subgroups(k = 4, d = 3, n = 40,
+                                  subgroup = c(1, 1, 2, 2),
+                                  p_com = 0.25, p_sub = 0.10, p_ind = 0.05,
+                                  sigma = diag(3))
+
+# Plot subgroup effects
+plot_sim(sim_sub, plot_type = "subgrp")
 }
-\keyword{multivar}
-\keyword{plot}
-\keyword{simulate}
-\keyword{var}
+
+}
+\seealso{
+\code{\link{plot_results}}, \code{\link{plot_transition_mat}}
+}

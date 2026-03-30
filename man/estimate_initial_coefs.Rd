@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimate_initial_coefs.R
 \name{estimate_initial_coefs}
 \alias{estimate_initial_coefs}
-\title{Estimate consistent first-stage coefficients}
+\title{Estimate initial coefficients for adaptive weights}
 \usage{
 estimate_initial_coefs(
   Ak,
@@ -14,25 +14,61 @@ estimate_initial_coefs(
   subgroup_membership,
   subgroup,
   nlambda1,
-  nlambda2,
   tvp,
-  breaks
+  breaks,
+  intercept,
+  nfolds,
+  lambda_choice = "lambda.min",
+  common_effects = TRUE,
+  common_tvp_effects = TRUE,
+  maity_opts = list()
 )
 }
-\description{
-`estimate_initial_coefs` returns consistent first-stage estimates to be used
-for calculating adaptive weights used in regularization.
-}
-\details{
-This function returns a list containing the following elements:
-* common_effects: a d x d matrix containing consistent esimtates of the common 
-  effects
-* subgroup_effects: a list of length max(subgroup), where each element is a d x d matrix 
-  containing consistent esimtates of the subgroup effects
-* unique_effects: a list of length k, where each element is a d x d matrix 
-  containing consistent esimtates of the unique effects
-* total_effects: a list of length k, where each element is a d x d matrix 
-  containing consistent esimtates of the total effects
+\arguments{
+\item{Ak}{List. A list (length = k) of lagged (T-lag-horizon) by d multivariate time series matrices.}
 
-#' @export
+\item{bk}{List. A list (length = k) of (T-lag-horizon) by d multivariate time series matrices.}
+
+\item{d}{Numeric vector. The number of variables for each dataset.}
+
+\item{k}{Numeric. The number of subjects.}
+
+\item{lassotype}{Character. Type of LASSO penalty: "standard" or "adaptive".}
+
+\item{weightest}{Character. How to estimate initial coefficients: "lasso", "ridge", or "ols".}
+
+\item{subgroup_membership}{Numeric vector. Vector of subgroup assignments for each subject.}
+
+\item{subgroup}{Logical. Whether to run subgrouping algorithm.}
+
+\item{nlambda1}{Numeric. Not used (kept for API compatibility).}
+
+\item{tvp}{Logical. Whether to estimate time-varying parameters.}
+
+\item{breaks}{List. A list of length k indicating structural breaks in the time series.}
+
+\item{intercept}{Logical. Whether to include intercepts in the model.}
+
+\item{nfolds}{Numeric. The number of folds for cross-validation.}
+
+\item{lambda_choice}{Character. Which lambda to use from cv.glmnet: "lambda.min" or "lambda.1se".}
+
+\item{common_effects}{Logical. Whether to include common effects in TVP models.}
+
+\item{common_tvp_effects}{Logical. Whether to include common TVP effects (k>1 only).}
+}
+\value{
+A list containing:
+  \itemize{
+    \item{common_effects: d x d matrix of common effects}
+    \item{subgroup_effects: list of d x d matrices per subgroup (if subgroup=TRUE)}
+    \item{unique_effects: list of d x d matrices per subject}
+    \item{tvp_effects: list of lists of d x d matrices per subject per period (if tvp=TRUE)}
+    \item{common_tvp_effects: list of d x d matrices per period (if tvp=TRUE and k>1)}
+    \item{total_effects: list of d x d matrices per subject}
+  }
+}
+\description{
+`estimate_initial_coefs` returns consistent initial estimates to be used
+for calculating adaptive weights in adaptive LASSO regularization.
 }

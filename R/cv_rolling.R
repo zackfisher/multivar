@@ -1,5 +1,6 @@
-#' @export
-cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALSE, cv, nfolds){
+#' @keywords internal
+cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALSE, cv, nfolds,
+                       warmstart = FALSE, stopping_crit = 0L){
   
   t1  <- t1[1]
   t2  <- t2[1]
@@ -9,7 +10,7 @@ cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALS
   t0k <- c(1, c(t3k+1)[-k])
   
   rw_n <- length(c(1:(t2-t1)))
-  #MSFE <- matrix(NA, nrow = rw_n, ncol = nrow(lambda1)*length(ratios))
+  #MSFE <- matrix(NA, nrow = rw_n, ncol = nrow(lambda1)*length(ratios_unique))
   MSFE <- matrix(NA, nrow = rw_n, ncol = nrow(lambda1)*dim(W)[3])
   pb   <- txtProgressBar(1, rw_n, style=3)
   
@@ -24,15 +25,18 @@ cv_rolling <- function(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALS
     #cat("test : ", train_idx, "\n")
     #cat("train: ", test_idx, "\n\n")
   
-    beta <- wlasso(B, Z[,train_idx], Y[,train_idx], W, k, d, lambda1,eps,intercept)
+    beta <- wlasso(B, Z[,train_idx], Y[,train_idx], W, k, d, lambda1,eps,intercept,
+                   warmstart = warmstart, stopping_crit = stopping_crit)
 
     # Calculate h-step MSFE for each penalty parameter
     for (ii in 1:dim(beta)[3]) {
-      MSFE[rw_idx,ii] <- norm2(Y[,test_idx,drop=F]- beta[,-1,ii] %*% Z[,test_idx,drop=F] )^2
+      #MSFE[rw_idx,ii] <- norm2(Y[,test_idx,drop=F]- beta[,-1,ii] %*% Z[,test_idx,drop=F] )^2
+      MSFE[rw_idx,ii] <- norm2(Y[,test_idx,drop=F]- beta[,,ii] %*% Z[,test_idx,drop=F] )^2
     }
   }
   
-  beta <- wlasso(B, Z, Y, W, k, d, lambda1,eps,intercept)
+  beta <- wlasso(B, Z, Y, W, k, d, lambda1,eps,intercept,
+                 warmstart = warmstart, stopping_crit = stopping_crit)
   
   return(list(beta,MSFE))
   

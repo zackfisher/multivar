@@ -23,6 +23,10 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{bk}}{List. A list (length = k) of (T-lag-horizon) by d multivariate time series.}
 
+\item{\code{Ak_orig}}{List. A list (length = k) of lagged (T-lag-horizon) by d unscaled multivariate time series.}
+
+\item{\code{bk_orig}}{List A list (length = k) of (T-lag-horizon) by d unscaled multivariate time series.}
+
 \item{\code{Hk}}{List. A list (length = k) of (horizon) by d multivariate time series.}
 
 \item{\code{A}}{Matrix. A matrix containing the lagged ((T-lag-horizon)k) by (d+dk) multivariate time series.}
@@ -30,6 +34,8 @@ To construct an object of class multivar, use the function \code{\link{construct
 \item{\code{b}}{Matrix. A matrix containing the non-lagged ((T-lag-horizon)k) by (d) multivariate time series.}
 
 \item{\code{H}}{Matrix. A matrix containing the non-lagged (horizon k) by d multivariate time series.}
+
+\item{\code{data_means}}{List. A list (length = k) of column means for each group's data, used for intercept recovery when intercept=TRUE.}
 
 \item{\code{lag}}{Numeric. The VAR order. Currently only lag 1 is supported.}
 
@@ -39,17 +45,21 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{t2}}{Numeric vector. Index of time series in which to end cross validation for individual k.}
 
-\item{\code{lambda1}}{Numeric vector. Regularization parameter 1.}
+\item{\code{t1k}}{Numeric vector. Index of time series in which to start cross validation for individual k.}
 
-\item{\code{lambda2}}{Numeric vector. Regularization parameter 2.}
+\item{\code{t2k}}{Numeric vector. Index of time series in which to end cross validation for individual k.}
 
-\item{\code{tau}}{Numeric vector. Regularization parameter for subgroup effects.}
+\item{\code{ntk}}{Numeric. Number of usable timepoints (rows of b) per individual k}
+
+\item{\code{ndk}}{Numeric. Number of variables (cols of b) per individual k}
+
+\item{\code{lambda1}}{Numeric vector. Regularization parameter grid.}
 
 \item{\code{nlambda1}}{Numeric. Number of lambda1 values to search over. Default is 30.}
 
-\item{\code{nlambda2}}{Numeric. Number of lambda2 values to search over. Default is 30.}
+\item{\code{n_ratios_subgroup}}{Numeric. Number of ratios_subgroup values to search over. Default is 30.}
 
-\item{\code{ntau}}{Numeric. Number of tau values to search over. Default is 30.}
+\item{\code{gamma}}{Numeric. Power for adaptive weighting (default 1). Controls how strongly initial estimates influence the penalty: weight = 1/|coef|^gamma.}
 
 \item{\code{tol}}{Numeric. Convergence tolerance.}
 
@@ -59,7 +69,7 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{standardize}}{Logical. Default is true. Whether to standardize the individual data.}
 
-\item{\code{weightest}}{Character. How to estimate the first-stage weights. Default is "lasso". Other options include "ridge", "ols" and "var".}
+\item{\code{weightest}}{Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "ridge" and "ols".}
 
 \item{\code{canonical}}{Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.}
 
@@ -71,17 +81,17 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{W}}{Matrix. Default is NULL.}
 
-\item{\code{ratios}}{Numeric vector. Default is NULL.}
+\item{\code{ratios_unique}}{Numeric vector. Penalty ratio for unique effects. Default is NULL.}
 
-\item{\code{ratiostau}}{Numeric vector. Default is NULL.}
+\item{\code{ratios_subgroup}}{Numeric vector. Penalty ratio for subgroup effects. Default is NULL.}
 
-\item{\code{ratiosalpha}}{Numeric vector. Default is NULL.}
+\item{\code{ratios_unique_tvp}}{Numeric vector. Default is NULL.}
+
+\item{\code{ratios_common_tvp}}{Numeric vector. Penalty ratio for common TVP effects. Default is NULL.}
 
 \item{\code{cv}}{Character. Default is "blocked" for k-folds blocked cross-validation. rolling window cross-validation also available using "rolling".  If "blocked" is selected the nfolds argument should be specified.}
 
 \item{\code{nfolds}}{Numeric. The number of folds for use with "blocked" cross-validation.}
-
-\item{\code{thresh}}{Numeric. Post-estimation threshold for setting the individual-level coefficients to zero if their absolute value is smaller than the value provided. Default is zero.}
 
 \item{\code{lamadapt}}{Logical. Should the lambdas be calculated adaptively. Default is FALSE.}
 
@@ -100,6 +110,30 @@ To construct an object of class multivar, use the function \code{\link{construct
 \item{\code{inittvpcoefs}}{List. A list of initial tvp estimates.}
 
 \item{\code{breaks}}{List. A list of length K indicating structural breaks in the time series.}
+
+\item{\code{lambda_choice}}{Character. Which lambda to use for initial coefficient estimation ("lambda.min" or "lambda.1se").}
+
+\item{\code{common_effects}}{Logical. Whether to include common effects in TVP models. Only applies when tvp = TRUE.}
+
+\item{\code{common_tvp_effects}}{Logical. Whether to include common TVP effects (shared time-varying patterns) in TVP models. Only applies when tvp = TRUE.}
+
+\item{\code{save_beta}}{Logical. Whether to retain the full beta array in the cv.multivar result. Default is TRUE.}
+
+\item{\code{ncores}}{Numeric. Number of cores for parallel computation. Default is 1.}
+
+\item{\code{spec}}{List. Design matrix specification object created by \code{\link{build_matrix_spec}}. Single source of truth for column/row indices.}
+
+\item{\code{eps}}{Numeric. FISTA convergence tolerance. Default is 1e-3.}
+
+\item{\code{warmstart}}{Logical. Whether to use warm starts in the FISTA solver. Default is TRUE.}
+
+\item{\code{stopping_crit}}{Character. FISTA convergence criterion. One of \code{"absolute"}, \code{"relative"}, or \code{"objective"}.}
+
+\item{\code{selection}}{Character. Model selection criterion: \code{"cv"} (default) for cross-validated MSFE, or \code{"ebic"} for Extended BIC.}
+
+\item{\code{ebic_gamma}}{Numeric. EBIC tuning parameter, used when \code{selection = "ebic"}. Default is 0.5.}
+
+\item{\code{weight_type}}{Character. Adaptive weight function type: \code{"standard"} (default) uses \code{1/|coef|^gamma}, \code{"bounded"} uses \code{1/(1+|coef|/tau)^gamma}.}
 }}
 
 \seealso{

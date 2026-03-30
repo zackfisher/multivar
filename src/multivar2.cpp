@@ -53,14 +53,15 @@ uvec ind(int n2,int m){
 
 // [[Rcpp::export]]
 mat FISTA(
-    const mat& Y, 
-    const mat& Z, 
-    mat& B, 
-    mat& W, 
+    const mat& Y,
+    const mat& Z,
+    mat& B,
+    mat& W,
     const rowvec lambda1,
-    const double eps, 
-    double step){
-  
+    const double eps,
+    double step,
+    int stopping_crit = 0){
+
   B=trans(B);
   W=trans(W);
   colvec B1=B.col(0);
@@ -69,7 +70,7 @@ mat FISTA(
   mat I(Z.n_cols,Z.n_cols);
   I.eye();
   int np = B.n_cols;
-  
+
   for( int i =0; i<np; ++i){
     B1=B.col(i);
     colvec BOLD=B.col(i);
@@ -80,17 +81,32 @@ mat FISTA(
 	  double maxiters=1000;
 	  j=1;
 	  colvec Wj = W.col(i);
-	  Wj = Wj*templam*step;
-	  //Wj = Wj*templam;
+	  colvec Wj_raw = Wj*templam;  // unscaled weights for objective computation
+	  Wj = Wj_raw*step;
+	  double obj_old = 1e30;  // for objective stopping criterion
 	  while((thresh>eps) & (j<maxiters)){
 
  			  colvec v=BOLD+((j-2)/(j+1))*(BOLD-BOLDOLD);
  			  B1=ST3a(vectorise(v)+step*vectorise((trans(Y.col(i))-trans(v)*Z)*trans(Z)),Wj);
- 			  thresh=max(abs(B1-v));
+
+ 			  if (stopping_crit == 0) {
+ 			    // absolute: max|B1 - v|
+ 			    thresh = max(abs(B1-v));
+ 			  } else if (stopping_crit == 1) {
+ 			    // relative: max|B1 - v| / (max|v| + 1e-15)
+ 			    thresh = max(abs(B1-v)) / (max(abs(v)) + 1e-15);
+ 			  } else {
+ 			    // objective: |obj_new - obj_old| / (|obj_old| + 1e-15)
+ 			    colvec resid = Y.col(i) - Z.t() * B1;
+ 			    double obj_new = 0.5 * dot(resid, resid) + dot(Wj_raw, abs(B1));
+ 			    thresh = std::abs(obj_new - obj_old) / (std::abs(obj_old) + 1e-15);
+ 			    obj_old = obj_new;
+ 			  }
+
  			  BOLDOLD=BOLD;
  			  BOLD=B1;
  			  j+=1;
- 			  
+
 	  }
 
     B.col(i)=B1;
@@ -107,61 +123,145 @@ mat FISTA(
 
 // [[Rcpp::export]]
 cube lamloopFISTA(
-    NumericVector beta_, 
+    NumericVector beta_,
     const mat& Y,
     const mat& Z,
-    NumericVector W_, 
+    NumericVector W_,
     const mat& lambda1,
     const double eps,
-    const colvec& YMean2, 
-    const colvec& ZMean2,
-    mat& B1, 
-    double step){
+    mat& B1,
+    double step,
+    bool warmstart = false,
+    int stopping_crit = 0){
 
-  
+
   mat b2 = B1;
   mat B1F2 = B1;
   mat W2 = B1;
 
-  // Here we read in the R array as a NumericVector as it retains 
-  // its dims attribute, We can then use these dims to set our 
+  // Here we read in the R array as a NumericVector as it retains
+  // its dims attribute, We can then use these dims to set our
   // arma::cube dimensions and recreate the array.
-  
-  // Beta is an array with dimensions 
+
+  // Beta is an array with dimensions
   IntegerVector dimsB=beta_.attr("dim");
   cube bcube(beta_.begin(),dimsB[0],dimsB[1],dimsB[2],false);
-  
-  cube bcube2(dimsB[0],dimsB[1]+1,dimsB[2]);
+
+  //cube bcube2(dimsB[0],dimsB[1]+1,dimsB[2]);
+  cube bcube2(dimsB[0],dimsB[1],dimsB[2]);
   bcube2.fill(0);
-  
-  colvec nu=zeros<colvec>(dimsB[0]);
-  
+
+  //colvec nu=zeros<colvec>(dimsB[0]);
+
   IntegerVector dimsW=W_.attr("dim");
   cube wcube(W_.begin(),dimsW[0],dimsW[1],dimsW[2],false);
 
 	int nlambda1 = lambda1.n_rows;
   int n_r = dimsW[2];
-  for(int i=0;i<nlambda1;++i){ 
-    
-    //rowvec lam1_temp(1);
-		//lam1_temp(0) = lambda1(i);
-    
-	  for(int j=0;j<n_r;++j){ 
-	    
+  for(int i=0;i<nlambda1;++i){
+
+	  for(int j=0;j<n_r;++j){
+
 	    rowvec lam1_temp(1);
 	  	lam1_temp(0) = lambda1(i,j);
-	    //showValue((i)*n_r+j);
-		  //double lam2_temp = lambda2(j);
-		  mat B1F2 = bcube.slice((i)*n_r+j);
+
+		  mat B1F2;
+
+		  if (warmstart && i > 0) {
+		    // Use previous lambda's solution as starting point
+		    B1F2 = bcube2.slice((i-1)*n_r+j);
+		  } else {
+		    B1F2 = bcube.slice((i)*n_r+j);
+		  }
+
 		  mat W1F2 = wcube.slice(j);
-		  B1 = FISTA(Y,Z,B1F2,W1F2,lam1_temp,eps,step); 
-		  nu = YMean2 - B1 * ZMean2;
-		  bcube2.slice((i)*n_r+j) = mat(join_horiz(nu, B1));
-		  
+		  B1 = FISTA(Y,Z,B1F2,W1F2,lam1_temp,eps,step,stopping_crit);
+		  bcube2.slice((i)*n_r+j) = mat(B1);
+
 	  }
-	  
+
 	}
-  
+
   return(bcube2);
 }
 
+
+// ---------------- NEW: offset-aware lamloopFISTA ----------------
+
+// This version mirrors lamloopFISTA but first subtracts a user-supplied
+// offset (d x N) from Y, and recomputes the row-means used for the
+// intercept on the *offset-adjusted* data.
+//
+// [[Rcpp::export]]
+cube lamloopFISTA_offset(
+    NumericVector beta_,
+    const mat& Y,            // d x N
+    const mat& Z,            // p x N
+    NumericVector W_,        // d x p x nscen
+    const mat& lambda1,      // nlam x nscen
+    const double eps,
+    const colvec& ZMean2,    // p x 1 (same as legacy)
+    mat& B1,                 // d x p (init for this slice)
+    double step,
+    const mat& offset,       // d x N
+    bool warmstart = false,
+    int stopping_crit = 0)
+{
+  // basic checks
+  if ( (offset.n_rows != Y.n_rows) || (offset.n_cols != Y.n_cols) )
+    stop("offset must be d x N, matching Y.");
+
+  // Y_tilde = Y - offset
+  mat Yadj = Y - offset;
+
+  // row means for intercept from *adjusted* Y
+  // (arma::mean with dim=1 returns column-vector of row means)
+  colvec YMean2_adj = mean(Yadj, 1);       // d x 1
+  colvec ZMean2_copy = ZMean2;             // unchanged
+
+  // reconstruct arrays from R
+  IntegerVector dimsB = beta_.attr("dim");
+  cube bcube(beta_.begin(), dimsB[0], dimsB[1], dimsB[2], false);
+
+  // Output cube has one extra column for intercept
+  cube bcube2(dimsB[0], dimsB[1] + 1, dimsB[2], fill::zeros);
+  // Separate cube to track coefficient-only solutions for warm-starting
+  cube bcube_coef(dimsB[0], dimsB[1], dimsB[2], fill::zeros);
+
+  IntegerVector dimsW = W_.attr("dim");
+  cube wcube(W_.begin(), dimsW[0], dimsW[1], dimsW[2], false);
+
+  colvec nu = zeros<colvec>(dimsB[0]);
+
+  int nlambda1 = lambda1.n_rows;
+  int n_r = dimsW[2];
+
+  for(int i=0;i<nlambda1;++i){
+    for(int j=0;j<n_r;++j){
+      rowvec lam1_temp(1);
+      lam1_temp(0) = lambda1(i,j);
+
+      mat B1F2;
+
+      if (warmstart && i > 0) {
+        B1F2 = bcube_coef.slice((i-1) * n_r + j);
+      } else {
+        B1F2 = bcube.slice(i * n_r + j);
+      }
+
+      mat W1F2  = wcube.slice(j);
+
+      // identical inner solver, but fed Y - offset
+      mat Bsol = FISTA(Yadj, Z, B1F2, W1F2, lam1_temp, eps, step, stopping_crit);
+
+      // Store coefficient-only solution for warm-starting next lambda
+      bcube_coef.slice(i * n_r + j) = Bsol;
+
+      // intercept from adjusted row means
+      nu = YMean2_adj - Bsol * ZMean2_copy;
+
+      bcube2.slice(i * n_r + j) = join_horiz(nu, Bsol);
+    }
+  }
+  return bcube2;
+}

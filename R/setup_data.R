@@ -1,4 +1,6 @@
-setup_data <- function (data, standardize, lag, horizon) {
+#' @importFrom Matrix Matrix
+#' @keywords internal
+setup_data <- function (data, standardize, lag, horizon, intercept, tvp = FALSE, breaks = NULL) {
   
    if (is.null(data)){
     stop(paste0(
@@ -27,61 +29,7 @@ setup_data <- function (data, standardize, lag, horizon) {
   
       ts_list  <- data
   }
-  # if (is.list(data)){
-  # 
-  #   ts_list  <- list()
-  # 
-  #   # if the user-supplied list does not have names, add names 
-  #   if(is.null(names(data))){ 
-  #     
-  #     names(data) <- paste0("dataset", 1:length(data)) 
-  #     
-  #   }
-  # 
-  #   ts_list  <- data
-  # 
-  # #-------------------------------------------------------------#
-  # # If the data is not a list (we assume it is a directory).
-  # #-------------------------------------------------------------#  
-  # } else if (!is.list(data)){
-  # 
-  #   files <- list.files(data, full.names = TRUE) 
-  #   
-  #   #-------------------------------------------------------------#
-  #   # Throw errors specific to data specified as a directory.
-  #   #-------------------------------------------------------------# 
-  #   if (is.null(sep)){
-  #     stop(paste0(
-  #       "multivar ERROR: a data directory is specified but the sep argument is not. ",
-  #       "Please specify a sep argument before continuing."
-  #     ))
-  #   }
-  #   
-  #   if (is.null(header)){
-  #     stop(paste0(
-  #       "multivar ERROR: a data directory is specified but a header argument is not. ",
-  #       "Please specify a logical value for header before continuing."
-  #     ))
-  #   }
-  # 
-  #   #-------------------------------------------------------------#
-  #   # Create a list of dataframes.
-  #   #-------------------------------------------------------------# 
-  #   
-  #   ts_list <- list()
-  #   for (i in 1:length(files)){
-  #     ts_list[[i]] <- read.table(files[i], sep = ctrlOpts$sep, header = ctrlOpts$header)
-  #   }
-  #   
-  #   names(ts_list) <- tools::file_path_sans_ext(basename(files))
-  # 
-  # } else {
-  # 
-  #   stop(paste0(
-  #     "multivar ERROR: Format of data argument not recognized. "
-  #   ))
-  # 
-  # }
+
   
   #-------------------------------------------------------------#
   # Ensure all datafiles share the same column order.
@@ -107,11 +55,14 @@ setup_data <- function (data, standardize, lag, horizon) {
   
   
 
-  if(standardize){
+  # For non-TVP: global standardization on raw time series
+  # For TVP: defer standardization until after A/b split (per-period)
+  # Note: Always center data for good LASSO estimation. Intercepts are recovered post-hoc.
+  if(standardize & !tvp){
     ts_list <- lapply(ts_list, function(df) {scale(df)})
   }
 
-  
+
   #-------------------------------------------------------------#
   # Final data checks
   #-------------------------------------------------------------#
@@ -131,33 +82,15 @@ setup_data <- function (data, standardize, lag, horizon) {
     numericCols[k]  <- any(apply(data.file, 2, is.numeric) == FALSE)
   }
   
-  
-  # if (n_subjects != 1) {
-  #   if (sd(cols) != 0) {
-  #     stop(paste0('multivar ERROR: not all data files have the same number of columns. ',
-  #                 'Please fix or remove file before continuing.'))
-  #   }
-  # 
-  #   if (any(cols != missingData)) {
-  #     stop(paste0('multivar ERROR: missing data not currently supported. '))
-  #   }  
-  #   
-  #   if (any(constantCols == TRUE)){
-  #     stop(paste0('multivar ERROR: at least one data file contains a column with constant values. ',
-  #                 'Please fix or remove files listed below before continuing. \n', 
-  #                 paste0(names(ts_list)[constantCols == TRUE], collapse = "\n")))
-  #   }
-  #   
-  #   if (any(numericCols == TRUE)){
-  #     stop(paste0('multivar ERROR: at least one data file contains a column with non-numeric values. ',
-  #                 'Please fix or remove files listed below before continuing. \n', 
-  #                 paste0(names(ts_list)[numericCols == TRUE], collapse = "\n")))
-  #   }
-  #   
-  # } 
-  
+  # Helper function for splitting by breaks
+
+  splitAt <- function(x, pos) {
+    unname(split(x, cumsum(seq_along(x) %in% pos)))
+  }
+
   # will need to be updated for lags > 1
-  ts_list <- lapply(ts_list, function(df){
+  ts_list <- lapply(seq_along(ts_list), function(k){
+    df <- ts_list[[k]]
     if(horizon > 0){
       H  <- df[((nrow(df)-horizon+1):nrow(df)),, drop = FALSE]
       df <- df[-((nrow(df)-horizon+1):nrow(df)),, drop = FALSE]
@@ -167,10 +100,106 @@ setup_data <- function (data, standardize, lag, horizon) {
     A  <- Matrix(df[1:(nrow(df)-1), ], sparse = FALSE)
     b  <- Matrix(df[2:(nrow(df)  ), ], sparse = FALSE)
     colnames(A) <- colnames(b) <- colnames(df)
-    list(b = b, A = A, H = H)
+
+    # Store original means for intercept recovery (before any standardization)
+    # These are needed for: c = mean(b) - Phi * mean(A)
+    mean_A_orig <- colMeans(A)
+    mean_b_orig <- colMeans(b)
+
+    # Initialize storage for standardization parameters and period means
+    sd_A <- sd_b <- NULL
+    mean_A_periods <- mean_b_periods <- NULL
+    sd_A_periods <- sd_b_periods <- NULL
+
+    # Per-period standardization for TVP
+    # Key: compute standardization parameters from A only, apply to both A and b
+    # This preserves the VAR relationship b = Phi*A + epsilon
+    if(standardize & tvp & !is.null(breaks)){
+      ntk <- nrow(A)
+      period_indices <- splitAt(seq_len(ntk), breaks[[k]])
+
+      A_standardized <- A
+      b_standardized <- b
+
+      # Storage for per-period means and SDs (for intercept recovery)
+      mean_A_periods <- vector("list", length(period_indices))
+      mean_b_periods <- vector("list", length(period_indices))
+      sd_A_periods <- vector("list", length(period_indices))
+      sd_b_periods <- vector("list", length(period_indices))
+
+      for(p in seq_along(period_indices)){
+        idx <- period_indices[[p]]
+        A_period <- A[idx, , drop = FALSE]
+        b_period <- b[idx, , drop = FALSE]
+
+        # Compute parameters from A only
+        col_means_A <- colMeans(A_period)
+        col_means_b <- colMeans(b_period)
+        col_sds <- apply(A_period, 2, sd)
+        col_sds[col_sds == 0] <- 1  # Avoid division by zero
+
+        # Store period means and SDs for intercept recovery
+        mean_A_periods[[p]] <- as.vector(col_means_A)
+        mean_b_periods[[p]] <- as.vector(col_means_b)
+        sd_A_periods[[p]] <- as.vector(col_sds)
+        sd_b_periods[[p]] <- as.vector(apply(b_period, 2, sd))
+        sd_b_periods[[p]][sd_b_periods[[p]] == 0] <- 1
+
+        # Always center and scale for good LASSO estimation
+        # Intercepts are recovered post-hoc using stored means
+        A_standardized[idx, ] <- scale(A_period, center = col_means_A, scale = col_sds)
+        b_standardized[idx, ] <- scale(b_period, center = col_means_A, scale = col_sds)
+      }
+
+      A <- A_standardized
+      b <- b_standardized
+
+    } else if (tvp & !is.null(breaks)) {
+      # TVP without standardization: still need period means for intercept recovery
+      ntk <- nrow(A)
+      period_indices <- splitAt(seq_len(ntk), breaks[[k]])
+
+      mean_A_periods <- vector("list", length(period_indices))
+      mean_b_periods <- vector("list", length(period_indices))
+
+      for(p in seq_along(period_indices)){
+        idx <- period_indices[[p]]
+        A_period <- A[idx, , drop = FALSE]
+        b_period <- b[idx, , drop = FALSE]
+
+        mean_A_periods[[p]] <- as.vector(colMeans(A_period))
+        mean_b_periods[[p]] <- as.vector(colMeans(b_period))
+      }
+      # No sd_*_periods needed when not standardizing
+
+    } else if (standardize & !tvp) {
+      # Non-TVP standardization: store global SDs for intercept recovery
+      sd_A <- apply(A, 2, sd)
+      sd_b <- apply(b, 2, sd)
+      sd_A[sd_A == 0] <- 1
+      sd_b[sd_b == 0] <- 1
+    }
+
+    # Return data with means for intercept recovery
+    list(
+      b = b,
+      A = A,
+      H = H,
+      mean_A = as.vector(mean_A_orig),
+      mean_b = as.vector(mean_b_orig),
+      sd_A = sd_A,
+      sd_b = sd_b,
+      mean_A_periods = mean_A_periods,
+      mean_b_periods = mean_b_periods,
+      sd_A_periods = sd_A_periods,
+      sd_b_periods = sd_b_periods
+    )
   })
-  
-  
+
+  # Note: Intercept column is NOT added to design matrix.
+  # Intercepts are recovered post-hoc using: c = mean(b) - Phi * mean(A)
+  # See recover_intercepts.R
+
   return(ts_list)
   
 }

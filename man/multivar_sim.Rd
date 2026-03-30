@@ -17,7 +17,9 @@ multivar_sim(
   mat_common = NULL,
   mat_unique = NULL,
   mat_total = NULL,
-  diag = FALSE
+  diag = FALSE,
+  intercept = NULL,
+  standardize_output = FALSE
 )
 }
 \arguments{
@@ -31,9 +33,9 @@ multivar_sim(
 
 \item{prop_fill_ind}{Numeric. The proportion of nonzero unique (not in the common transition matrix or transition matrix of other individuals) paths in each individual transition matrix.}
 
-\item{lb}{Numeric. The upper bound for individual elements of the transition matrices.}
+\item{lb}{Numeric. The lower bound for individual elements of the transition matrices.}
 
-\item{ub}{Numeric. The lower bound for individual elements of the transition matrices.}
+\item{ub}{Numeric. The upper bound for individual elements of the transition matrices.}
 
 \item{sigma}{Matrix. The (population) innovation covariance matrix.}
 
@@ -46,6 +48,10 @@ multivar_sim(
 \item{mat_total}{List. A list of total effects transition matrix (if known).}
 
 \item{diag}{Logical. Default is FALSE. Should diagonal elements be filled first for common elements.}
+
+\item{intercept}{List. Default is NULL. A list of length K containing numeric vectors of length d representing the intercept values.}
+
+\item{standardize_output}{Logical. Default is FALSE. If TRUE, scales each subject's data to have sample variance of 1 for each variable, and returns the transformed transition matrices and innovation covariances in standardized space.}
 }
 \description{
 Simulate multivar data.

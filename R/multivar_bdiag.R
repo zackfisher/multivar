@@ -1,4 +1,4 @@
-#' @export
+#' @keywords internal
 multivar_bdiag <- function(d){
 
     nrows = sum(sapply(d, NROW))

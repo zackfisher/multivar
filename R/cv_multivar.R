@@ -1,19 +1,49 @@
+#' Cross-Validation Dispatcher for multivar
+#'
+#' Routes to the appropriate CV method (blocked or rolling).
+#'
+#' @param B Initial coefficient array
+#' @param Z Design matrix (transposed)
+#' @param Y Response matrix (transposed)
+#' @param W Weight array
+#' @param Ak List of design matrices per subject
+#' @param bk List of response matrices per subject
+#' @param k Number of subjects
+#' @param d Number of variables
+#' @param lambda1 Lambda grid
+#' @param t1 Start indices
+#' @param t2 End indices
+#' @param eps Convergence tolerance
+#' @param intercept Whether model includes intercepts
+#' @param cv CV method: "blocked" or "rolling"
+#' @param nfolds Number of CV folds
+#' @param tvp Whether time-varying parameters are used
+#' @param breaks List of period indices per subject
+#' @param spec Optional matrix_spec object for row/column indices
+#' @param ncores Numeric. Number of cores for parallel computation. Default is 1.
+#' @param warmstart Logical. Whether to use warm starts in the FISTA solver. Default is FALSE.
+#' @param stopping_crit Integer. Stopping criterion flag passed to the C++ solver. Default is 0.
+#'
+#' @return List with beta coefficients and MSFE matrix
 #' @export
-cv_multivar <- function(B, Z, Y, W, Ak, bk, k, d, lambda1, lambda2, t1, t2, eps,intercept=FALSE, cv, nfolds){
-  
-  if(cv == "rolling"){
-    
-    res <- cv_rolling(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALSE, cv, nfolds)
-  
-  } else if (cv == "blocked"){
-    
-    res <- cv_blocked(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,intercept=FALSE, cv, nfolds)
-  
+cv_multivar <- function(B, Z, Y, W, Ak, bk, k, d, lambda1, t1, t2, eps,
+                        intercept = FALSE, cv, nfolds, tvp = FALSE,
+                        breaks = NULL, spec = NULL, ncores = 1,
+                        warmstart = FALSE, stopping_crit = 0L) {
+
+  if (cv == "rolling") {
+    # TODO: Add spec support to cv_rolling when needed
+    res <- cv_rolling(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps, intercept, cv, nfolds,
+                      warmstart = warmstart, stopping_crit = stopping_crit)
+
+  } else if (cv == "blocked") {
+    res <- cv_blocked(B, Z, Y, W, Ak, k, d, lambda1, t1, t2, eps,
+                      intercept, cv, nfolds, tvp, breaks, spec, ncores,
+                      warmstart = warmstart, stopping_crit = stopping_crit)
+
   } else {
-    
     stop(paste0("multivar ERROR: ", cv, " is not a supported cross-validation method."))
   }
-  
+
   return(res)
-  
 }

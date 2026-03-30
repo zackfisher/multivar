@@ -2,52 +2,85 @@
 % Please edit documentation in R/plot_results.R
 \name{plot_results}
 \alias{plot_results}
-\title{Plot data arising from cv.multivar.}
+\title{Plot fitted multivar model results}
 \usage{
 plot_results(
   x,
-  plot_type = "common",
+  plot_type = c("common", "unique", "total", "subgrp", "tvp", "common_tvp", "tvp_total"),
   facet_ncol = 3,
-  datasets = "all",
+  subjects = "all",
+  periods = "all",
   ub = 1,
-  lb = -1
+  lb = -1,
+  palette = "default",
+  show_zeros = FALSE,
+  ...
 )
 }
 \arguments{
-\item{x}{Object. An object returned by multivar_sim.}
+\item{x}{Object returned by \code{cv.multivar()} or related fitting functions}
 
-\item{plot_type}{Character. User can specify "common" to plot the common effects matrix, "unique" to plot the unique effects matrix, or "total" to plot the total effects matrix.}
+\item{plot_type}{Character. Type of effects to plot:
+\itemize{
+  \item "common" - Common effects shared across all subjects
+  \item "unique" - Subject-specific unique effects
+  \item "total" - Total effects (common + unique for each subject)
+  \item "subgrp" - Subgroup effects (if model includes subgroups)
+  \item "tvp" - Time-varying parameter effects (unique TVP deviations)
+  \item "common_tvp" - Common time-varying effects across subjects
+  \item "tvp_total" - Total effects for TVP models by period
+}}
 
-\item{facet_ncol}{Numeric. Number of columns to use in the "unique" or "total" effects plot.}
+\item{facet_ncol}{Numeric. Number of columns when faceting multiple matrices}
 
-\item{datasets}{Numeric. A vector containing the index of datasets to plot. Default is "all".}
+\item{subjects}{Character "all" or numeric vector. Which subjects to plot for
+"unique", "total", or "tvp" types. Default is "all"}
 
-\item{ub}{Numeric. Upper bound on coefficient values for heatmap index. Default is 1.}
+\item{periods}{Character "all" or numeric vector. Which time periods to plot for
+TVP models. Default is "all"}
 
-\item{lb}{Numeric. Lower bound on coefficient values for heatmap index. Default is -1.}
+\item{ub}{Numeric. Upper bound for color scale. Default is 1}
+
+\item{lb}{Numeric. Lower bound for color scale. Default is -1}
+
+\item{palette}{Character. Color palette: "default", "viridis", or "greyscale"}
+
+\item{show_zeros}{Logical. If FALSE (default), zero values shown as white/NA}
+
+\item{...}{Additional arguments passed to plotting engine}
+}
+\value{
+A ggplot2 object that can be further customized
 }
 \description{
-Plot data arising from cv.multivar.
+Creates heatmap visualizations of transition matrices from fitted multivar models.
+Supports plotting common effects, unique (subject-specific) effects, total effects,
+subgroup effects, and time-varying parameter (TVP) effects.
 }
 \examples{
+\dontrun{
+sim <- multivar_sim(k = 3, d = 5, n = 50, prop_fill_com = 0.2,
+                    prop_fill_ind = 0.1, sigma = diag(5))
+model <- constructModel(sim$data)
+fit <- cv.multivar(model)
 
-sim1  <- multivar_sim(
-  k = 2,  # individuals
-  d = 3,  # number of variables
-  n = 20, # number of timepoints
-  prop_fill_com = 0.1, # proportion of paths common
-  prop_fill_ind = 0.1, # proportion of paths unique
-  lb = 0.1,  # lower bound on coefficient magnitude
-  ub = 0.9,  # upper bound on coefficient magnitude
-  sigma = diag(1,3) # noise
-)
+# Plot common effects
+plot_results(fit, plot_type = "common")
 
-model1 <- constructModel(data = sim1$data, weightest = "ols")
-fit1 <- cv.multivar(model1)
-plot_results(fit1, plot_type = "common")
+# Plot unique effects for first 2 subjects
+plot_results(fit, plot_type = "unique", subjects = 1:2)
+
+# For TVP models
+fit_tvp <- cv.multivar(constructModel(data, tvp = TRUE, breaks = list(c(50, 100))))
+plot_results(fit_tvp, plot_type = "tvp")  # TVP deviations by period
+plot_results(fit_tvp, plot_type = "tvp_total")  # Total effects by period
+
+# Customize the plot
+p <- plot_results(fit, plot_type = "total")
+p + ggplot2::ggtitle("My Custom Title") + ggplot2::theme_minimal()
+}
 
 }
-\keyword{multivar}
-\keyword{plot}
-\keyword{simulate}
-\keyword{var}
+\seealso{
+\code{\link{plot_sim}}, \code{\link{plot_transition_mat}}
+}

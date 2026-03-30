@@ -1,138 +1,91 @@
-#' Plot data arising from multivar_sim.
+#' Plot simulated multivar ground truth
 #'
-#' @param x Object. An object returned by multivar_sim.
-#' @param plot_type Character. User can specify "common" to plot the common effects matrix, "unique" to plot the unique effects matrix, or "total" to plot the total effects matrix.
-#' @param facet_ncol Numeric. Number of columns to use in the "unique" or "total" effects plot.
-#' @param datasets Numeric. A vector containing the index of datasets to plot. Default is "all".
-#' @param ub Numeric. Upper bound on coefficient values for heatmap index. Default is 1.
-#' @param lb Numeric. Lower bound on coefficient values for heatmap index. Default is -1.
-#' @keywords var multivar simulate plot
+#' Creates heatmap visualizations of true transition matrices from multivar simulations.
+#' Supports plotting common effects, unique (subject-specific) effects, total effects,
+#' and subgroup effects.
+#'
+#' @param x Object returned by \code{multivar_sim()} or \code{multivar_sim_subgroups()}
+#' @param plot_type Character. Type of effects to plot:
+#'   \itemize{
+#'     \item "common" - Common effects shared across all subjects
+#'     \item "unique" - Subject-specific unique effects
+#'     \item "total" - Total effects (common + unique for each subject)
+#'     \item "subgrp" - Subgroup effects (if simulation includes subgroups)
+#'   }
+#' @param facet_ncol Numeric. Number of columns when faceting multiple matrices
+#' @param subjects Character "all" or numeric vector. Which subjects to plot for
+#'   "unique" or "total" types. Default is "all"
+#' @param ub Numeric. Upper bound for color scale. Default is 1
+#' @param lb Numeric. Lower bound for color scale. Default is -1
+#' @param palette Character. Color palette: "default", "viridis", or "greyscale"
+#' @param show_zeros Logical. If FALSE (default), zero values shown as white/NA
+#' @param ... Additional arguments passed to plotting engine
+#'
+#' @return A ggplot2 object that can be further customized
 #'
 #' @examples
+#' \dontrun{
+#' # Simulate data
+#' sim <- multivar_sim(k = 3, d = 5, n = 50,
+#'                     prop_fill_com = 0.2, prop_fill_ind = 0.1,
+#'                     lb = 0.1, ub = 0.9, sigma = diag(5))
 #'
-#' k <- 3
-#' d <- 5
-#' n <- 50
-#' prop_fill_com <- .2
-#' prop_fill_ind <- .2
-#' lb <- 0.1
-#' ub <- 0.7
-#' sigma <- diag(0.1,d)
-#' sim <- multivar_sim(k, d, n, prop_fill_com, prop_fill_ind, lb, ub,sigma)
+#' # Plot true common effects
 #' plot_sim(sim, plot_type = "common")
 #'
+#' # Plot true unique effects for subjects 1-2
+#' plot_sim(sim, plot_type = "unique", subjects = 1:2)
+#'
+#' # Simulate with subgroups
+#' sim_sub <- multivar_sim_subgroups(k = 4, d = 3, n = 40,
+#'                                   subgroup = c(1, 1, 2, 2),
+#'                                   p_com = 0.25, p_sub = 0.10, p_ind = 0.05,
+#'                                   sigma = diag(3))
+#'
+#' # Plot subgroup effects
+#' plot_sim(sim_sub, plot_type = "subgrp")
+#' }
+#'
+#' @seealso \code{\link{plot_results}}, \code{\link{plot_transition_mat}}
 #' @export
-plot_sim <- function(x, plot_type = "common", facet_ncol=3, datasets = "all",ub = 1, lb = -1){
-  rows <- values <- NULL
-  if(plot_type == "common"){
-    colnames(x$mat_com) <- rownames(x$mat_com) <- paste0("V",1:nrow(x$mat_com))
-    df <- setNames(melt(x$mat_com), c('rows', 'vars', 'values'))
-  }
-  
-  if(plot_type == "unique"){
-    if(datasets[1] == "all"){
-      df <- as.data.frame(do.call("rbind",lapply(seq_along(x$mat_ind_unique), function(j){
-        mat <- x$mat_ind_unique[[j]]
-        colnames(mat) <- rownames(mat) <- paste0("V",1:nrow(mat))
-        df <- setNames(melt(mat), c('rows', 'vars', 'values'))
-        df$Subject <- paste0("Dataset ", j)
-        df
-      })))
-    } else {
-      df <- as.data.frame(do.call("rbind",lapply(datasets, function(j){
-        mat <- x$mat_ind_unique[[j]]
-        colnames(mat) <- rownames(mat) <- paste0("V",1:nrow(mat))
-        df <- setNames(melt(mat), c('rows', 'vars', 'values'))
-        df$Subject <- paste0("Dataset ", j)
-        df
-      })))
-    }
-  }
-  
-  if(plot_type == "total"){
-    if(datasets[1] == "all"){
-      df <- as.data.frame(do.call("rbind",lapply(seq_along(x$mat_ind_final), function(j){
-        mat <- x$mat_ind_final[[j]]
-        colnames(mat) <- rownames(mat) <- paste0("V",1:nrow(mat))
-        df <- setNames(melt(mat), c('rows', 'vars', 'values'))
-        df$Subject <- paste0("Dataset ", j)
-        df
-      })))
-    } else {
-      df <- as.data.frame(do.call("rbind",lapply(datasets, function(j){
-        mat <- x$mat_ind_final[[j]]
-        colnames(mat) <- rownames(mat) <- paste0("V",1:nrow(mat))
-        df <- setNames(melt(mat), c('rows', 'vars', 'values'))
-        df$Subject <- paste0("Dataset ", j)
-        df
-      })))
-    }
-  }
+plot_sim <- function(x,
+                    plot_type = c("common", "unique", "total", "subgrp"),
+                    facet_ncol = 3,
+                    subjects = "all",
+                    ub = 1,
+                    lb = -1,
+                    palette = "default",
+                    show_zeros = FALSE,
+                    ...) {
 
-  df$values[df$values == 0] <- NA
+  # Validate plot_type
+  plot_type <- match.arg(plot_type)
 
-  zf_red <- rgb(255,0,90, maxColorValue=255)
-  zf_green <- rgb(90, 168, 0, maxColorValue=255)
-  zf_blue <- rgb(0, 152, 233, maxColorValue=255)
-  zf_yellow <- rgb(242, 147, 24, maxColorValue=255)
-  zf_back <- rgb(51,51,51, maxColorValue=255)
-  #zf_fore <- rgb(249,242,215, maxColorValue=255)
-  zf_fore <- "white"
-  
-  text_color <- zf_back
-  grid_color <- zf_back
-  plot_background <- "white"
-  
-  limit <- max(abs(c(lb,ub))) * c(-1, 1)
-  
-  colfunc_low <- colorRampPalette(c(zf_red, zf_fore))
-  colfunc_high <- colorRampPalette(c(zf_fore, zf_blue))
-  colors_to_use <- c(colfunc_low(6)[1:3],zf_fore,colfunc_high(6)[4:6])
-  
-  df$rows <- factor(df$rows,levels=rev(paste0("V",1:nrow(x$mat_com))))
- 
-  gg <- ggplot(df, aes(y=rows, x=vars, fill = values)) # original
-  #gg <- gg + geom_tile(color=grid_color, size=.5)
-  gg <- gg + geom_tile() 
-  gg <- gg + scale_fill_gradientn(colors=colors_to_use,limits=limit,na.value = zf_fore,guide = guide_colorbar(frame.colour = "black", ticks.colour = "black",ticks.linewidth = 1,frame.linewidth = 1))
-  gg <- gg + coord_equal()
-  gg <- gg + theme(panel.grid.minor=element_blank())
-  gg <- gg + theme(panel.grid.major=element_blank())
-  gg <- gg + theme(axis.text.x = element_text(angle=45,hjust=1))
-  gg <- gg + theme(axis.ticks =element_blank())
-  gg <- gg + theme(axis.text.x=element_text(size=10, color=text_color))
-  gg <- gg + theme(axis.text.y=element_text(size=10, color=text_color))
-  gg <- gg + theme(panel.border=element_blank())
-  gg <- gg + theme(plot.title=element_text(hjust=0, color=text_color,face="bold"))
-  gg <- gg + theme(strip.text=element_text(hjust=0, color=text_color,size=12,face="bold"))
-  gg <- gg + theme(strip.background=element_rect(fill=plot_background, color=plot_background))
-  gg <- gg + theme(panel.spacing.x=unit(0.5, "cm"))
-  gg <- gg + theme(panel.spacing.y=unit(0.5, "cm"))
-  gg <- gg + theme(legend.background=element_rect(fill=plot_background, color=plot_background)) 
-  gg <- gg + theme(legend.title=element_text(size=12, color=text_color))
-  gg <- gg + theme(legend.title.align=1)
-  gg <- gg + theme(legend.text=element_text(size=10, color=text_color))
-  gg <- gg + theme(plot.background=element_rect(fill=plot_background,color=plot_background)) 
-  gg <- gg + theme(panel.border=element_rect(fill = NA, colour='black',size=1))
-  gg <- gg + theme(legend.text.align=1)
-  
-  gg <- gg + labs(fill='') 
-  
-  if(plot_type == "common"){
-     gg <- gg + labs(x=NULL, y=NULL, title="Common Transition Matrix")
-  }
-  
-  if(plot_type == "unique"){
-     gg <- gg + labs(x=NULL, y=NULL, title="Unique Transition Matrices")
-     gg <- gg + facet_wrap(~Subject, ncol=facet_ncol)
-  }
-  
-  if(plot_type == "total"){
-     gg <- gg + labs(x=NULL, y=NULL, title="Total Transition Matrices")
-     gg <- gg + facet_wrap(~Subject, ncol=facet_ncol)
-  }
-  
-  gg
-  
-  
+  # Extract matrices using helper function
+  mat_list <- .extract_matrices_from_sim(
+    sim = x,
+    type = plot_type,
+    subjects = subjects
+  )
+
+  # Determine title
+  title <- switch(plot_type,
+    common = "True Common Transition Matrix",
+    unique = "True Unique Transition Matrices",
+    total = "True Total Transition Matrices",
+    subgrp = "True Subgroup Transition Matrices"
+  )
+
+  # Call core plotting engine
+  .plot_transition_heatmap(
+    mat_list = mat_list,
+    titles = names(mat_list),
+    facet_ncol = facet_ncol,
+    lb = lb,
+    ub = ub,
+    show_zeros = show_zeros,
+    palette = palette,
+    title = title,
+    ...
+  )
 }
