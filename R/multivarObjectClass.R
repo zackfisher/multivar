@@ -40,7 +40,7 @@ check.multivar <- function(object){
 #' @slot lambda1 Numeric vector. Regularization parameter grid.
 #' @slot nlambda1 Numeric. Number of lambda1 values to search over. Default is 30.
 #' @slot n_ratios_subgroup Numeric. Number of ratios_subgroup values to search over. Default is 30.
-#' @slot gamma Numeric. Need definition here
+#' @slot gamma Numeric. Power for adaptive weighting (default 1). Controls how strongly initial estimates influence the penalty: weight = 1/|coef|^gamma.
 #' @slot tol Numeric. Convergence tolerance.
 #' @slot depth Numeric. Depth of grid construction. Default is 1000.
 #' @slot window Numeric. Size of rolling window.

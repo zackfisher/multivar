@@ -59,7 +59,7 @@ To construct an object of class multivar, use the function \code{\link{construct
 
 \item{\code{n_ratios_subgroup}}{Numeric. Number of ratios_subgroup values to search over. Default is 30.}
 
-\item{\code{gamma}}{Numeric. Need definition here}
+\item{\code{gamma}}{Numeric. Power for adaptive weighting (default 1). Controls how strongly initial estimates influence the penalty: weight = 1/|coef|^gamma.}
 
 \item{\code{tol}}{Numeric. Convergence tolerance.}
 

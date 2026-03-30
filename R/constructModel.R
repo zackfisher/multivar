@@ -2,7 +2,7 @@
 #' 
 #' @param data List. A list (length = k) of T by d multivariate time series
 #' @param lag Numeric. The VAR order. Default is 1.
-#' @param horizon Numeric. Desired forecast horizon. Default is 1. ZF Note: Should probably be zero.
+#' @param horizon Numeric. Desired forecast horizon. Default is 1.
 #' @param t1 Numeric. Index of time series in which to start cross validation. If NULL, default is floor(nrow(n)/3) where nk is the time series length for individual k.
 #' @param t2 Numeric. Index of times series in which to end cross validation. If NULL, default is floor(2*nrow(n)/3) where nk is the time series length for individual k.
 #' @param lambda1 Matrix. Regularization parameter grid. Default is NULL (auto-generated).
@@ -12,7 +12,7 @@
 #' @param tol Numeric. Optimization tolerance (default 1e-4).
 #' @param window Numeric. Size of rolling window.   
 #' @param standardize Logical. Default is true. Whether to standardize the individual data. Note, if intercept = TRUE and standardize = TRUE, the data is scaled but not de-meaned.
-#' @param weightest Character. How to estimate initial coefficients for adaptive weights. Default is "lasso". Other options include "alasso" (adaptive LASSO: two-stage procedure using LASSO pilot then adaptive reweighting for sparser estimates), "ridge", "ols", and "multivar". The "multivar" option fits a standard lasso multivar model first to get structured initial estimates. Note: for k=1 TVP models, "multivar" works well with common_effects=TRUE but not with common_effects=FALSE (use "lasso" instead). Only used when lassotype = "adaptive" (ignored for standard LASSO).
+#' @param weightest Character. How to estimate initial coefficients for adaptive weights. Default is "maity". Other options include "lasso", "alasso" (adaptive LASSO: two-stage procedure using LASSO pilot then adaptive reweighting for sparser estimates), "ridge", "ols", and "multivar". The "multivar" option fits a standard lasso multivar model first to get structured initial estimates. Note: for k=1 TVP models, "multivar" works well with common_effects=TRUE but not with common_effects=FALSE (use "lasso" instead). Only used when lassotype = "adaptive" (ignored for standard LASSO).
 #' @param canonical Logical. Default is false. If true, individual datasets are fit to a VAR(1) model.
 #' @param threshold Logical. Default is false. If true, and canonical is true, individual transition matrices are thresholded based on significance.
 #' @param lassotype Character. Default is "adaptive". Choices are "standard" or "adaptive" lasso.
@@ -21,7 +21,7 @@
 #' @param ratios_unique Numeric vector. Penalty ratio for unique effects. Default is NULL.
 #' @param ratios_subgroup Numeric vector. Penalty ratio for subgroup effects. Default is NULL. 
 #' @param ratios_unique_tvp Numeric vector. Default is NULL. 
-#' @param cv Character. Default is "rolling" for rolling window cross-validation. "blocked" is also available for blocked folds cross-validation. If "blocked" is selected the nfolds argument should bbe specified.
+#' @param cv Character. Default is "blocked" for blocked folds cross-validation. "rolling" is also available for rolling window cross-validation. If "blocked" is selected the nfolds argument should be specified.
 #' @param nfolds Numeric. The number of folds for use with "blocked" cross-validation.
 #' @param lamadapt Logical. Should the lambdas be calculated adaptively. Default is FALSE.
 #' @param subgroup_membership Numeric. Vector of subgroup assignments.
